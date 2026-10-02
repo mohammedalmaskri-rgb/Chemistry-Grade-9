@@ -5,18 +5,65 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>بوابة الكيمياء | الصف التاسع</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f4f7fb;color:#172033}.top{background:linear-gradient(135deg,#0f766e,#155e75);color:#fff;padding:18px}.wrap{max-width:1050px;margin:auto;padding:16px}.brand{font-size:22px;font-weight:800}.card{background:#fff;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 8px 25px #0f172a12}.login{max-width:460px;margin:55px auto}.field{margin:12px 0}.field label{display:block;margin-bottom:7px;font-weight:700}.field input{width:100%;padding:12px;border:1px solid #dbe3ed;border-radius:11px;font-size:16px}.btn{border:0;border-radius:11px;padding:12px 15px;font-weight:800;cursor:pointer;background:#0f766e;color:#fff}.btn:disabled{opacity:.65;cursor:not-allowed}.btn2{background:#e8eef5;color:#172033}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.tile{background:#fff;padding:18px;border-radius:16px;box-shadow:0 5px 18px #0f172a0d;text-align:center}.tile b{display:block;margin-top:8px}.hide{display:none!important}.muted{color:#64748b;font-size:13px}.notice{background:#fff7ed;border-right:4px solid #f59e0b;padding:12px;border-radius:10px}.success{background:#ecfdf5;border-right:4px solid #10b981;padding:12px;border-radius:10px}.error{color:#b91c1c;margin-top:10px}.ok{color:#047857;margin-top:10px}.pill{display:inline-block;background:#e6fffb;color:#115e59;padding:5px 9px;border-radius:999px;font-size:12px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.footer{text-align:center;color:#94a3b8;font-size:12px;padding:25px}@media(max-width:750px){.grid{grid-template-columns:repeat(2,1fr)}.row{grid-template-columns:1fr}.wrap{padding:11px}.login{margin:25px auto}}
+*{box-sizing:border-box}
+:root{--teal:#0f766e;--blue:#155e75;--ink:#172033;--muted:#64748b;--card:#ffffffee;--line:#dbe3ed}
+body{margin:0;font-family:Tahoma,Arial,sans-serif;background:
+radial-gradient(circle at 15% 15%,#d7f8f2 0 90px,transparent 91px),
+radial-gradient(circle at 88% 22%,#dbeafe 0 110px,transparent 111px),
+linear-gradient(180deg,#f5fbff,#eef7f6 50%,#f8fafc);color:var(--ink);min-height:100vh;overflow-x:hidden}
+.top{background:linear-gradient(135deg,#0f766e,#155e75);color:#fff;padding:18px;position:relative;overflow:hidden}
+.top:before,.top:after{content:"";position:absolute;border:2px solid #ffffff35;border-radius:50%}
+.top:before{width:120px;height:120px;left:4%;top:-45px;box-shadow:40px 35px 0 -48px #fff,78px 72px 0 -48px #fff}
+.top:after{width:80px;height:80px;right:8%;bottom:-38px}
+.wrap{max-width:1050px;margin:auto;padding:16px;position:relative;z-index:2}
+.brand{font-size:22px;font-weight:800;display:flex;align-items:center;gap:8px}
+.card{background:var(--card);backdrop-filter:blur(8px);border:1px solid #ffffffc9;border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 10px 30px #0f172a14}
+.login{max-width:460px;margin:55px auto;position:relative}
+.field{margin:12px 0}.field label{display:block;margin-bottom:7px;font-weight:700}.field input{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-size:16px;background:#fff}
+.btn{border:0;border-radius:12px;padding:12px 15px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#0f766e,#0e7490);color:#fff;box-shadow:0 6px 14px #0f766e2a;transition:.2s transform,.2s box-shadow}
+.btn:hover{transform:translateY(-1px);box-shadow:0 9px 18px #0f766e35}.btn:disabled{opacity:.65;cursor:not-allowed}.btn2{background:#e8eef5;color:#172033;box-shadow:none}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.tile{background:linear-gradient(180deg,#fff,#f7fbfb);padding:18px;border-radius:18px;box-shadow:0 7px 18px #0f172a0d;text-align:center;border:1px solid #e8f0f2;transition:.2s transform,.2s border-color}.tile:hover{transform:translateY(-3px);border-color:#9bd7d0}.tile .ico{font-size:30px;line-height:1}.tile b{display:block;margin-top:8px}
+.hide{display:none!important}.muted{color:var(--muted);font-size:13px}.notice{background:#fff7ed;border-right:4px solid #f59e0b;padding:12px;border-radius:10px}.success{background:#ecfdf5;border-right:4px solid #10b981;padding:12px;border-radius:10px}.error{color:#b91c1c;margin-top:10px}.ok{color:#047857;margin-top:10px}.pill{display:inline-block;background:#e6fffb;color:#115e59;padding:5px 9px;border-radius:999px;font-size:12px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.footer{text-align:center;color:#94a3b8;font-size:12px;padding:25px}
+
+/* زخارف كيميائية على الجوانب */
+.chem-side{position:fixed;top:120px;bottom:20px;width:120px;z-index:0;pointer-events:none;opacity:.6}
+.chem-side.left{left:8px}.chem-side.right{right:8px}
+.atom{position:absolute;width:74px;height:74px;border:2px solid #0f766e33;border-radius:50%;animation:floaty 6s ease-in-out infinite}
+.atom:before,.atom:after{content:"";position:absolute;inset:14px;border:2px solid #155e7533;border-radius:50%;transform:rotate(60deg)}
+.atom:after{transform:rotate(-60deg)}
+.atom i{position:absolute;width:10px;height:10px;background:#0f766e;border-radius:50%;left:31px;top:31px;box-shadow:25px -18px 0 #155e75,-23px 16px 0 #14b8a6}
+.flask{position:absolute;font-size:46px;filter:drop-shadow(0 6px 10px #0f172a12)}
+.el{position:absolute;width:48px;height:48px;border-radius:12px;background:#ffffffd9;border:1px solid #cfe9e5;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0f766e;box-shadow:0 5px 12px #0f172a0c}
+.el small{display:block;font-size:8px;color:#64748b;font-weight:600}
+.left .a1{top:5%;left:22px}.left .f1{top:25%;left:36px}.left .e1{top:44%;left:10px}.left .e2{top:61%;left:56px}.left .f2{top:80%;left:22px}
+.right .a2{top:11%;right:20px;animation-delay:1.2s}.right .f3{top:32%;right:32px}.right .e3{top:51%;right:58px}.right .e4{top:69%;right:12px}.right .f4{top:84%;right:42px}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-10px) rotate(7deg)}}
+
+.hero-chem{display:grid;grid-template-columns:1.3fr .7fr;gap:14px;align-items:center}
+.hero-art{min-height:150px;border-radius:18px;background:linear-gradient(135deg,#e6fffb,#eff6ff);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.hero-art .big-atom{font-size:70px}.hero-art .mini{position:absolute;font-weight:800;color:#0f766eaa}.m1{left:16%;top:18%}.m2{right:17%;top:24%}.m3{left:22%;bottom:18%}.m4{right:20%;bottom:16%}
+
+@media(max-width:1100px){.chem-side{display:none}}
+@media(max-width:750px){.grid{grid-template-columns:repeat(2,1fr)}.row,.hero-chem{grid-template-columns:1fr}.wrap{padding:11px}.login{margin:25px auto}.tile{padding:15px}.hero-art{min-height:110px}}
 </style>
 </head>
 <body>
+<div class="chem-side left" aria-hidden="true">
+  <div class="atom a1"><i></i></div><div class="flask f1">⚗️</div><div class="el e1">H</div><div class="el e2">Na</div><div class="flask f2">🧪</div>
+</div>
+<div class="chem-side right" aria-hidden="true">
+  <div class="atom a2"><i></i></div><div class="flask f3">🔬</div><div class="el e3">O</div><div class="el e4">Cl</div><div class="flask f4">🧬</div>
+</div>
+
 <div id="loginView">
   <div class="top"><div class="wrap"><div class="brand">🧪 بوابة الكيمياء | الصف التاسع</div></div></div>
   <div class="wrap"><div class="card login">
+    <div class="hero-art" style="margin-bottom:14px"><div class="big-atom">⚛️</div><span class="mini m1">H₂O</span><span class="mini m2">CO₂</span><span class="mini m3">NaCl</span><span class="mini m4">O₂</span></div>
     <h2>تسجيل الدخول</h2>
     <p class="muted">أدخل اسم المستخدم وكلمة المرور التي استلمتها من المعلم.</p>
     <div class="field"><label>اسم المستخدم</label><input id="loginUser" inputmode="numeric" autocomplete="username" placeholder="مثال: 96001"></div>
     <div class="field"><label>كلمة المرور</label><input id="loginPass" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••••"></div>
-    <button id="loginBtn" class="btn" style="width:100%" onclick="login()">دخول</button>
+    <button id="loginBtn" class="btn" style="width:100%" onclick="login()">⚗️ دخول إلى البوابة</button>
     <p id="loginMsg" class="muted"></p>
   </div></div>
 </div>
@@ -25,8 +72,20 @@
   <div class="top"><div class="wrap"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><div><div class="brand">🧪 بوابة الكيمياء | الصف التاسع</div><div id="who" style="margin-top:5px"></div></div><button class="btn btn2" onclick="logout()">خروج</button></div></div></div>
   <div class="wrap">
     <div id="studentView" class="hide">
-      <div class="card"><h2 id="studentWelcome"></h2><div class="row"><div><span class="pill" id="studentClass"></span><p>⭐ نقاطك: <b id="studentPoints"></b></p></div><div class="success">تم تسجيل الدخول بنجاح ✅<br><span class="muted">هذا الحساب مرتبط بقاعدة بيانات المدرسة.</span></div></div></div>
-      <div class="grid"><div class="tile">📚<b>دروسي</b></div><div class="tile">📝<b>واجباتي</b></div><div class="tile">🧪<b>المختبر</b></div><div class="tile">✅<b>الاختبارات</b></div><div class="tile">📊<b>درجاتي</b></div><div class="tile">⭐<b>نقاطي</b></div><div class="tile">📁<b>الملفات</b></div><div class="tile">👤<b>حسابي</b></div></div>
+      <div class="card hero-chem">
+        <div><h2 id="studentWelcome"></h2><div class="row"><div><span class="pill" id="studentClass"></span><p>⭐ نقاطك: <b id="studentPoints"></b></p><p class="muted">اسم المستخدم: <b id="studentUsername"></b></p></div><div class="success">تم تسجيل الدخول بنجاح ✅<br><span class="muted">حسابك مرتبط ببوابة الكيمياء.</span></div></div></div>
+        <div class="hero-art"><div class="big-atom">⚛️</div><span class="mini m1">H</span><span class="mini m2">O</span><span class="mini m3">Na</span><span class="mini m4">Cl</span></div>
+      </div>
+      <div class="grid">
+        <div class="tile"><span class="ico">📚</span><b>دروسي</b></div>
+        <div class="tile"><span class="ico">📝</span><b>واجباتي</b></div>
+        <div class="tile"><span class="ico">⚗️</span><b>المختبر</b></div>
+        <div class="tile"><span class="ico">🧫</span><b>الاختبارات</b></div>
+        <div class="tile"><span class="ico">📊</span><b>درجاتي</b></div>
+        <div class="tile"><span class="ico">⭐</span><b>نقاطي</b></div>
+        <div class="tile"><span class="ico">🧾</span><b>الملفات</b></div>
+        <div class="tile"><span class="ico">👨‍🔬</span><b>حسابي</b></div>
+      </div>
       <div class="card"><h3>📢 إعلان</h3><p>مرحبًا بك في بوابة الكيمياء للصف التاسع.</p></div>
     </div>
 
@@ -34,10 +93,10 @@
       <div class="card login" style="margin-top:15px"><h2>🔐 تغيير كلمة المرور</h2><div class="notice">هذه أول مرة تدخل فيها. غيّر كلمة المرور المؤقتة قبل استخدام البوابة.</div>
         <div class="field"><label>كلمة المرور الجديدة</label><input id="newPass1" type="password" minlength="6" autocomplete="new-password"></div>
         <div class="field"><label>تأكيد كلمة المرور</label><input id="newPass2" type="password" autocomplete="new-password"></div>
-        <button id="changeBtn" class="btn" onclick="changeFirstPassword()">حفظ والدخول</button><p id="passMsg" class="muted"></p>
+        <button id="changeBtn" class="btn" onclick="changeFirstPassword()">🧪 حفظ والدخول</button><p id="passMsg" class="muted"></p>
       </div></div>
   </div>
-  <div class="footer">بوابة الكيمياء للصف التاسع</div>
+  <div class="footer">⚗️ بوابة الكيمياء للصف التاسع</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -50,6 +109,16 @@ let currentPassword='';
 
 function hideViews(){['studentView','changePassView'].forEach(id=>document.getElementById(id).classList.add('hide'))}
 function openApp(){document.getElementById('loginView').classList.add('hide');document.getElementById('app').classList.remove('hide')}
+function normStudent(r){
+  return {
+    id:r.student_id ?? r.id,
+    full_name:r.student_name ?? r.full_name ?? '',
+    class_name:r.student_class ?? r.class_name ?? '',
+    username:r.student_username ?? r.username ?? '',
+    points:r.student_points ?? r.points ?? 0,
+    must_change_password:r.change_password ?? r.must_change_password ?? false
+  }
+}
 
 async function login(){
   const u=document.getElementById('loginUser').value.trim();
@@ -63,11 +132,11 @@ async function login(){
     const {data,error}=await db.rpc('student_login',{p_username:u,p_password:p});
     if(error) throw error;
     if(!data||data.length===0){msg.className='error';msg.textContent='اسم المستخدم أو كلمة المرور غير صحيحة.';return}
-    currentStudent=data[0]; currentPassword=p;
+    currentStudent=normStudent(data[0]); currentPassword=p;
     openApp();
     if(currentStudent.must_change_password) showChangePass(); else showStudent(currentStudent);
   }catch(e){console.error(e);msg.className='error';msg.textContent='خطأ الاتصال: '+(e?.message||String(e))}
-  finally{btn.disabled=false;btn.textContent='دخول'}
+  finally{btn.disabled=false;btn.textContent='⚗️ دخول إلى البوابة'}
 }
 
 function showStudent(s){
@@ -76,6 +145,7 @@ function showStudent(s){
   document.getElementById('studentWelcome').textContent='مرحبًا، '+s.full_name+' 👋';
   document.getElementById('studentClass').textContent='الصف '+s.class_name;
   document.getElementById('studentPoints').textContent=s.points||0;
+  document.getElementById('studentUsername').textContent=s.username||'';
 }
 
 function showChangePass(){hideViews();document.getElementById('changePassView').classList.remove('hide');document.getElementById('who').textContent=currentStudent.full_name+' — تفعيل الحساب لأول مرة'}
@@ -95,11 +165,10 @@ async function changeFirstPassword(){
     if(data!==true){m.className='error';m.textContent='لم يتم تغيير كلمة المرور. أعد تسجيل الدخول وحاول مرة أخرى.';return}
     currentPassword='';currentStudent.must_change_password=false;m.className='ok';m.textContent='تم تغيير كلمة المرور بنجاح.';setTimeout(()=>showStudent(currentStudent),500);
   }catch(e){console.error(e);m.className='error';m.textContent='حدث خطأ أثناء تغيير كلمة المرور.'}
-  finally{btn.disabled=false;btn.textContent='حفظ والدخول'}
+  finally{btn.disabled=false;btn.textContent='🧪 حفظ والدخول'}
 }
 
 function logout(){currentStudent=null;currentPassword='';document.getElementById('app').classList.add('hide');document.getElementById('loginView').classList.remove('hide');document.getElementById('loginPass').value='';document.getElementById('loginMsg').textContent=''}
-
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
 </script>
 </body>
