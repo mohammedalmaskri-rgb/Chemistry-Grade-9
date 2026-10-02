@@ -60,13 +60,13 @@ async function login(){
   if(!u||!p){msg.className='error';msg.textContent='أدخل اسم المستخدم وكلمة المرور.';return}
   btn.disabled=true; btn.textContent='جاري الدخول...';
   try{
-    const {data,error}=await db.rpc('login_student',{p_username:u,p_password:p});
+    const {data,error}=await db.rpc('student_login',{p_username:u,p_password:p});
     if(error) throw error;
     if(!data||data.length===0){msg.className='error';msg.textContent='اسم المستخدم أو كلمة المرور غير صحيحة.';return}
     currentStudent=data[0]; currentPassword=p;
     openApp();
     if(currentStudent.must_change_password) showChangePass(); else showStudent(currentStudent);
-  }catch(e){console.error(e);msg.className='error';msg.textContent='تعذر الاتصال بالنظام الآن. حاول مرة أخرى.'}
+  }catch(e){console.error(e);msg.className='error';msg.textContent='خطأ الاتصال: '+(e?.message||String(e))}
   finally{btn.disabled=false;btn.textContent='دخول'}
 }
 
@@ -90,7 +90,7 @@ async function changeFirstPassword(){
   if(p1!==p2){m.className='error';m.textContent='كلمتا المرور غير متطابقتين.';return}
   btn.disabled=true;btn.textContent='جاري الحفظ...';
   try{
-    const {data,error}=await db.rpc('change_student_password',{p_username:currentStudent.username,p_current_password:currentPassword,p_new_password:p1});
+    const {data,error}=await db.rpc('student_change_password',{p_username:currentStudent.username,p_old_password:currentPassword,p_new_password:p1});
     if(error) throw error;
     if(data!==true){m.className='error';m.textContent='لم يتم تغيير كلمة المرور. أعد تسجيل الدخول وحاول مرة أخرى.';return}
     currentPassword='';currentStudent.must_change_password=false;m.className='ok';m.textContent='تم تغيير كلمة المرور بنجاح.';setTimeout(()=>showStudent(currentStudent),500);
