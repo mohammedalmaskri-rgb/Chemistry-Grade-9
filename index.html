@@ -198,23 +198,21 @@ function materialAttachment(m){
 window.openStudyFile=async(dataEnc,titleEnc)=>{
   const data=decodeURIComponent(dataEnc),title=decodeURIComponent(titleEnc);
   const isPdf=data.startsWith('data:application/pdf');
-  $('popupRoot').innerHTML=`<div class="popup"><div class="iframe-wrap"><div class="iframe-bar"><b style="flex:1">📄 ${esc(title)}</b><span id="pdfPageCount" class="muted"></span><button id="closeStudyFile" class="btn danger">إغلاق</button></div>${isPdf?'<div id="pdfPages" style="flex:1;overflow:auto;background:#e9eef2;padding:12px"><div class="muted" style="text-align:center;padding:25px">جاري تحميل جميع الصفحات...</div></div>':`<iframe src="${data}"></iframe>`}</div></div>`;
-  $('closeStudyFile').onclick=()=>$('popupRoot').innerHTML='';
-  if(!isPdf)return;
-  try{
-    const b64=data.split(',')[1]; const bin=atob(b64); const bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-    const pdfjs=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
-    const pdf=await pdfjs.getDocument({data:bytes}).promise;
-    $('pdfPageCount').textContent=`${pdf.numPages} صفحة`; const host=$('pdfPages'); host.innerHTML='';
-    for(let n=1;n<=pdf.numPages;n++){
-      const page=await pdf.getPage(n); const base=page.getViewport({scale:1}); const maxW=Math.min(1000,Math.max(280,host.clientWidth-24)); const scale=Math.min(2,maxW/base.width); const vp=page.getViewport({scale});
-      const wrap=document.createElement('div'); wrap.style.cssText='background:white;margin:0 auto 16px;max-width:1000px;box-shadow:0 3px 14px #0002;border-radius:8px;overflow:hidden';
-      const c=document.createElement('canvas'); c.width=Math.floor(vp.width); c.height=Math.floor(vp.height); c.style.cssText='display:block;width:100%;height:auto'; wrap.appendChild(c); host.appendChild(wrap);
-      await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
-    }
-  }catch(e){const host=$('pdfPages'); if(host)host.innerHTML=`<div class="msg err">تعذر عرض صفحات PDF داخل البوابة. <button class="btn secondary" id="fallbackPdf">فتح الملف بالطريقة العادية</button></div>`; if($('fallbackPdf'))$('fallbackPdf').onclick=()=>window.open(data,'_blank');}
+  let viewUrl=data;
+  if(isPdf){
+    try{
+      const b64=data.split(',')[1]||'';
+      const bin=atob(b64);
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+      viewUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
+    }catch(e){viewUrl=data}
+  }
+  $('popupRoot').innerHTML=`<div class="popup"><div class="iframe-wrap"><div class="iframe-bar"><b style="flex:1">📄 ${esc(title)}</b>${isPdf?'<span class="muted">مرّر لعرض جميع الصفحات</span>':''}<button id="openStudyExternal" class="btn secondary">فتح بملء الشاشة</button><button id="closeStudyFile" class="btn danger">إغلاق</button></div><iframe id="studyFileFrame" src="${viewUrl}" style="width:100%;height:calc(100vh - 110px);border:0;background:#fff"></iframe></div></div>`;
+  $('openStudyExternal').onclick=()=>window.open(viewUrl,'_blank');
+  $('closeStudyFile').onclick=()=>{if(isPdf&&viewUrl.startsWith('blob:'))URL.revokeObjectURL(viewUrl);$('popupRoot').innerHTML=''};
 };
+
 function showImagePreview(inputId,imgId){$(inputId).onchange=async()=>{const f=$(inputId).files?.[0];if(!f){$(imgId).style.display='none';return}try{const d=await compressImage(f,700,.7);$(imgId).src=d;$(imgId).style.display='block'}catch(e){alert(e.message);$(inputId).value=''}}}
 showImagePreview('bankQuestionImage','bankQuestionPreview');showImagePreview('bankSolutionImage','bankSolutionPreview');
 
