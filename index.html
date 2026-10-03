@@ -6,13 +6,60 @@
 <title>بوابة الكيمياء | الصف التاسع</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:linear-gradient(135deg,#f8fbfb,#edf7f5);color:#173233;min-height:100vh}button,input,textarea,select{font:inherit}.top{background:linear-gradient(110deg,#0f766e,#155e75);color:#fff;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;box-shadow:0 8px 28px #0002}.brand{font-size:22px;font-weight:800}.sub{font-size:12px;opacity:.85}.wrap{max-width:1180px;margin:auto;padding:22px}.card{background:#ffffffee;border:1px solid #d9ece8;border-radius:22px;box-shadow:0 14px 36px #0f766e12;padding:20px}.login{max-width:520px;margin:8vh auto}.tabs{display:flex;gap:8px;margin-bottom:18px}.tab{flex:1;padding:12px;border:0;border-radius:12px;background:#e8f4f2;color:#0f766e;font-weight:700}.tab.active{background:#0f766e;color:white}.field{margin:12px 0}.field label{display:block;font-weight:700;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;padding:12px;border:1px solid #cfe2df;border-radius:12px;background:#fff}.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}.primary{background:#0f766e;color:#fff}.secondary{background:#e8f4f2;color:#0f766e}.danger{background:#fee2e2;color:#991b1b}.btn:disabled{opacity:.5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.stat{padding:18px;border-radius:18px;background:linear-gradient(145deg,#fff,#f3fbf9);border:1px solid #dcefeb}.stat b{font-size:28px;display:block;color:#0f766e}.nav{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.nav button{padding:10px 13px;border:1px solid #cae1dd;border-radius:12px;background:white;color:#245354;font-weight:700}.nav button.active{background:#0f766e;color:white}.section{display:none}.section.active{display:block}.item{border:1px solid #deece9;border-radius:16px;padding:14px;margin:10px 0;background:white}.item h3{margin:0 0 8px}.muted{color:#678;font-size:13px}.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#e8f4f2;color:#0f766e;font-size:12px;font-weight:800}.lesson-progress{background:linear-gradient(120deg,#f0fdfa,#eff6ff);border:1px solid #c9e9e1;padding:17px;border-radius:18px;margin-bottom:16px}.class-card{border:1px solid #d9ece8;border-radius:16px;padding:14px;background:#fff}.class-card strong{font-size:18px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.hide{display:none!important}.msg{padding:10px 12px;border-radius:10px;margin:10px 0}.ok{background:#dcfce7;color:#166534}.err{background:#fee2e2;color:#991b1b}.popup{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}.popup .card{max-width:560px;width:100%}.chem-bg{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:-1}.atom{position:absolute;border:1px solid #0f766e22;border-radius:50%;width:130px;height:130px}.atom:after,.atom:before{content:"";position:absolute;inset:30px;border:1px solid #0f766e33;border-radius:50%;transform:rotate(60deg)}.atom:after{transform:rotate(-60deg)}table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden}th,td{padding:10px;border-bottom:1px solid #e5efed;text-align:right}th{background:#edf8f6}.link{color:#0f766e;font-weight:700;text-decoration:none}.small{font-size:12px}@media(max-width:720px){.row,.row3{grid-template-columns:1fr}.wrap{padding:12px}.top{padding:14px}.brand{font-size:18px}table{font-size:12px}}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:linear-gradient(135deg,#f8fbfb,#edf7f5);color:#173233;min-height:100vh}button,input,textarea,select{font:inherit}.top{background:linear-gradient(110deg,#0f766e,#155e75);color:#fff;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;box-shadow:0 8px 28px #0002}.brand{font-size:22px;font-weight:800}.sub{font-size:12px;opacity:.85}.wrap{max-width:1180px;margin:auto;padding:22px}.card{background:#ffffffee;border:1px solid #d9ece8;border-radius:22px;box-shadow:0 14px 36px #0f766e12;padding:20px}.login{max-width:520px;margin:8vh auto}.tabs{display:flex;gap:8px;margin-bottom:18px}.tab{flex:1;padding:12px;border:0;border-radius:12px;background:#e8f4f2;color:#0f766e;font-weight:700}.tab.active{background:#0f766e;color:white}.field{margin:12px 0}.field label{display:block;font-weight:700;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;padding:12px;border:1px solid #cfe2df;border-radius:12px;background:#fff}.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}.primary{background:#0f766e;color:#fff}.secondary{background:#e8f4f2;color:#0f766e}.danger{background:#fee2e2;color:#991b1b}.btn:disabled{opacity:.5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.stat{padding:18px;border-radius:18px;background:linear-gradient(145deg,#fff,#f3fbf9);border:1px solid #dcefeb}.stat b{font-size:28px;display:block;color:#0f766e}.nav{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.nav button{padding:10px 13px;border:1px solid #cae1dd;border-radius:12px;background:white;color:#245354;font-weight:700}.nav button.active{background:#0f766e;color:white}.section{display:none}.section.active{display:block}.item{border:1px solid #deece9;border-radius:16px;padding:14px;margin:10px 0;background:white}.item h3{margin:0 0 8px}.muted{color:#678;font-size:13px}.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#e8f4f2;color:#0f766e;font-size:12px;font-weight:800}.lesson-progress{background:linear-gradient(120deg,#f0fdfa,#eff6ff);border:1px solid #c9e9e1;padding:17px;border-radius:18px;margin-bottom:16px}.class-card{border:1px solid #d9ece8;border-radius:16px;padding:14px;background:#fff}.class-card strong{font-size:18px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.hide{display:none!important}.msg{padding:10px 12px;border-radius:10px;margin:10px 0}.ok{background:#dcfce7;color:#166534}.err{background:#fee2e2;color:#991b1b}.popup{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}.popup .card{max-width:560px;width:100%}
+.chem-bg{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:-1}
+.atom{position:absolute;width:150px;height:150px;opacity:.8;filter:drop-shadow(0 8px 20px #0f766e0f);animation:atomFloat 7s ease-in-out infinite}
+.atom.large{width:210px;height:210px;animation-duration:9s}
+.atom .nucleus{position:absolute;left:50%;top:50%;width:18px;height:18px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 35% 35%,#fff 0 12%,#5eead4 13% 34%,#0f766e 35% 100%);box-shadow:0 0 0 7px #0f766e14,0 0 24px #0f766e35}
+.atom .orbit{position:absolute;left:50%;top:50%;width:100%;height:42%;border:1px solid #0f766e38;border-radius:50%;transform-origin:center}
+.atom .orbit.o1{transform:translate(-50%,-50%) rotate(0deg)}
+.atom .orbit.o2{transform:translate(-50%,-50%) rotate(60deg)}
+.atom .orbit.o3{transform:translate(-50%,-50%) rotate(-60deg)}
+.atom .orbit .electron{position:absolute;left:50%;top:-5px;width:10px;height:10px;border-radius:50%;background:#0f766e;box-shadow:0 0 0 4px #0f766e18,0 0 12px #0f766e66;transform:translateX(-50%);animation:electronRun 3.8s linear infinite}
+.atom .orbit.o2 .electron{animation-duration:4.8s;animation-delay:-1.4s}
+.atom .orbit.o3 .electron{animation-duration:5.6s;animation-delay:-2.6s}
+.atom.large .orbit .electron{width:11px;height:11px}
+@keyframes electronRun{0%{offset-distance:0%}100%{offset-distance:100%}}
+@supports(offset-path:path("M 0 0")){
+  .atom .orbit .electron{left:0;top:0;transform:none;offset-path:ellipse(50% 50% at 50% 50%);offset-rotate:0deg}
+}
+@supports not (offset-path:path("M 0 0")){
+  .atom .orbit{animation:orbitSpin 4.2s linear infinite}
+  .atom .orbit.o2{animation-duration:5.1s}
+  .atom .orbit.o3{animation-duration:5.9s}
+  .atom .orbit .electron{animation:none;left:50%;top:-5px}
+}
+@keyframes orbitSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes atomFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-10px) rotate(3deg)}}
+@media(max-width:720px){.atom{opacity:.62;transform:scale(.82)}.atom.large{transform:scale(.74)}}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden}th,td{padding:10px;border-bottom:1px solid #e5efed;text-align:right}th{background:#edf8f6}.link{color:#0f766e;font-weight:700;text-decoration:none}.small{font-size:12px}@media(max-width:720px){.row,.row3{grid-template-columns:1fr}.wrap{padding:12px}.top{padding:14px}.brand{font-size:18px}table{font-size:12px}}
 
 .media-img{max-width:100%;max-height:520px;display:block;margin:12px auto;border-radius:14px;border:1px solid #dcebea;object-fit:contain;background:#f8fbfb}.state-on{background:#dcfce7;color:#166534}.state-off{background:#f1f5f9;color:#475569}.inline-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.preview{max-width:220px;max-height:180px;border-radius:12px;border:1px solid #dcebea;margin-top:8px;display:none}.iframe-wrap{width:min(1100px,96vw);height:min(760px,88vh);background:white;border-radius:18px;overflow:hidden;display:flex;flex-direction:column}.iframe-bar{padding:10px;display:flex;gap:8px;align-items:center;background:#f3faf8;border-bottom:1px solid #dcebea}.iframe-wrap iframe{border:0;width:100%;flex:1;background:white}
+
+.learning-picker{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}.material-card{border:1px solid #d7ebe7;border-radius:18px;padding:16px;background:linear-gradient(145deg,#fff,#f7fcfb);margin:12px 0}.material-card.summary{border-right:5px solid #0f766e}.material-card.questions{border-right:5px solid #2563eb}.material-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.visit-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.visit-box{padding:14px;border-radius:14px;background:#f0fdfa;border:1px solid #cfeae4}.visit-box b{font-size:22px;color:#0f766e}.file-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;background:#eef7f5;color:#0f766e;font-weight:700}.lesson-empty{padding:24px;text-align:center;color:#678;background:#f8fbfb;border-radius:16px}.eng-table{width:100%;border-collapse:collapse}.eng-table th,.eng-table td{padding:9px;border-bottom:1px solid #e5efed;text-align:right;white-space:nowrap}@media(max-width:700px){.learning-picker{grid-template-columns:1fr}.material-actions .btn{width:100%}.eng-table{font-size:12px}}
 </style>
 </head>
 <body>
-<div class="chem-bg"><div class="atom" style="top:8%;left:3%"></div><div class="atom" style="bottom:8%;right:4%;width:190px;height:190px"></div></div>
+<div class="chem-bg" aria-hidden="true">
+  <div class="atom" style="top:8%;left:3%">
+    <span class="nucleus"></span>
+    <span class="orbit o1"><span class="electron"></span></span>
+    <span class="orbit o2"><span class="electron"></span></span>
+    <span class="orbit o3"><span class="electron"></span></span>
+  </div>
+  <div class="atom large" style="bottom:7%;right:3%">
+    <span class="nucleus"></span>
+    <span class="orbit o1"><span class="electron"></span></span>
+    <span class="orbit o2"><span class="electron"></span></span>
+    <span class="orbit o3"><span class="electron"></span></span>
+  </div>
+  <div class="atom" style="top:42%;right:7%;width:110px;height:110px;opacity:.45">
+    <span class="nucleus"></span>
+    <span class="orbit o1"><span class="electron"></span></span>
+    <span class="orbit o2"><span class="electron"></span></span>
+    <span class="orbit o3"><span class="electron"></span></span>
+  </div>
+</div>
 <header class="top"><div><div class="brand">⚗️ بوابة الكيمياء | الصف التاسع</div><div class="sub" id="topSub">9/1 - 9/7</div></div><button id="logoutBtn" class="btn secondary hide">خروج</button></header>
 <main class="wrap">
 <section id="loginView" class="card login">
@@ -30,10 +77,11 @@
     <div class="card lesson-progress"><div class="badge">📍 أين وصلنا؟</div><h3 id="progressTitle">لم يتم تحديد الدرس بعد</h3><div id="progressMeta" class="muted"></div></div>
   </div>
   <div class="nav" id="studentNav">
-    <button data-sec="s-ann" class="active">📢 الإعلانات</button><button data-sec="s-lessons">📚 دروسي</button><button data-sec="s-homework">📝 واجباتي</button><button data-sec="s-grades">📊 درجاتي</button><button data-sec="s-lab">🧪 التجارب</button><button data-sec="s-tests">✅ الاختبارات</button><button data-sec="s-files">📁 الملفات</button><button data-sec="s-bank">🖼️ بنك الأسئلة</button><button data-sec="s-ask">💬 اسأل معلمك</button>
+    <button data-sec="s-ann" class="active">📢 الإعلانات</button><button data-sec="s-lessons">📚 دروسي</button><button data-sec="s-study">📖 الملخصات والأسئلة</button><button data-sec="s-homework">📝 واجباتي</button><button data-sec="s-grades">📊 درجاتي</button><button data-sec="s-lab">🧪 التجارب</button><button data-sec="s-tests">✅ الاختبارات</button><button data-sec="s-files">📁 الملفات</button><button data-sec="s-bank">🖼️ بنك الأسئلة</button><button data-sec="s-ask">💬 اسأل معلمك</button>
   </div>
   <section id="s-ann" class="section active card"><h2>📢 الإعلانات</h2><div id="annList"></div></section>
   <section id="s-lessons" class="section card"><h2>📚 دروسي</h2><div id="lessonList"></div></section>
+  <section id="s-study" class="section card"><h2>📖 الملخصات والأسئلة</h2><p class="muted">اختر الوحدة ثم الدرس. عند فتح الدرس يُسجل دخولك تلقائيًا لمتابعة الاستفادة.</p><div class="learning-picker"><div class="field"><label>الوحدة</label><select id="studentStudyUnit"><option value="">اختر الوحدة</option></select></div><div class="field"><label>الدرس</label><select id="studentStudyTopic"><option value="">اختر الدرس</option></select></div></div><div id="studentLessonMaterials" class="lesson-empty">اختر درسًا لعرض الملخص والأسئلة.</div></section>
   <section id="s-homework" class="section card"><h2>📝 واجباتي</h2><div id="homeworkList"></div></section>
   <section id="s-grades" class="section card"><h2>📊 درجاتي</h2><div id="gradeList"></div></section>
   <section id="s-lab" class="section card"><h2>🧪 التجارب</h2><div id="labList"></div></section>
@@ -47,7 +95,7 @@
   <div class="card today-card" style="margin-bottom:14px"><h2 style="margin-top:0">☀️ اليوم في بوابة الكيمياء</h2><div id="todaySummary" class="muted">جاري تحميل ملخص اليوم...</div></div>
   <div class="grid" id="teacherStats"></div>
   <div class="nav" id="teacherNav">
-    <button data-sec="t-progress" class="active">📍 تقدم الشعب</button><button data-sec="t-ann">📢 رسالة جماعية</button><button data-sec="t-experiments">🧪 تجارب 3D</button><button data-sec="t-bank">🖼️ بنك الأسئلة</button><button data-sec="t-content">📚 المحتوى</button><button data-sec="t-grades">📊 الدرجات</button><button data-sec="t-questions">💬 أسئلة الطلاب</button><button data-sec="t-points">⭐ النقاط</button><button data-sec="t-students">👥 الطلاب</button><button data-sec="t-account">⚙️ الحساب</button>
+    <button data-sec="t-progress" class="active">📍 تقدم الشعب</button><button data-sec="t-ann">📢 رسالة جماعية</button><button data-sec="t-experiments">🧪 تجارب 3D</button><button data-sec="t-study">📖 ملخصات وأسئلة</button><button data-sec="t-bank">🖼️ بنك الأسئلة</button><button data-sec="t-content">📚 المحتوى</button><button data-sec="t-grades">📊 الدرجات</button><button data-sec="t-questions">💬 أسئلة الطلاب</button><button data-sec="t-points">⭐ النقاط</button><button data-sec="t-students">👥 الطلاب</button><button data-sec="t-account">⚙️ الحساب</button>
   </div>
   <section id="t-progress" class="section active card"><h2>📍 أين وصلت مع كل شعبة؟</h2><div class="grid" id="progressCards"></div></section>
   <section id="t-ann" class="section card"><h2>📢 إرسال رسالة جماعية</h2><div class="row"><div class="field"><label>العنوان</label><input id="annTitle"></div><div class="field"><label>المستهدف</label><select id="annClass"><option value="ALL">كل الصفوف</option></select></div></div><div class="field"><label>الرسالة</label><textarea id="annBody" rows="5"></textarea></div><label><input id="annPopup" type="checkbox" checked> تظهر كنافذة عند دخول الطالب</label><br><br><button id="annAddBtn" class="btn primary">إرسال</button><div id="annTeacherMsg"></div><h3>الرسائل السابقة</h3><div id="teacherAnnList"></div></section>
@@ -59,6 +107,18 @@
     <label><input id="expVisible" type="checkbox"> إظهار للطلاب مباشرة بعد الإضافة</label><br><br>
     <button id="expAddBtn" class="btn primary">إضافة التجربة</button><div id="expMsg"></div>
     <h3>التجارب المحفوظة</h3><div id="teacherExperimentList"></div>
+  </section>
+  <section id="t-study" class="section card">
+    <h2>📖 ملخصات وأسئلة الدروس</h2>
+    <p class="muted">اختر الدرس ثم ارفع الملخص أو أسئلة الدرس كصورة أو PDF. الحل غير مطلوب. تقدر تحفظ المحتوى مخفيًا وتظهره للطلاب وقت ما تريد.</p>
+    <div class="row3"><div class="field"><label>الدرس</label><select id="studyTopic"></select></div><div class="field"><label>النوع</label><select id="studyType"><option value="summary">📖 ملخص الدرس</option><option value="questions">📝 أسئلة الدرس</option></select></div><div class="field"><label>الشعبة</label><select id="studyClass"><option value="ALL">كل الصفوف</option></select></div></div>
+    <div class="row"><div class="field"><label>العنوان</label><input id="studyTitle" placeholder="مثال: ملخص الانتشار في الموائع"></div><div class="field"><label>ملف أو صورة</label><input id="studyFile" type="file" accept="image/*,application/pdf"></div></div>
+    <div class="field"><label>ملاحظة اختيارية</label><textarea id="studyNote" rows="2" placeholder="مثال: راجع الملخص ثم حل أسئلة الدرس"></textarea></div>
+    <label><input id="studyVisible" type="checkbox"> إظهار للطلاب مباشرة</label><br><br><button id="studyAddBtn" class="btn primary">حفظ المحتوى</button><div id="studyMsg"></div>
+    <hr><h3>المحتوى المضاف</h3><div id="teacherStudyList"></div>
+    <hr><h3>👁️ متابعة دخول الطلاب للدرس</h3>
+    <div class="row"><div class="field"><label>الدرس</label><select id="engTopic"></select></div><div class="field"><label>الشعبة</label><select id="engClass"><option value="ALL">كل الصفوف</option></select></div></div>
+    <button id="engLoadBtn" class="btn primary">عرض إحصائية الدخول</button><div id="engResults" style="margin-top:14px"></div>
   </section>
   <section id="t-bank" class="section card">
     <h2>🖼️ بنك الأسئلة بالصور</h2>
@@ -86,18 +146,18 @@ const SUPABASE_URL='https://axcfgpfcdrwnsryihulg.supabase.co';
 const SUPABASE_KEY='sb_publishable_1BXmnOOKxAHxVvdMRi8QEw_pBlwX60T';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const classes=['9/1','9/2','9/3','9/4','9/5','9/6','9/7'];
-let loginMode='student',studentToken=null,teacherToken=null,currentStudent=null,allStudents=[],topics=[];
+let loginMode='student',studentToken=null,teacherToken=null,currentStudent=null,allStudents=[],topics=[],studentLearningTopics=[];
 const $=id=>document.getElementById(id); const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function msg(id,t,ok=true){$(id).innerHTML=`<div class="msg ${ok?'ok':'err'}">${esc(t)}</div>`}
 function show(view){['loginView','studentView','teacherView'].forEach(x=>$(x).classList.add('hide'));$(view).classList.remove('hide');$('logoutBtn').classList.toggle('hide',view==='loginView')}
 function nav(root){root.querySelectorAll('button[data-sec]').forEach(b=>b.onclick=()=>{root.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));$(b.dataset.sec).classList.add('active')})}
 nav($('studentNav'));nav($('teacherNav'));
-classes.forEach(c=>{['annClass','contentClass','studentFilter','expClass','bankClass'].forEach(id=>$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`));['gradeClass','pointsClass'].forEach(id=>$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`))});
+classes.forEach(c=>{['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass'].forEach(id=>$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`));['gradeClass','pointsClass'].forEach(id=>$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`))});
 document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>{loginMode=b.dataset.login;document.querySelectorAll('[data-login]').forEach(x=>x.classList.toggle('active',x===b));$('teacherHint').style.display=loginMode==='teacher'?'block':'none';$('loginUser').placeholder=loginMode==='teacher'?'teacher':'مثال: 91001'});
 async function rpc(fn,args={}){const {data,error}=await sb.rpc(fn,args);if(error)throw error;return data}
 $('loginBtn').onclick=async()=>{try{$('loginBtn').disabled=true;$('loginMsg').innerHTML='';if(loginMode==='student'){const d=await rpc('portal_student_login',{p_username:$('loginUser').value,p_password:$('loginPass').value});if(!d?.length)throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة');studentToken=d[0].token;currentStudent=d[0];localStorage.setItem('chemStudentToken',studentToken);await enterStudent(d[0])}else{const d=await rpc('portal_teacher_login',{p_username:$('loginUser').value,p_password:$('loginPass').value});if(!d?.length)throw new Error('بيانات المعلم غير صحيحة');teacherToken=d[0].token;localStorage.setItem('chemTeacherToken',teacherToken);if(d[0].must_change_password)await forceTeacherPasswordChange();await enterTeacher()}}catch(e){msg('loginMsg',e.message,false)}finally{$('loginBtn').disabled=false}};
 $('logoutBtn').onclick=()=>{studentToken=teacherToken=null;localStorage.removeItem('chemStudentToken');localStorage.removeItem('chemTeacherToken');show('loginView');$('topSub').textContent='9/1 - 9/7'};
-async function enterStudent(s){currentStudent=s;show('studentView');$('topSub').textContent=`${s.full_name} — ${s.class_name}`;$('studentWelcome').textContent=`مرحبًا، ${s.full_name} 👋`;$('studentMeta').textContent=`الشعبة ${s.class_name} • اسم المستخدم ${s.username}`;$('studentPoints').textContent=s.points??0;if(s.must_change_password) await forcePasswordChange();await Promise.all([loadStudentProgress(),loadStudentAnnouncements(),loadStudentContent(),loadGrades(),loadQuestions(),loadStudentExperiments(),loadStudentBank()])}
+async function enterStudent(s){currentStudent=s;show('studentView');$('topSub').textContent=`${s.full_name} — ${s.class_name}`;$('studentWelcome').textContent=`مرحبًا، ${s.full_name} 👋`;$('studentMeta').textContent=`الشعبة ${s.class_name} • اسم المستخدم ${s.username}`;$('studentPoints').textContent=s.points??0;if(s.must_change_password) await forcePasswordChange();await Promise.all([loadStudentProgress(),loadStudentAnnouncements(),loadStudentContent(),loadGrades(),loadQuestions(),loadStudentExperiments(),loadStudentBank(),loadStudentLearningTopics()])}
 async function forcePasswordChange(){return new Promise(resolve=>{const root=$('popupRoot');root.innerHTML=`<div class="popup"><div class="card"><h2>🔒 تغيير كلمة المرور</h2><p>هذه أول مرة تدخل فيها. غيّر كلمة المرور المؤقتة قبل متابعة استخدام البوابة.</p><div class="field"><input id="np1" type="password" placeholder="كلمة المرور الجديدة"></div><div class="field"><input id="np2" type="password" placeholder="تأكيد كلمة المرور"></div><div id="pm"></div><button id="saveNp" class="btn primary">حفظ والدخول</button></div></div>`;$('saveNp').onclick=async()=>{if($('np1').value.length<6||$('np1').value!==$('np2').value){msg('pm','تأكد من تطابق كلمتي المرور وأنها 6 أحرف على الأقل',false);return}const ok=await rpc('portal_student_change_password',{p_token:studentToken,p_new_password:$('np1').value});if(ok){root.innerHTML='';resolve()}else msg('pm','تعذر تغيير كلمة المرور',false)}})}
 async function forceTeacherPasswordChange(){return new Promise(resolve=>{const root=$('popupRoot');root.innerHTML=`<div class="popup"><div class="card"><h2>🔐 تأمين حساب المعلم</h2><p>هذه أول مرة تدخل فيها بهذه النسخة. غيّر كلمة المرور الافتراضية قبل متابعة لوحة التحكم.</p><div class="field"><input id="tnp1" type="password" placeholder="كلمة المرور الجديدة - 8 أحرف على الأقل"></div><div class="field"><input id="tnp2" type="password" placeholder="تأكيد كلمة المرور"></div><div id="tpm"></div><button id="saveTnp" class="btn primary">حفظ والدخول</button></div></div>`;$('saveTnp').onclick=async()=>{if($('tnp1').value.length<8||$('tnp1').value!==$('tnp2').value){msg('tpm','تأكد من تطابق كلمتي المرور وأنها 8 أحرف على الأقل',false);return}const ok=await rpc('portal_teacher_change_password',{p_token:teacherToken,p_new_password:$('tnp1').value});if(ok){root.innerHTML='';resolve()}else msg('tpm','تعذر تغيير كلمة المرور',false)}})}
 async function loadStudentProgress(){const d=await rpc('portal_student_progress',{p_token:studentToken});const p=d?.[0];if(p?.topic_title){$('progressTitle').textContent=p.topic_title;$('progressMeta').textContent=`${p.section_code} • صفحة ${p.page_no??'-'} • آخر تحديث ${new Date(p.updated_at).toLocaleString('ar')}${p.note?' • '+p.note:''}`}else{$('progressTitle').textContent='لم يتم تحديد الدرس بعد';$('progressMeta').textContent=''}}
@@ -119,8 +179,42 @@ async function compressImage(file,maxWidth=1500,quality=.78){
   if(out.length>2800000)throw new Error('الصورة كبيرة جدًا حتى بعد الضغط. اختر صورة أصغر.');
   return out;
 }
+async function prepareStudyFile(file){
+  if(!file)return {data:null,name:null,mime:null};
+  if(file.type.startsWith('image/')){const data=await compressImage(file,1600,.78);return {data,name:file.name||'image.jpg',mime:'image/jpeg'}}
+  if(file.type==='application/pdf'){
+    if(file.size>6*1024*1024)throw new Error('ملف PDF أكبر من 6 MB. قسّمه إلى ملف أصغر أو اضغطه أولًا.');
+    const data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)});
+    return {data,name:file.name||'document.pdf',mime:'application/pdf'};
+  }
+  throw new Error('ارفع صورة أو ملف PDF فقط');
+}
+function materialAttachment(m){
+  if(!m.attachment_data)return '';
+  if((m.attachment_mime||'').startsWith('image/'))return `<img class="media-img" src="${m.attachment_data}" alt="${esc(m.attachment_name||m.title)}">`;
+  return `<button class="btn secondary" onclick="openStudyFile('${encodeURIComponent(m.attachment_data)}','${encodeURIComponent(m.title)}')">📄 فتح ${esc(m.attachment_name||'الملف')}</button>`;
+}
+window.openStudyFile=(dataEnc,titleEnc)=>{const data=decodeURIComponent(dataEnc),title=decodeURIComponent(titleEnc);$('popupRoot').innerHTML=`<div class="popup"><div class="iframe-wrap"><div class="iframe-bar"><b style="flex:1">📄 ${esc(title)}</b><button id="closeStudyFile" class="btn danger">إغلاق</button></div><iframe src="${data}"></iframe></div></div>`;$('closeStudyFile').onclick=()=>$('popupRoot').innerHTML=''};
 function showImagePreview(inputId,imgId){$(inputId).onchange=async()=>{const f=$(inputId).files?.[0];if(!f){$(imgId).style.display='none';return}try{const d=await compressImage(f,700,.7);$(imgId).src=d;$(imgId).style.display='block'}catch(e){alert(e.message);$(inputId).value=''}}}
 showImagePreview('bankQuestionImage','bankQuestionPreview');showImagePreview('bankSolutionImage','bankSolutionPreview');
+
+async function loadStudentLearningTopics(){
+  studentLearningTopics=await rpc('portal_student_learning_topics',{p_token:studentToken});
+  const units=[...new Map(studentLearningTopics.map(t=>[t.unit_no,t.unit_title])).entries()];
+  $('studentStudyUnit').innerHTML='<option value="">اختر الوحدة</option>'+units.map(([n,title])=>`<option value="${n}">الوحدة ${n} — ${esc(title)}</option>`).join('');
+  $('studentStudyTopic').innerHTML='<option value="">اختر الدرس</option>';
+  $('studentLessonMaterials').innerHTML='<div class="lesson-empty">اختر درسًا لعرض الملخص والأسئلة.</div>';
+}
+$('studentStudyUnit').onchange=()=>{const u=Number($('studentStudyUnit').value);const arr=studentLearningTopics.filter(t=>t.unit_no===u);$('studentStudyTopic').innerHTML='<option value="">اختر الدرس</option>'+arr.map(t=>`<option value="${t.id}">${esc(t.title)}${t.page_no?' — ص '+t.page_no:''}${t.has_summary?' • ملخص':''}${t.has_questions?' • أسئلة':''}</option>`).join('');$('studentLessonMaterials').innerHTML='<div class="lesson-empty">اختر درسًا لعرض محتواه.</div>'};
+$('studentStudyTopic').onchange=async()=>{const id=Number($('studentStudyTopic').value);if(!id){$('studentLessonMaterials').innerHTML='<div class="lesson-empty">اختر درسًا لعرض محتواه.</div>';return}await loadStudentLessonMaterials(id)};
+async function loadStudentLessonMaterials(topicId){
+  $('studentLessonMaterials').innerHTML='<div class="lesson-empty">جاري تحميل محتوى الدرس...</div>';
+  const d=await rpc('portal_student_lesson_materials',{p_token:studentToken,p_topic_id:topicId});
+  if(!d?.length){$('studentLessonMaterials').innerHTML='<div class="lesson-empty">لا يوجد محتوى متاح لهذا الدرس حاليًا.</div>';return}
+  const summaries=d.filter(x=>x.material_type==='summary'),questions=d.filter(x=>x.material_type==='questions');
+  const render=(arr,type,label)=>arr.length?`<h3>${label}</h3>`+arr.map(m=>`<div class="material-card ${type}"><span class="badge">${type==='summary'?'ملخص':'أسئلة'}</span><h3>${esc(m.title)}</h3>${m.note?`<p>${esc(m.note)}</p>`:''}${materialAttachment(m)}</div>`).join(''):'';
+  $('studentLessonMaterials').innerHTML=render(summaries,'summary','📖 ملخص الدرس')+render(questions,'questions','📝 أسئلة الدرس');
+}
 
 async function loadStudentExperiments(){
   const d=await rpc('portal_student_experiments',{p_token:studentToken});
@@ -151,7 +245,20 @@ window.deleteBankQuestion=async id=>{if(!confirm('حذف السؤال؟'))return
 
 $('askImage').onchange=async()=>{const f=$('askImage').files?.[0];if(!f){$('askImagePreview').style.display='none';return}try{const d=await compressImage(f);$('askImagePreview').src=d;$('askImagePreview').style.display='block'}catch(e){msg('askMsg',e.message,false)}};
 $('askBtn').onclick=async()=>{try{$('askBtn').disabled=true;let attachment=$('askUrl').value.trim();const f=$('askImage').files?.[0];if(f){msg('askMsg','جاري تجهيز الصورة...');attachment=await compressImage(f)}const id=await rpc('portal_student_ask',{p_token:studentToken,p_question:$('askText').value,p_attachment_url:attachment});if(!id)throw new Error('تعذر الإرسال');$('askText').value='';$('askUrl').value='';$('askImage').value='';$('askImagePreview').src='';$('askImagePreview').style.display='none';msg('askMsg','تم إرسال سؤالك للمعلم ✅');await loadQuestions()}catch(e){msg('askMsg',e.message,false)}finally{$('askBtn').disabled=false}};
-async function enterTeacher(){show('teacherView');$('topSub').textContent='لوحة المعلم';topics=await rpc('portal_teacher_topics',{p_token:teacherToken});await Promise.all([loadOverview(),loadProgressCards(),loadTeacherAnnouncements(),loadTeacherContent(),loadTeacherQuestions(),loadStudents('ALL'),loadTeacherExperiments(),loadTeacherBank()]);await refreshStudentSelects()}
+function fillStudyTopicSelects(){
+  const html=topics.map(t=>`<option value="${t.id}">الوحدة ${t.unit_no} — ${esc(t.title)}${t.page_no?' (ص '+t.page_no+')':''}</option>`).join('');
+  $('studyTopic').innerHTML=html;$('engTopic').innerHTML=html;
+}
+async function loadTeacherStudyMaterials(){
+  const d=await rpc('portal_teacher_lesson_materials',{p_token:teacherToken,p_topic_id:null});
+  $('teacherStudyList').innerHTML=d?.length?d.map(m=>`<div class="item"><span class="badge">${m.material_type==='summary'?'📖 ملخص':'📝 أسئلة'}</span> <span class="badge">${m.target_class==='ALL'?'كل الصفوف':esc(m.target_class)}</span> <span class="badge ${m.is_visible?'state-on':'state-off'}">${m.is_visible?'ظاهر':'مخفي'}</span><h3>${esc(m.topic_title)} — ${esc(m.title)}</h3>${m.attachment_name?`<div class="muted">📎 ${esc(m.attachment_name)}</div>`:''}<div class="material-actions"><button class="btn ${m.is_visible?'secondary':'primary'}" onclick="toggleStudyMaterial(${m.id},${!m.is_visible})">${m.is_visible?'🙈 إخفاء':'👁️ إظهار للطلاب'}</button><button class="btn danger" onclick="deleteStudyMaterial(${m.id})">حذف</button></div></div>`).join(''):'<div class="muted">لم تضف ملخصات أو أسئلة بعد.</div>';
+}
+$('studyAddBtn').onclick=async()=>{try{$('studyAddBtn').disabled=true;msg('studyMsg','جاري تجهيز الملف...');const f=await prepareStudyFile($('studyFile').files?.[0]);const type=$('studyType').value;const topic=topics.find(t=>t.id===Number($('studyTopic').value));const defaultTitle=type==='summary'?`ملخص ${topic?.title||'الدرس'}`:`أسئلة ${topic?.title||'الدرس'}`;const id=await rpc('portal_teacher_add_lesson_material',{p_token:teacherToken,p_topic_id:Number($('studyTopic').value),p_material_type:type,p_title:$('studyTitle').value.trim()||defaultTitle,p_note:$('studyNote').value,p_attachment_data:f.data,p_attachment_name:f.name,p_attachment_mime:f.mime,p_target_class:$('studyClass').value,p_is_visible:$('studyVisible').checked});if(!id)throw new Error('تعذر حفظ المحتوى');$('studyTitle').value='';$('studyNote').value='';$('studyFile').value='';$('studyVisible').checked=false;msg('studyMsg','تم حفظ المحتوى ✅');await loadTeacherStudyMaterials()}catch(e){msg('studyMsg',e.message,false)}finally{$('studyAddBtn').disabled=false}};
+window.toggleStudyMaterial=async(id,v)=>{const ok=await rpc('portal_teacher_set_lesson_material_visibility',{p_token:teacherToken,p_material_id:id,p_is_visible:v});if(ok)await loadTeacherStudyMaterials()};
+window.deleteStudyMaterial=async id=>{if(!confirm('حذف هذا المحتوى؟'))return;const ok=await rpc('portal_teacher_delete_lesson_material',{p_token:teacherToken,p_material_id:id});if(ok)await loadTeacherStudyMaterials()};
+$('engLoadBtn').onclick=async()=>{const topicId=Number($('engTopic').value),cls=$('engClass').value;$('engResults').innerHTML='<div class="muted">جاري تحميل الإحصائية...</div>';const [v,n]=await Promise.all([rpc('portal_teacher_lesson_visits',{p_token:teacherToken,p_topic_id:topicId,p_class:cls}),rpc('portal_teacher_lesson_nonvisitors',{p_token:teacherToken,p_topic_id:topicId,p_class:cls})]);const total=(v?.length||0)+(n?.length||0);$('engResults').innerHTML=`<div class="visit-summary"><div class="visit-box"><b>${v?.length||0}</b><br>دخلوا الدرس</div><div class="visit-box"><b>${n?.length||0}</b><br>لم يدخلوا</div><div class="visit-box"><b>${total?Math.round((v.length/total)*100):0}%</b><br>نسبة الدخول</div></div><h3>✅ الطلاب الذين دخلوا</h3>${v?.length?`<div style="overflow:auto"><table class="eng-table"><thead><tr><th>الطالب</th><th>الشعبة</th><th>أول دخول</th><th>آخر دخول</th><th>مرات الفتح</th></tr></thead><tbody>${v.map(x=>`<tr><td>${esc(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${new Date(x.first_opened_at).toLocaleString('ar')}</td><td>${new Date(x.last_opened_at).toLocaleString('ar')}</td><td>${x.open_count}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">لم يدخل أحد بعد.</div>'}<h3>⏳ لم يدخلوا بعد</h3>${n?.length?`<div class="grid">${n.map(x=>`<div class="item"><b>${esc(x.full_name)}</b><div class="muted">${esc(x.class_name)} • ${esc(x.username)}</div></div>`).join('')}</div>`:'<div class="msg ok">كل الطلاب المستهدفين دخلوا الدرس ✅</div>'}`};
+
+async function enterTeacher(){show('teacherView');$('topSub').textContent='لوحة المعلم';topics=await rpc('portal_teacher_topics',{p_token:teacherToken});fillStudyTopicSelects();await Promise.all([loadOverview(),loadProgressCards(),loadTeacherAnnouncements(),loadTeacherContent(),loadTeacherQuestions(),loadStudents('ALL'),loadTeacherExperiments(),loadTeacherBank(),loadTeacherStudyMaterials()]);await refreshStudentSelects()}
 async function loadOverview(){const d=await rpc('portal_teacher_overview',{p_token:teacherToken});const o=d?.[0]||{};$('teacherStats').innerHTML=`<div class="stat"><b>${o.total_students??0}</b>طالب</div><div class="stat"><b>${o.new_questions??0}</b>سؤال جديد</div><div class="stat"><b>${o.announcements??0}</b>إعلان</div><div class="stat"><b>${o.content_items??0}</b>محتوى منشور</div>`;if($('todaySummary'))$('todaySummary').innerHTML=`عندك اليوم <b>${o.new_questions??0}</b> سؤال جديد من الطلاب، و<b>${o.content_items??0}</b> محتوى منشور في البوابة. استخدم بطاقات تقدم الشعب تحت لتحديث آخر درس لكل شعبة، أو أرسل رسالة جماعية من تبويب الإعلانات.`}
 async function loadProgressCards(){const p=await rpc('portal_teacher_progress',{p_token:teacherToken});$('progressCards').innerHTML=classes.map(c=>{const x=p.find(v=>v.class_name===c);return `<div class="class-card"><strong>${c}</strong><div class="muted" style="margin:6px 0">${x?.topic_title?esc(x.topic_title):'لم يحدد بعد'} ${x?.page_no?'— ص '+x.page_no:''}</div><select id="tp-${c.replace('/','-')}" style="width:100%;padding:9px;border-radius:10px;border:1px solid #cfe2df">${topics.map(t=>`<option value="${t.id}" ${x?.topic_id===t.id?'selected':''}>${esc(t.section_code)} — ${esc(t.title)}${t.page_no?' (ص '+t.page_no+')':''}</option>`).join('')}</select><input id="tn-${c.replace('/','-')}" value="${esc(x?.note||'')}" placeholder="ملاحظة اختيارية" style="width:100%;padding:9px;margin:7px 0;border:1px solid #cfe2df;border-radius:10px"><button class="btn primary" onclick="saveProgress('${c}')">حفظ التقدم</button></div>`}).join('')}
 window.saveProgress=async c=>{const key=c.replace('/','-');const ok=await rpc('portal_teacher_set_progress',{p_token:teacherToken,p_class:c,p_topic_id:Number($('tp-'+key).value),p_note:$('tn-'+key).value});if(ok){await loadProgressCards();alert('تم حفظ تقدم '+c+' ✅')}};
