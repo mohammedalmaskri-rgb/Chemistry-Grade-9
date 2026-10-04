@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>بوابة الكيمياء | الصف التاسع</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:linear-gradient(135deg,#f8fbfb,#edf7f5);color:#173233;min-height:100vh}button,input,textarea,select{font:inherit}.top{background:linear-gradient(110deg,#0f766e,#155e75);color:#fff;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;box-shadow:0 8px 28px #0002}.brand{font-size:22px;font-weight:800}.sub{font-size:12px;opacity:.85}.wrap{max-width:1180px;margin:auto;padding:22px}.card{background:#ffffffee;border:1px solid #d9ece8;border-radius:22px;box-shadow:0 14px 36px #0f766e12;padding:20px}.login{max-width:520px;margin:8vh auto}.tabs{display:flex;gap:8px;margin-bottom:18px}.tab{flex:1;padding:12px;border:0;border-radius:12px;background:#e8f4f2;color:#0f766e;font-weight:700}.tab.active{background:#0f766e;color:white}.field{margin:12px 0}.field label{display:block;font-weight:700;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;padding:12px;border:1px solid #cfe2df;border-radius:12px;background:#fff}.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}.primary{background:#0f766e;color:#fff}.secondary{background:#e8f4f2;color:#0f766e}.danger{background:#fee2e2;color:#991b1b}.btn:disabled{opacity:.5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.stat{padding:18px;border-radius:18px;background:linear-gradient(145deg,#fff,#f3fbf9);border:1px solid #dcefeb}.stat b{font-size:28px;display:block;color:#0f766e}.nav{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.nav button{padding:10px 13px;border:1px solid #cae1dd;border-radius:12px;background:white;color:#245354;font-weight:700}.nav button.active{background:#0f766e;color:white}.section{display:none}.section.active{display:block}.item{border:1px solid #deece9;border-radius:16px;padding:14px;margin:10px 0;background:white}.item h3{margin:0 0 8px}.muted{color:#678;font-size:13px}.badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#e8f4f2;color:#0f766e;font-size:12px;font-weight:800}.lesson-progress{background:linear-gradient(120deg,#f0fdfa,#eff6ff);border:1px solid #c9e9e1;padding:17px;border-radius:18px;margin-bottom:16px}.class-card{border:1px solid #d9ece8;border-radius:16px;padding:14px;background:#fff}.class-card strong{font-size:18px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.hide{display:none!important}.msg{padding:10px 12px;border-radius:10px;margin:10px 0}.ok{background:#dcfce7;color:#166534}.err{background:#fee2e2;color:#991b1b}.popup{position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}.popup .card{max-width:560px;width:100%}
 .chem-bg{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:-1}
@@ -198,19 +198,37 @@ function materialAttachment(m){
 window.openStudyFile=async(dataEnc,titleEnc)=>{
   const data=decodeURIComponent(dataEnc),title=decodeURIComponent(titleEnc);
   const isPdf=data.startsWith('data:application/pdf');
-  let viewUrl=data;
-  if(isPdf){
-    try{
-      const b64=data.split(',')[1]||'';
-      const bin=atob(b64);
-      const bytes=new Uint8Array(bin.length);
-      for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-      viewUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
-    }catch(e){viewUrl=data}
+  if(!isPdf){
+    $('popupRoot').innerHTML=`<div class="popup"><div class="iframe-wrap"><div class="iframe-bar"><b style="flex:1">🖼️ ${esc(title)}</b><button id="closeStudyFile" class="btn danger">إغلاق</button></div><div style="overflow:auto;padding:12px;text-align:center"><img src="${data}" style="max-width:100%;height:auto"></div></div></div>`;
+    $('closeStudyFile').onclick=()=>$('popupRoot').innerHTML='';return;
   }
-  $('popupRoot').innerHTML=`<div class="popup"><div class="iframe-wrap"><div class="iframe-bar"><b style="flex:1">📄 ${esc(title)}</b>${isPdf?'<span class="muted">مرّر لعرض جميع الصفحات</span>':''}<button id="openStudyExternal" class="btn secondary">فتح بملء الشاشة</button><button id="closeStudyFile" class="btn danger">إغلاق</button></div><iframe id="studyFileFrame" src="${viewUrl}" style="width:100%;height:calc(100vh - 110px);border:0;background:#fff"></iframe></div></div>`;
-  $('openStudyExternal').onclick=()=>window.open(viewUrl,'_blank');
-  $('closeStudyFile').onclick=()=>{if(isPdf&&viewUrl.startsWith('blob:'))URL.revokeObjectURL(viewUrl);$('popupRoot').innerHTML=''};
+  let viewUrl=data;
+  try{
+    const b64=data.split(',')[1]||'',bin=atob(b64),bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    viewUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
+    $('popupRoot').innerHTML=`<div class="popup"><div class="iframe-wrap"><div class="iframe-bar"><b style="flex:1">📄 ${esc(title)}</b><span id="pdfPageCount" class="muted">جاري تحميل الصفحات...</span><button id="openStudyExternal" class="btn secondary">فتح الملف الأصلي</button><button id="closeStudyFile" class="btn danger">إغلاق</button></div><div id="pdfPages" style="flex:1;overflow:auto;background:#e9eef0;padding:12px"></div></div></div>`;
+    $('openStudyExternal').onclick=()=>window.open(viewUrl,'_blank');
+    $('closeStudyFile').onclick=()=>{URL.revokeObjectURL(viewUrl);$('popupRoot').innerHTML=''};
+    if(!window.pdfjsLib)throw new Error('تعذر تحميل عارض PDF');
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf=await pdfjsLib.getDocument({data:bytes}).promise;
+    $('pdfPageCount').textContent=`${pdf.numPages} صفحة — مرّر للأسفل`;
+    const host=$('pdfPages');
+    for(let n=1;n<=pdf.numPages;n++){
+      const page=await pdf.getPage(n),base=page.getViewport({scale:1});
+      const maxW=Math.min(1000,Math.max(280,host.clientWidth-24));
+      const scale=maxW/base.width,viewport=page.getViewport({scale});
+      const wrap=document.createElement('div');wrap.style='margin:0 auto 16px;max-width:1000px;background:white;box-shadow:0 2px 10px #0002';
+      const label=document.createElement('div');label.textContent=`صفحة ${n} من ${pdf.numPages}`;label.style='padding:7px 10px;text-align:center;color:#567;font-size:13px;border-bottom:1px solid #eee';
+      const canvas=document.createElement('canvas');const ratio=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.floor(viewport.width*ratio);canvas.height=Math.floor(viewport.height*ratio);canvas.style.width='100%';canvas.style.height='auto';canvas.style.display='block';
+      wrap.append(label,canvas);host.appendChild(wrap);
+      const ctx=canvas.getContext('2d');await page.render({canvasContext:ctx,viewport,transform:ratio!==1?[ratio,0,0,ratio,0,0]:null}).promise;
+    }
+  }catch(e){
+    if(viewUrl.startsWith('blob:'))URL.revokeObjectURL(viewUrl);
+    $('popupRoot').innerHTML=`<div class="popup"><div class="card" style="max-width:620px"><div class="msg err">تعذر عرض ملف PDF: ${esc(e.message||'خطأ غير معروف')}</div><button id="closeStudyFile" class="btn danger">إغلاق</button></div></div>`;$('closeStudyFile').onclick=()=>$('popupRoot').innerHTML='';
+  }
 };
 
 function showImagePreview(inputId,imgId){$(inputId).onchange=async()=>{const f=$(inputId).files?.[0];if(!f){$(imgId).style.display='none';return}try{const d=await compressImage(f,700,.7);$(imgId).src=d;$(imgId).style.display='block'}catch(e){alert(e.message);$(inputId).value=''}}}
