@@ -310,8 +310,8 @@ window.openLessonFromMyLessons=async(topicId,unitNo)=>{
 async function loadLessonPlanEditor(){
   if(!$('planClass')||!$('planTopic'))return;
   const cls=$('planClass').value,topicId=Number($('planTopic').value);if(!cls||!topicId)return;
-  if(cls==='ALL'){$('planObjectives').value='';$('planRequirements').value='';$('planNote').value='';$('planExpTitle').value='';$('planExpUrl').value='';return;}
-  const d=await rpc('portal_teacher_lesson_plan',{p_token:teacherToken,p_class:cls,p_topic_id:topicId});const x=d?.[0]||{};
+  const readClass=cls==='ALL'?classes[0]:cls;
+  const d=await rpc('portal_teacher_lesson_plan',{p_token:teacherToken,p_class:readClass,p_topic_id:topicId});const x=d?.[0]||{};
   $('planObjectives').value=x.objectives||'';$('planRequirements').value=x.requirements||'';$('planNote').value=x.teacher_note||'';$('planExpTitle').value=x.experiment_title||'';$('planExpUrl').value=x.experiment_url||'';
 }
 async function initLessonPlanEditor(){
@@ -321,7 +321,21 @@ async function initLessonPlanEditor(){
   await loadLessonPlanEditor();
 }
 $('planClass')&&($('planClass').onchange=loadLessonPlanEditor);$('planTopic')&&($('planTopic').onchange=loadLessonPlanEditor);
-$('planSaveBtn')&&($('planSaveBtn').onclick=async()=>{try{$('planSaveBtn').disabled=true;const targets=$('planClass').value==='ALL'?classes:[$('planClass').value];for(const cls of targets){const ok=await rpc('portal_teacher_save_lesson_plan',{p_token:teacherToken,p_class:cls,p_topic_id:Number($('planTopic').value),p_objectives:$('planObjectives').value,p_teacher_note:$('planNote').value,p_requirements:$('planRequirements').value,p_experiment_title:$('planExpTitle').value,p_experiment_url:$('planExpUrl').value});if(!ok)throw new Error('تعذر الحفظ للشعبة '+cls)}msg('planMsg',targets.length>1?'تم حفظ بطاقة الدرس لكل الشعب بنجاح ✅':'تم حفظ بطاقة الدرس بشكل ناجح ✅')}catch(e){msg('planMsg',e.message,false)}finally{$('planSaveBtn').disabled=false}});
+$('planSaveBtn')&&($('planSaveBtn').onclick=async()=>{try{
+  $('planSaveBtn').disabled=true;
+  const selected=$('planClass').value,targets=selected==='ALL'?[...classes]:[selected],topicId=Number($('planTopic').value);
+  const payload={p_topic_id:topicId,p_objectives:$('planObjectives').value,p_teacher_note:$('planNote').value,p_requirements:$('planRequirements').value,p_experiment_title:$('planExpTitle').value,p_experiment_url:$('planExpUrl').value};
+  const failed=[];
+  for(const cls of targets){
+    const ok=await rpc('portal_teacher_save_lesson_plan',{p_token:teacherToken,p_class:cls,...payload});
+    if(!ok){failed.push(cls);continue}
+    const check=await rpc('portal_teacher_lesson_plan',{p_token:teacherToken,p_class:cls,p_topic_id:topicId});
+    if(!check?.length)failed.push(cls);
+  }
+  if(failed.length)throw new Error('لم يتم الحفظ لهذه الشعب: '+failed.join('، '));
+  msg('planMsg',targets.length>1?'تم حفظ بطاقة الدرس فعليًا للشعب السبع ✅':'تم حفظ بطاقة الدرس بنجاح ✅');
+  if(selected!=='ALL')await loadLessonPlanEditor();
+}catch(e){msg('planMsg',e.message,false)}finally{$('planSaveBtn').disabled=false}});
 $('planStatsBtn')&&($('planStatsBtn').onclick=async()=>{const topicId=Number($('planTopic').value),cls=$('planClass').value;$('planStats').innerHTML='<div class="muted">جاري تحميل الإحصائية...</div>';const [v,n]=await Promise.all([rpc('portal_teacher_lesson_visits',{p_token:teacherToken,p_topic_id:topicId,p_class:cls}),rpc('portal_teacher_lesson_nonvisitors',{p_token:teacherToken,p_topic_id:topicId,p_class:cls})]);const total=(v?.length||0)+(n?.length||0),pct=total?Math.round((v.length/total)*100):0;$('planStats').innerHTML=`<div class="visit-summary"><div class="visit-box"><b>${v?.length||0}</b><br>دخلوا</div><div class="visit-box"><b>${n?.length||0}</b><br>لم يدخلوا</div><div class="visit-box"><b>${pct}%</b><br>نسبة الدخول</div></div><h3>✅ دخلوا الدرس</h3>${v?.length?`<div style="overflow:auto"><table class="eng-table"><thead><tr><th>الطالب</th><th>آخر دخول</th><th>مرات الفتح</th></tr></thead><tbody>${v.map(x=>`<tr><td>${studentName(x.full_name)}</td><td>${new Date(x.last_opened_at).toLocaleString('ar')}</td><td>${x.open_count}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">لم يدخل أحد بعد.</div>'}<h3>⏳ لم يدخلوا بعد</h3>${n?.length?`<div class="grid">${n.map(x=>`<div class="item"><b>${studentName(x.full_name)}</b><div class="muted">${esc(x.username)}</div></div>`).join('')}</div>`:'<div class="msg ok">كل الطلاب دخلوا الدرس ✅</div>'}`});
 
 async function loadStudentExperiments(){
