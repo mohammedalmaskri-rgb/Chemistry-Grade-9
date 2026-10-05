@@ -473,3 +473,4 @@ $('teacherPassBtn').onclick=async()=>{const ok=await rpc('portal_teacher_change_
 (async()=>{const st=localStorage.getItem('chemStudentToken'),tt=localStorage.getItem('chemTeacherToken');try{if(st){const d=await rpc('portal_student_me',{p_token:st});if(d?.length){studentToken=st;currentStudent=d[0];await enterStudent(d[0]);return}}if(tt){teacherToken=tt;const me=await rpc('portal_teacher_me',{p_token:tt});if(me?.length){if(me[0].must_change_password)await forceTeacherPasswordChange();await enterTeacher();return}}}catch(e){}show('loginView')})();
 </script>
 </body></html>
+<!-- redeploy -->
