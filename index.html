@@ -179,7 +179,7 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;ove
     <div id="bankEditBanner" class="msg ok hide"><b>✏️ وضع التعديل:</b> أنت تعدّل سؤالًا منشورًا حاليًا. بعد الحفظ سيتحدث نفس السؤال بدون حذفه.</div>
 
     <div class="qb-builder">
-      <div class="row"><div class="field"><label>عنوان السؤال</label><input id="bankTitle" placeholder="مثال: مراجعة حالات المادة"></div><div class="field"><label>الشعبة</label><select id="bankClass"><option value="ALL">كل الصفوف</option></select></div></div>
+      <div class="row3"><div class="field"><label>اسم الدرس</label><input id="bankLessonName" placeholder="مثال: حالات المادة"></div><div class="field"><label>عنوان السؤال</label><input id="bankTitle" placeholder="مثال: درجة التجمد"></div><div class="field"><label>الشعبة</label><select id="bankClass"><option value="ALL">كل الصفوف</option></select></div></div>
       <div class="row"><div class="field"><label>نوع السؤال</label><select id="bankQuestionType"><option value="mcq">🔘 اختيار من متعدد</option><option value="tf">✅ صح أو خطأ</option><option value="matching">🔗 توصيل</option><option value="essay">✍️ مقالي</option></select></div><div class="field"><label>درجة السؤال</label><input id="bankPoints" type="number" min="0.5" step="0.5" value="1"></div></div>
       <div class="field"><label>نص السؤال</label><textarea id="bankQuestionText" rows="3" placeholder="يمكن ترك النص فارغًا إذا كان السؤال موجودًا بالكامل في الصورة"></textarea></div>
       <div id="bankTypeEditor" class="qb-type-editor"></div>
@@ -222,7 +222,7 @@ const SUPABASE_URL='https://axcfgpfcdrwnsryihulg.supabase.co';
 const SUPABASE_KEY='sb_publishable_1BXmnOOKxAHxVvdMRi8QEw_pBlwX60T';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const classes=['9/1','9/2','9/3','9/4','9/5','9/6','9/7'];
-let loginMode='student',studentToken=null,teacherToken=null,currentStudent=null,allStudents=[],topics=[],studentLearningTopics=[];
+let loginMode='student',studentToken=null,teacherToken=null,currentStudent=null,allStudents=[],topics=[],studentLearningTopics=[],quizPoints=0;
 const $=id=>document.getElementById(id); const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
 // ===== Security hardening =====
@@ -254,6 +254,8 @@ async function isRealPdf(file){if(!file||file.size<5)return false;const head=new
 // ===== End security hardening =====
 const fixStudentName=n=>String(n??'').replace(/(^|\s)عبدا(?=\s|$)/g,'$1عبدالله').replace(/(^|\s)طلل(?=\s|$)/g,'$1طلال').replace(/(^|\s)هلل(?=\s|$)/g,'$1هلال').replace(/(^|\s)غلم(?=\s|$)/g,'$1غلام');
 const studentName=n=>esc(fixStudentName(n));
+const fmtPoints=n=>{const x=Number(n||0);return Number.isInteger(x)?String(x):x.toFixed(1)};
+async function loadStudentQuizPoints(){try{const d=await rpc('portal_student_quiz_points',{p_token:studentToken});const x=d?.[0];quizPoints=Number(x?.quiz_points||0);if($('studentPoints'))$('studentPoints').textContent=fmtPoints(x?.total_points??((Number(currentStudent?.points||0))+quizPoints));}catch(_e){quizPoints=0;if($('studentPoints'))$('studentPoints').textContent=fmtPoints(currentStudent?.points||0)}}
 function msg(id,t,ok=true){$(id).innerHTML=`<div class="msg ${ok?'ok':'err'}">${esc(t)}</div>`}
 function show(view){['loginView','studentView','teacherView'].forEach(x=>$(x).classList.add('hide'));$(view).classList.remove('hide');$('logoutBtn').classList.toggle('hide',view==='loginView')}
 function nav(root){root.querySelectorAll('button[data-sec]').forEach(b=>b.onclick=()=>{root.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));$(b.dataset.sec).classList.add('active')})}
@@ -266,7 +268,7 @@ document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>{loginMode=b.
 async function rpc(fn,args={}){const {data,error}=await sb.rpc(fn,args);if(error)throw error;return data}
 $('loginBtn').onclick=async()=>{try{const wait=loginGuard();if(wait)throw new Error(`محاولات كثيرة. انتظر ${wait} ثانية ثم حاول مرة أخرى.`);$('loginBtn').disabled=true;$('loginMsg').innerHTML='';const username=$('loginUser').value.trim(),password=$('loginPass').value;if(!username||!password)throw new Error('اكتب اسم المستخدم وكلمة المرور.');if(username.length>80||password.length>200)throw new Error('بيانات الدخول غير صالحة.');if(loginMode==='student'){const d=await rpc('portal_student_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');studentToken=d[0].token;currentStudent=d[0];sessionSave('student',studentToken);loginSucceeded();await enterStudent(d[0])}else{const d=await rpc('portal_teacher_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');teacherToken=d[0].token;sessionSave('teacher',teacherToken);loginSucceeded();if(d[0].must_change_password)await forceTeacherPasswordChange();await enterTeacher()}}catch(e){if(!String(e.message||'').startsWith('محاولات كثيرة')&&!String(e.message||'').startsWith('اكتب اسم'))loginFailed();const wait=loginGuard();msg('loginMsg',wait?`محاولات كثيرة. انتظر ${wait} ثانية ثم حاول مرة أخرى.`:(e.message==='بيانات الدخول غير صحيحة'?e.message:'تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.'),false)}finally{$('loginBtn').disabled=false}};
 $('logoutBtn').onclick=()=>secureLogout();
-async function enterStudent(s){currentStudent=s;show('studentView');$('topSub').textContent=`${fixStudentName(s.full_name)} — ${s.class_name}`;$('studentWelcome').textContent=`مرحبًا، ${fixStudentName(s.full_name)} 👋`;$('studentMeta').textContent=`الشعبة ${s.class_name} • اسم المستخدم ${s.username}`;$('studentPoints').textContent=s.points??0;if(s.must_change_password) await forcePasswordChange();await loadStudentLearningTopics();await Promise.all([loadStudentProgress(),loadStudentAnnouncements(),loadStudentContent(),loadGrades(),loadQuestions(),loadStudentExperiments(),loadStudentBank(),loadMyLessons()])}
+async function enterStudent(s){currentStudent=s;quizPoints=0;show('studentView');$('topSub').textContent=`${fixStudentName(s.full_name)} — ${s.class_name}`;$('studentWelcome').textContent=`مرحبًا، ${fixStudentName(s.full_name)} 👋`;$('studentMeta').textContent=`الشعبة ${s.class_name} • اسم المستخدم ${s.username}`;$('studentPoints').textContent=fmtPoints(s.points??0);if(s.must_change_password) await forcePasswordChange();await loadStudentLearningTopics();await Promise.all([loadStudentProgress(),loadStudentAnnouncements(),loadStudentContent(),loadGrades(),loadQuestions(),loadStudentExperiments(),loadStudentBank(),loadMyLessons(),loadStudentQuizPoints()])}
 async function forcePasswordChange(){return new Promise(resolve=>{const root=$('popupRoot');root.innerHTML=`<div class="popup"><div class="card"><h2>🔒 تغيير كلمة المرور</h2><p>هذه أول مرة تدخل فيها. غيّر كلمة المرور المؤقتة قبل متابعة استخدام البوابة.</p><div class="field"><input id="np1" type="password" placeholder="كلمة المرور الجديدة"></div><div class="field"><input id="np2" type="password" placeholder="تأكيد كلمة المرور"></div><div id="pm"></div><button id="saveNp" class="btn primary">حفظ والدخول</button></div></div>`;$('saveNp').onclick=async()=>{if($('np1').value.length<6||$('np1').value!==$('np2').value){msg('pm','تأكد من تطابق كلمتي المرور وأنها 6 أحرف على الأقل',false);return}const ok=await rpc('portal_student_change_password',{p_token:studentToken,p_new_password:$('np1').value});if(ok){root.innerHTML='';resolve()}else msg('pm','تعذر تغيير كلمة المرور',false)}})}
 async function forceTeacherPasswordChange(){return new Promise(resolve=>{const root=$('popupRoot');root.innerHTML=`<div class="popup"><div class="card"><h2>🔐 تأمين حساب المعلم</h2><p>هذه أول مرة تدخل فيها بهذه النسخة. غيّر كلمة المرور الافتراضية قبل متابعة لوحة التحكم.</p><div class="field"><input id="tnp1" type="password" placeholder="كلمة المرور الجديدة - 8 أحرف على الأقل"></div><div class="field"><input id="tnp2" type="password" placeholder="تأكيد كلمة المرور"></div><div id="tpm"></div><button id="saveTnp" class="btn primary">حفظ والدخول</button></div></div>`;$('saveTnp').onclick=async()=>{if($('tnp1').value.length<8||$('tnp1').value!==$('tnp2').value){msg('tpm','تأكد من تطابق كلمتي المرور وأنها 8 أحرف على الأقل',false);return}const ok=await rpc('portal_teacher_change_password',{p_token:teacherToken,p_new_password:$('tnp1').value});if(ok){root.innerHTML='';resolve()}else msg('tpm','تعذر تغيير كلمة المرور',false)}})}
 async function loadStudentProgress(){const d=await rpc('portal_student_progress',{p_token:studentToken});const p=d?.[0];if(p?.topic_title){$('progressTitle').textContent=p.topic_title;$('progressMeta').textContent=`${p.section_code} • صفحة ${p.page_no??'-'} • آخر تحديث ${new Date(p.updated_at).toLocaleString('ar')}${p.note?' • '+p.note:''}`}else{$('progressTitle').textContent='لم يتم تحديد الدرس بعد';$('progressMeta').textContent=''}}
@@ -485,20 +487,20 @@ $('bankQuestionType')&&($('bankQuestionType').onchange=()=>{captureBankEditor();
 bankTypeEditor();
 
 function buildBankMeta(){
-  captureBankEditor();const type=$('bankQuestionType').value,points=Math.max(.5,Number($('bankPoints').value||1));
+  captureBankEditor();const type=$('bankQuestionType').value,points=Math.max(.5,Number($('bankPoints').value||1)),lessonName=($('bankLessonName')?.value||'').trim();
   if(type==='mcq'){
     const kept=bankDraft.options.map((text,idx)=>({text:text.trim(),idx})).filter(x=>x.text);
     if(kept.length<2)throw new Error('أضف خيارين على الأقل.');
     const correct=kept.findIndex(x=>x.idx===bankDraft.correct);if(correct<0)throw new Error('حدد إجابة صحيحة من الخيارات المكتوبة.');
-    return {v:4,type,points,answer:{options:kept.map(x=>x.text),correct}};
+    return {v:4,type,points,lessonName,answer:{options:kept.map(x=>x.text),correct}};
   }
-  if(type==='tf')return {v:4,type,points,answer:{correct:!!bankDraft.tf}};
+  if(type==='tf')return {v:4,type,points,lessonName,answer:{correct:!!bankDraft.tf}};
   if(type==='matching'){
     const pairs=bankDraft.pairs.map(p=>[p[0].trim(),p[1].trim()]).filter(p=>p[0]&&p[1]);
     if(pairs.length<2)throw new Error('أضف زوجين على الأقل في سؤال التوصيل.');
-    return {v:4,type,points,answer:{pairs}};
+    return {v:4,type,points,lessonName,answer:{pairs}};
   }
-  return {v:4,type:'essay',points,answer:{}};
+  return {v:4,type:'essay',points,lessonName,answer:{}};
 }
 function packBankSolution(text,meta){return '__QB4__'+btoa(unescape(encodeURIComponent(JSON.stringify(meta))))+'__'+(text||'')}
 function unpackBank(q){
@@ -560,16 +562,28 @@ window.submitBankAnswer=async id=>{
     }catch(e){out.innerHTML=`<div class="qb-wrong">${esc(e.message||'تعذر الإرسال')}</div>`;const btn=$('submit-bank-'+id);if(btn)btn.disabled=false}
     return;
   }
-  let correct=false,answer=null;
+  let localCorrect=false,answer=null;
   if(meta.type==='mcq'){
-    const x=document.querySelector(`input[name="qa${id}"]:checked`);if(!x){out.innerHTML='<div class="qb-wrong">اختر إجابة أولًا.</div>';return}answer=Number(x.value);correct=answer===Number(meta.answer.correct);
+    const x=document.querySelector(`input[name="qa${id}"]:checked`);if(!x){out.innerHTML='<div class="qb-wrong">اختر إجابة أولًا.</div>';return}answer=Number(x.value);localCorrect=answer===Number(meta.answer.correct);
   }else if(meta.type==='tf'){
-    const x=document.querySelector(`input[name="qa${id}"]:checked`);if(!x){out.innerHTML='<div class="qb-wrong">اختر صح أو خطأ.</div>';return}answer=x.value==='true';correct=answer===!!meta.answer.correct;
+    const x=document.querySelector(`input[name="qa${id}"]:checked`);if(!x){out.innerHTML='<div class="qb-wrong">اختر صح أو خطأ.</div>';return}answer=x.value==='true';localCorrect=answer===!!meta.answer.correct;
   }else if(meta.type==='matching'){
-    answer=(meta.answer.pairs||[]).map((_,i)=>$('match-'+id+'-'+i)?.value||'');if(answer.some(x=>!x)){out.innerHTML='<div class="qb-wrong">أكمل جميع التوصيلات.</div>';return}correct=answer.every((x,i)=>x===meta.answer.pairs[i][1]);
+    answer=(meta.answer.pairs||[]).map((_,i)=>$('match-'+id+'-'+i)?.value||'');if(answer.some(x=>!x)){out.innerHTML='<div class="qb-wrong">أكمل جميع التوصيلات.</div>';return}localCorrect=answer.every((x,i)=>x===meta.answer.pairs[i][1]);
   }
-  const score=correct?Number(meta.points||1):0,old=getBankAttempt(id),attempts=(old?.attempts||0)+1;saveBankAttempt(id,{correct,score,attempts,at:Date.now()});
-  out.innerHTML=`<div class="${correct?'qb-correct':'qb-wrong'}">${correct?'✅ إجابة صحيحة':'❌ إجابة غير صحيحة'} — الدرجة ${score}/${meta.points??1} <span class="small">(المحاولة ${attempts})</span></div>${q.show_solution?answerKeyHtml(q,meta,solution):''}`;
+  const btn=$('submit-bank-'+id);if(btn)btn.disabled=true;
+  let correct=localCorrect,awarded=0,serverSaved=false;
+  try{
+    out.innerHTML='<div class="muted">جاري التحقق وحفظ النقاط...</div>';
+    const d=await rpc('portal_student_answer_bank',{p_token:studentToken,p_question_id:id,p_answer:answer});
+    const r=d?.[0];if(!r)throw new Error('لم يرجع النظام نتيجة التحقق');
+    correct=!!r.is_correct;awarded=Number(r.awarded_points||0);quizPoints=Number(r.quiz_points||0);serverSaved=true;
+    if($('studentPoints')&&r.total_points!=null)$('studentPoints').textContent=fmtPoints(r.total_points);
+  }catch(e){
+    console.warn('تعذر حفظ نقاط بنك الأسئلة',e);
+  }finally{if(btn)btn.disabled=false}
+  const score=correct?Number(meta.points||1):0,old=getBankAttempt(id),attempts=(old?.attempts||0)+1;saveBankAttempt(id,{correct,score,attempts,awarded,at:Date.now()});
+  const rewardMsg=correct?(serverSaved?(awarded>0?' • ⭐ +0.5 نقطة':' • ⭐ سبق احتساب نصف النقطة لهذا السؤال'):' • ⚠️ لم تُحفظ نقاط المكافأة'):' • حاول مرة أخرى';
+  out.innerHTML=`<div class="${correct?'qb-correct':'qb-wrong'}">${correct?'✅ إجابة صحيحة':'❌ إجابة غير صحيحة'} — الدرجة ${score}/${meta.points??1}${rewardMsg} <span class="small">(المحاولة ${attempts})</span></div>${q.show_solution?answerKeyHtml(q,meta,solution):''}`;
 };
 
 let studentBankRows=[],studentBankEssayMap=new Map();
@@ -578,7 +592,7 @@ async function loadStudentBank(){
   studentBankRows=d||[];window.__bankQuestions={};studentBankRows.forEach(q=>window.__bankQuestions[q.id]=q);
   studentBankEssayMap=new Map();(studentQs||[]).forEach(x=>{const p=parseEssaySubmission(x.question_text);if(p&&!studentBankEssayMap.has(p.questionId))studentBankEssayMap.set(p.questionId,x)});
   const host=$('studentBankList');if(!host)return;
-  host.innerHTML=studentBankRows.length?studentBankRows.map(q=>{const qi=safeMedia(q.question_image),{meta}=unpackBank(q);return `<div class="item"><div class="qb-meta"><span class="badge">${bankTypeLabel(meta.type)}</span><span class="badge">${meta.points??1} درجة</span></div><h3>${esc(q.title)}</h3>${q.question_text?`<p>${esc(q.question_text).replace(/\n/g,'<br>')}</p>`:''}${qi?`<img class="media-img" src="${qi}" alt="صورة السؤال">`:''}${renderStudentInteractive(q,studentBankEssayMap)}</div>`}).join(''):'<div class="lesson-empty">لا توجد أسئلة متاحة لك حاليًا.</div>';
+  host.innerHTML=studentBankRows.length?studentBankRows.map(q=>{const qi=safeMedia(q.question_image),{meta}=unpackBank(q);return `<div class="item"><div class="qb-meta">${meta.lessonName?`<span class="badge">📘 ${esc(meta.lessonName)}</span>`:''}<span class="badge">${bankTypeLabel(meta.type)}</span><span class="badge">${meta.points??1} درجة</span></div><h3>${esc(q.title)}</h3>${q.question_text?`<p>${esc(q.question_text).replace(/\n/g,'<br>')}</p>`:''}${qi?`<img class="media-img" src="${qi}" alt="صورة السؤال">`:''}${renderStudentInteractive(q,studentBankEssayMap)}</div>`}).join(''):'<div class="lesson-empty">لا توجد أسئلة متاحة لك حاليًا.</div>';
 }
 
 async function loadTeacherExperiments(){
@@ -594,7 +608,7 @@ let bankEditingId=null,bankEditingQuestionImage=null,bankEditingSolutionImage=nu
 window.__teacherBankRows={};
 function clearBankForm(){
   bankEditingId=null;bankEditingQuestionImage=null;bankEditingSolutionImage=null;
-  ['bankTitle','bankQuestionText','bankSolutionText','bankQuestionImage','bankSolutionImage'].forEach(x=>{if($(x))$(x).value=''});
+  ['bankLessonName','bankTitle','bankQuestionText','bankSolutionText','bankQuestionImage','bankSolutionImage'].forEach(x=>{if($(x))$(x).value=''});
   ['bankQuestionPreview','bankSolutionPreview'].forEach(x=>{if($(x)){$(x).src='';$(x).style.display='none'}});
   $('bankVisible').checked=false;$('bankShowSolution').checked=false;$('bankPoints').value='1';$('bankQuestionType').value='mcq';resetBankDraft();bankTypeEditor();
   if($('bankRemoveQuestionImage'))$('bankRemoveQuestionImage').checked=false;if($('bankRemoveSolutionImage'))$('bankRemoveSolutionImage').checked=false;
@@ -605,7 +619,7 @@ window.editBankQuestion=id=>{
   const q=window.__teacherBankRows[id];if(!q)return;
   const parsed=unpackBank(q),meta=parsed.meta;if(meta.type==='legacy'){alert('هذا سؤال قديم للعرض فقط. أنشئ نسخة جديدة منه إذا أردت تحويله إلى سؤال تفاعلي.');return}
   bankEditingId=id;bankEditingQuestionImage=safeMedia(q.question_image)||null;bankEditingSolutionImage=safeMedia(q.solution_image)||null;
-  $('bankTitle').value=q.title||'';$('bankClass').value=q.target_class||'ALL';$('bankQuestionText').value=q.question_text||'';$('bankSolutionText').value=parsed.solution||'';
+  $('bankLessonName').value=meta.lessonName||'';$('bankTitle').value=q.title||'';$('bankClass').value=q.target_class||'ALL';$('bankQuestionText').value=q.question_text||'';$('bankSolutionText').value=parsed.solution||'';
   $('bankVisible').checked=!!q.is_visible;$('bankShowSolution').checked=!!q.show_solution;$('bankPoints').value=meta.points??1;$('bankQuestionType').value=meta.type||'mcq';
   if(meta.type==='mcq'){bankDraft.options=[...(meta.answer?.options||[])];while(bankDraft.options.length<2)bankDraft.options.push('');bankDraft.correct=Number(meta.answer?.correct||0)}
   else if(meta.type==='tf'){bankDraft.tf=!!meta.answer?.correct}
@@ -619,7 +633,7 @@ window.editBankQuestion=id=>{
 $('bankCancelEditBtn')&&($('bankCancelEditBtn').onclick=()=>{clearBankForm();msg('bankMsg','تم إلغاء التعديل.')});
 async function loadTeacherBank(){
   const d=await rpc('portal_teacher_question_bank',{p_token:teacherToken});window.__teacherBankRows={};(d||[]).forEach(q=>window.__teacherBankRows[q.id]=q);
-  $('teacherBankList').innerHTML=d?.length?d.map(q=>{const qi=safeMedia(q.question_image),si=safeMedia(q.solution_image),parsed=unpackBank(q),meta=parsed.meta;let key='';if(meta.type==='mcq')key=meta.answer?.options?.[meta.answer.correct]||'';else if(meta.type==='tf')key=meta.answer?.correct?'صح':'خطأ';else if(meta.type==='matching')key=(meta.answer?.pairs||[]).map(p=>`${p[0]} ← ${p[1]}`).join(' • ');else if(meta.type==='essay')key='تصحيح يدوي';return `<div class="item"><div class="qb-meta"><span class="badge ${q.is_visible?'state-on':'state-off'}">${q.is_visible?'ظاهر للطلاب':'مخفي'}</span><span class="badge ${q.show_solution?'state-on':'state-off'}">${q.show_solution?'إظهار الحل بعد الإجابة':'عدم إظهار الحل'}</span><span class="badge">${q.target_class==='ALL'?'كل الصفوف':esc(q.target_class)}</span><span class="badge">${bankTypeLabel(meta.type)}</span><span class="badge">${meta.points??1} درجة</span></div><h3>${esc(q.title)}</h3>${q.question_text?`<p>${esc(q.question_text).replace(/\n/g,'<br>')}</p>`:''}${qi?`<img class="media-img" src="${qi}" alt="السؤال">`:''}${meta.type!=='legacy'?`<div class="muted"><b>${meta.type==='essay'?'طريقة التصحيح':'الإجابة المحفوظة'}:</b> ${esc(key)}</div>`:''}${parsed.solution?`<div class="muted" style="margin-top:6px"><b>تفسير/ملاحظة:</b> ${esc(parsed.solution)}</div>`:''}${si?`<img class="media-img" src="${si}" alt="الحل">`:''}<div class="inline-actions"><button class="btn secondary" onclick="editBankQuestion(${q.id})">✏️ تعديل السؤال</button><button class="btn ${q.is_visible?'secondary':'primary'}" onclick="setQuestionState(${q.id},${!q.is_visible},${q.show_solution})">${q.is_visible?'🙈 إخفاء السؤال':'👁️ إظهار السؤال'}</button><button class="btn ${q.show_solution?'secondary':'primary'}" onclick="setQuestionState(${q.id},${q.is_visible},${!q.show_solution})">${q.show_solution?'🔒 عدم إظهار الحل بعد الإجابة':'✅ إظهار الحل بعد الإجابة'}</button><button class="btn danger" onclick="deleteBankQuestion(${q.id})">حذف</button></div></div>`}).join(''):'<div class="muted">لم تضف أسئلة بعد.</div>';
+  $('teacherBankList').innerHTML=d?.length?d.map(q=>{const qi=safeMedia(q.question_image),si=safeMedia(q.solution_image),parsed=unpackBank(q),meta=parsed.meta;let key='';if(meta.type==='mcq')key=meta.answer?.options?.[meta.answer.correct]||'';else if(meta.type==='tf')key=meta.answer?.correct?'صح':'خطأ';else if(meta.type==='matching')key=(meta.answer?.pairs||[]).map(p=>`${p[0]} ← ${p[1]}`).join(' • ');else if(meta.type==='essay')key='تصحيح يدوي';return `<div class="item"><div class="qb-meta"><span class="badge ${q.is_visible?'state-on':'state-off'}">${q.is_visible?'ظاهر للطلاب':'مخفي'}</span><span class="badge ${q.show_solution?'state-on':'state-off'}">${q.show_solution?'إظهار الحل بعد الإجابة':'عدم إظهار الحل'}</span><span class="badge">${q.target_class==='ALL'?'كل الصفوف':esc(q.target_class)}</span>${meta.lessonName?`<span class="badge">📘 ${esc(meta.lessonName)}</span>`:''}<span class="badge">${bankTypeLabel(meta.type)}</span><span class="badge">${meta.points??1} درجة</span></div><h3>${esc(q.title)}</h3>${q.question_text?`<p>${esc(q.question_text).replace(/\n/g,'<br>')}</p>`:''}${qi?`<img class="media-img" src="${qi}" alt="السؤال">`:''}${meta.type!=='legacy'?`<div class="muted"><b>${meta.type==='essay'?'طريقة التصحيح':'الإجابة المحفوظة'}:</b> ${esc(key)}</div>`:''}${parsed.solution?`<div class="muted" style="margin-top:6px"><b>تفسير/ملاحظة:</b> ${esc(parsed.solution)}</div>`:''}${si?`<img class="media-img" src="${si}" alt="الحل">`:''}<div class="inline-actions"><button class="btn secondary" onclick="editBankQuestion(${q.id})">✏️ تعديل السؤال</button><button class="btn ${q.is_visible?'secondary':'primary'}" onclick="setQuestionState(${q.id},${!q.is_visible},${q.show_solution})">${q.is_visible?'🙈 إخفاء السؤال':'👁️ إظهار السؤال'}</button><button class="btn ${q.show_solution?'secondary':'primary'}" onclick="setQuestionState(${q.id},${q.is_visible},${!q.show_solution})">${q.show_solution?'🔒 عدم إظهار الحل بعد الإجابة':'✅ إظهار الحل بعد الإجابة'}</button><button class="btn danger" onclick="deleteBankQuestion(${q.id})">حذف</button></div></div>`}).join(''):'<div class="muted">لم تضف أسئلة بعد.</div>';
 }
 async function loadTeacherEssaySubmissions(){
   if(!$('teacherEssayList'))return;
@@ -637,7 +651,7 @@ $('bankAddBtn').onclick=async()=>{try{
   let qi=newQiFile?await compressImage(newQiFile):bankEditingQuestionImage;
   let si=newSiFile?await compressImage(newSiFile):bankEditingSolutionImage;
   if(bankEditingId&&$('bankRemoveQuestionImage')?.checked&&!newQiFile)qi=null;if(bankEditingId&&$('bankRemoveSolutionImage')?.checked&&!newSiFile)si=null;
-  const title=$('bankTitle').value.trim(),question=$('bankQuestionText').value.trim();if(!title)throw new Error('اكتب عنوان السؤال.');if(!question&&!qi)throw new Error('اكتب نص السؤال أو أضف صورة للسؤال.');
+  const lessonName=($('bankLessonName')?.value||'').trim(),title=$('bankTitle').value.trim(),question=$('bankQuestionText').value.trim();if(!lessonName)throw new Error('اكتب اسم الدرس.');if(!title)throw new Error('اكتب عنوان السؤال.');if(!question&&!qi)throw new Error('اكتب نص السؤال أو أضف صورة للسؤال.');
   if(bankEditingId){
     const ok=await rpc('portal_teacher_update_question_bank',{p_token:teacherToken,p_question_id:bankEditingId,p_title:title,p_question_text:question,p_question_image:qi,p_solution_text:packBankSolution($('bankSolutionText').value.trim(),meta),p_solution_image:si,p_target_class:$('bankClass').value,p_is_visible:$('bankVisible').checked,p_show_solution:$('bankShowSolution').checked});
     if(!ok)throw new Error('تعذر تعديل السؤال. تأكد من تشغيل كود SQL الخاص بالتعديل.');msg('bankMsg','تم تعديل السؤال بنجاح ✅');
