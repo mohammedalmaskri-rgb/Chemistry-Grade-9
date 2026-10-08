@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mohammedalmaskri-rgb.github.io/Chemistry-Grade-9/sitemap.xml
