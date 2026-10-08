@@ -1,0 +1,10 @@
+{
+  "name": "بوابة الكيمياء للصف التاسع | الأستاذ محمد المسكري",
+  "short_name": "بوابة الكيمياء",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f8fbfb",
+  "theme_color": "#0f766e"
+}
