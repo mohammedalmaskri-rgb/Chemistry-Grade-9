@@ -12,21 +12,13 @@
 <meta name="author" content="الأستاذ محمد المسكري"/>
 <meta name="application-name" content="بوابة الكيمياء للصف التاسع"/>
 <meta name="apple-mobile-web-app-title" content="بوابة الكيمياء"/>
-<meta name="theme-color" content="#0f766e"/>
-<meta name="subject" content="كيمياء الصف التاسع"/>
-<meta name="classification" content="تعليم، كيمياء، الصف التاسع"/>
 <meta property="og:locale" content="ar_OM"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="بوابة الكيمياء للصف التاسع"/>
 <meta property="og:title" content="بوابة الكيمياء للصف التاسع | الأستاذ محمد المسكري"/>
 <meta property="og:description" content="منصة تعليمية للكيمياء للصف التاسع تشمل الدروس والملخصات والأسئلة والواجبات والدرجات والتجارب ثلاثية الأبعاد."/>
 <meta property="og:url" content="https://mohammedalmaskri-rgb.github.io/Chemistry-Grade-9/"/>
-<meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="بوابة الكيمياء للصف التاسع | الأستاذ محمد المسكري"/>
-<meta name="twitter:description" content="دروس وملخصات وأسئلة وواجبات ودرجات وتجارب ثلاثية الأبعاد في كيمياء الصف التاسع."/>
 <link rel="canonical" href="https://mohammedalmaskri-rgb.github.io/Chemistry-Grade-9/"/>
-<link rel="alternate" hreflang="ar-OM" href="https://mohammedalmaskri-rgb.github.io/Chemistry-Grade-9/"/>
-<link rel="alternate" hreflang="x-default" href="https://mohammedalmaskri-rgb.github.io/Chemistry-Grade-9/"/>
 <link rel="sitemap" type="application/xml" title="Sitemap" href="./sitemap.xml"/>
 <link rel="manifest" href="./site.webmanifest"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -114,6 +106,7 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;ove
 
 .seo-intro{margin-bottom:16px;padding:14px 15px;border-radius:16px;background:linear-gradient(135deg,#f0fdfa,#eff6ff);border:1px solid #d3e9e5}.seo-intro h1{font-size:20px;margin:0 0 6px;color:#0f5f59}.seo-intro p{margin:0;color:#567;line-height:1.7;font-size:13px}
 </style>
+<link rel="stylesheet" href="question-bank-addon.css">
 </head>
 <body>
 <div class="chem-bg" aria-hidden="true">
@@ -136,24 +129,12 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;ove
     <span class="orbit o3"><span class="electron"></span></span>
   </div>
 </div>
-<header class="top"><div><div class="brand">⚗️ بوابة الكيمياء للصف التاسع</div><div class="sub" id="topSub">الأستاذ محمد المسكري • الصفوف 9/1 - 9/7</div></div><button id="logoutBtn" class="btn secondary hide">خروج</button></header>
+<header class="top"><div><div class="brand">⚗️ بوابة الكيمياء | الصف التاسع</div><div class="sub" id="topSub">9/1 - 9/7</div></div><button id="logoutBtn" class="btn secondary hide">خروج</button></header>
 <main class="wrap">
 <section id="loginView" class="card login">
-  <div class="seo-intro" itemscope itemtype="https://schema.org/WebSite">
-    <meta itemprop="url" content="https://mohammedalmaskri-rgb.github.io/Chemistry-Grade-9/">
-    <meta itemprop="inLanguage" content="ar-OM">
-    <h1 itemprop="name">⚗️ بوابة الكيمياء للصف التاسع | الأستاذ محمد المسكري</h1>
-    <p itemprop="description">منصة تعليمية لطلاب الصف التاسع في سلطنة عُمان تشمل دروس الكيمياء والملخصات والأسئلة والواجبات والدرجات والتجارب ثلاثية الأبعاد.</p>
-    <div itemprop="publisher" itemscope itemtype="https://schema.org/Person">
-      <meta itemprop="name" content="محمد المسكري">
-      <meta itemprop="jobTitle" content="معلم كيمياء">
-    </div>
-    <div itemprop="mainEntity" itemscope itemtype="https://schema.org/LearningResource">
-      <meta itemprop="name" content="كيمياء الصف التاسع">
-      <meta itemprop="educationalLevel" content="الصف التاسع">
-      <meta itemprop="learningResourceType" content="بوابة تعليمية">
-      <meta itemprop="about" content="الكيمياء">
-    </div>
+  <div class="seo-intro">
+    <h1>⚗️ بوابة الكيمياء للصف التاسع</h1>
+    <p>منصة الأستاذ محمد المسكري للدروس والملخصات والأسئلة والواجبات والدرجات والتجارب ثلاثية الأبعاد.</p>
   </div>
   <div class="tabs"><button class="tab active" data-login="student">👨‍🎓 طالب</button><button class="tab" data-login="teacher">👨‍🏫 معلم</button></div>
   <div id="loginMsg"></div>
@@ -179,7 +160,7 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;ove
   <section id="s-lab" class="section card"><h2>🧪 التجارب</h2><div id="labList"></div></section>
   <section id="s-tests" class="section card"><h2>✅ الاختبارات</h2><div id="testList"></div></section>
   <section id="s-files" class="section card"><h2>📁 الملفات والأسئلة والحلول</h2><div id="fileList"></div></section>
-  <section id="s-bank" class="section card"><h2>🖼️ بنك الأسئلة</h2><p class="muted">الأسئلة التي أتاحها لك المعلم. أجب عنها مباشرة، وإذا فعّل المعلم إظهار الحل فسيظهر بعد إرسال إجابتك.</p><div id="studentBankList"><div class="lesson-empty">جاري تحميل الأسئلة...</div></div></section>
+  <section id="s-bank" class="section card qb-bank-section"><h2>🧠 بنك الأسئلة</h2><p class="muted">اختر الوحدة ثم الدرس، وبعدها تبدأ الأسئلة مباشرة سؤالًا بعد سؤال.</p><div id="qbChallengeRoot"><div class="lesson-empty">اختر بنك الأسئلة لعرض الوحدات والدروس.</div></div><div id="studentBankList" class="hide" aria-hidden="true"><div class="lesson-empty">جاري تحميل الأسئلة...</div></div></section>
   <section id="s-ask" class="section card"><h2>💬 اسأل معلمك</h2><div class="field"><label>سؤالك</label><textarea id="askText" rows="4" placeholder="اكتب سؤالك هنا..."></textarea></div><div class="row"><div class="field"><label>📷 صورة من الألبوم - اختياري</label><input id="askImage" type="file" accept="image/*"><img id="askImagePreview" class="preview" alt="معاينة المرفق"></div><div class="field"><label>أو رابط ملف/صورة - اختياري</label><input id="askUrl" placeholder="https://..."></div></div><button id="askBtn" class="btn primary">إرسال السؤال</button><div id="askMsg"></div><hr><h3>أسئلتي السابقة</h3><div id="questionList"></div></section>
 </section>
 
@@ -258,6 +239,7 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;ove
 </main>
 <div id="popupRoot"></div>
 <script src="app.js"></script>
+<script src="question-bank-addon.js"></script>
 <!-- student-login-tracking-v1 -->
 <!-- security-hardening-v2-stage5 -->
 </body></html>
