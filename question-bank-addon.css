@@ -47,3 +47,9 @@
 .teacher-bank-lesson-filter select{width:100%;padding:12px;border:1px solid #cfe2df;border-radius:12px;background:#fff;color:#173233;font-weight:700}
 #teacherBankLessonFilterHint{padding:12px 0}
 @media(max-width:700px){.teacher-bank-lesson-filter{grid-template-columns:1fr}.teacher-bank-lesson-filter #teacherBankLessonFilterHint{padding:0}}
+
+/* تحكم المعلم بإظهار/إخفاء أسئلة الدرس دفعة واحدة */
+.teacher-bank-lesson-actions{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:4px}
+.teacher-bank-lesson-actions .btn{padding:10px 13px}
+#teacherBankLessonActionMsg{min-height:20px}
+@media(max-width:700px){.teacher-bank-lesson-actions .btn{width:100%}.teacher-bank-lesson-actions #teacherBankLessonVisibilityState{width:100%;text-align:center}}

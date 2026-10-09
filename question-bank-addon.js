@@ -211,6 +211,7 @@
       else if(value==='__ALL__') hint.textContent=`عرض كل الأسئلة المحفوظة (${shown} سؤال).`;
       else hint.textContent=`${value}: ${shown} سؤال.`;
     }
+    updateTeacherLessonVisibilityUI();
   }
 
   function populateTeacherLessonFilter(){
@@ -230,13 +231,95 @@
     applyTeacherLessonFilter();
   }
 
+  function selectedTeacherLessonRows(){
+    const select=el('teacherBankLessonFilter');
+    if(!select || !select.value || select.value==='__ALL__')return [];
+    const value=teacherLessonNorm(select.value);
+    return Object.values(window.__teacherBankRows||{}).filter(q=>teacherLessonNorm(teacherLessonNameFromRow(q))===value);
+  }
+
+  function updateTeacherLessonVisibilityUI(){
+    const select=el('teacherBankLessonFilter');
+    const box=el('teacherBankLessonActions');
+    const state=el('teacherBankLessonVisibilityState');
+    const showBtn=el('teacherBankShowAllBtn');
+    const hideBtn=el('teacherBankHideAllBtn');
+    if(!select||!box||!state||!showBtn||!hideBtn)return;
+    const valid=!!select.value && select.value!=='__ALL__';
+    box.classList.toggle('hide',!valid);
+    if(!valid)return;
+    const qs=selectedTeacherLessonRows();
+    const visible=qs.filter(q=>!!q.is_visible).length;
+    const hidden=qs.length-visible;
+    if(!qs.length){
+      state.className='badge state-off';
+      state.textContent='لا توجد أسئلة في هذا الدرس';
+      showBtn.disabled=true;hideBtn.disabled=true;return;
+    }
+    if(visible===qs.length){
+      state.className='badge state-on';
+      state.textContent=`ظاهر للطلاب • ${visible}/${qs.length}`;
+    }else if(hidden===qs.length){
+      state.className='badge state-off';
+      state.textContent=`مخفي عن الطلاب • ${hidden}/${qs.length}`;
+    }else{
+      state.className='badge';
+      state.textContent=`بعض الأسئلة ظاهرة • ${visible}/${qs.length}`;
+    }
+    showBtn.disabled=visible===qs.length;
+    hideBtn.disabled=hidden===qs.length;
+  }
+
+  async function setSelectedTeacherLessonVisibility(makeVisible){
+    const select=el('teacherBankLessonFilter');
+    const msg=el('teacherBankLessonActionMsg');
+    const showBtn=el('teacherBankShowAllBtn');
+    const hideBtn=el('teacherBankHideAllBtn');
+    if(!select || !select.value || select.value==='__ALL__')return;
+    const qs=selectedTeacherLessonRows();
+    if(!qs.length){if(msg)msg.textContent='لا توجد أسئلة في هذا الدرس.';return}
+    const action=makeVisible?'إظهار':'إخفاء';
+    if(!confirm(`${action} جميع أسئلة «${select.value}» ${makeVisible?'للطلاب':'عن الطلاب'}؟`))return;
+    if(showBtn)showBtn.disabled=true;if(hideBtn)hideBtn.disabled=true;
+    if(msg)msg.textContent=`جاري ${action} الأسئلة...`;
+    try{
+      let changed=0;
+      for(const q of qs){
+        if(!!q.is_visible===makeVisible)continue;
+        const ok=await rpc('portal_teacher_set_question_state',{
+          p_token:teacherToken,
+          p_question_id:q.id,
+          p_is_visible:makeVisible,
+          p_show_solution:!!q.show_solution
+        });
+        if(ok)changed++;
+      }
+      if(msg)msg.textContent=makeVisible?`✅ تم إظهار أسئلة الدرس للطلاب (${changed} تحديث).`:`✅ تم إخفاء أسئلة الدرس (${changed} تحديث).`;
+      if(typeof loadTeacherBank==='function')await loadTeacherBank();
+      setTimeout(()=>{
+        populateTeacherLessonFilter();
+        const s=el('teacherBankLessonFilter');
+        if(s && [...s.options].some(o=>o.value===select.value))s.value=select.value;
+        applyTeacherLessonFilter();
+        updateTeacherLessonVisibilityUI();
+      },80);
+    }catch(e){
+      if(msg)msg.textContent=`تعذر تحديث حالة الدرس: ${e?.message||'خطأ غير معروف'}`;
+      updateTeacherLessonVisibilityUI();
+    }
+  }
+
   function bindTeacherBankFilter(){
     const select=el('teacherBankLessonFilter'),list=el('teacherBankList');
     if(!select||!list)return;
     if(!select.dataset.bound){
       select.dataset.bound='1';
-      select.addEventListener('change',applyTeacherLessonFilter);
+      select.addEventListener('change',()=>{applyTeacherLessonFilter();updateTeacherLessonVisibilityUI();});
     }
+    const showBtn=el('teacherBankShowAllBtn'),hideBtn=el('teacherBankHideAllBtn');
+    if(showBtn&&!showBtn.dataset.bound){showBtn.dataset.bound='1';showBtn.addEventListener('click',()=>setSelectedTeacherLessonVisibility(true));}
+    if(hideBtn&&!hideBtn.dataset.bound){hideBtn.dataset.bound='1';hideBtn.addEventListener('click',()=>setSelectedTeacherLessonVisibility(false));}
+
     if(!list.dataset.lessonObserver){
       list.dataset.lessonObserver='1';
       const observer=new MutationObserver(()=>setTimeout(populateTeacherLessonFilter,0));
