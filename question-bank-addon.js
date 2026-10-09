@@ -2,7 +2,7 @@
   بنك الأسئلة المتسلسل
   - الوحدة الأولى: حالات المادة / فصل وتنقية المواد
   - سؤال واحد كل مرة، بلا رجوع للسؤال السابق
-  - 10 نقاط داخل التحدي لكل إجابة صحيحة (النتيجة من 100 عند وجود 10 أسئلة)
+  - 10 نقاط داخل التحدي لكل إجابة صحيحة (النتيجة من 150 عند وجود 15 سؤالًا)
   - +0.5 نقطة في رصيد المنصة لأول إجابة صحيحة على السؤال، عبر RPC الحالي
 */
 (() => {
@@ -55,7 +55,7 @@
       <div class="qb-unit-card">
         <div class="qb-unit-head"><div><div class="qb-unit-title">📘 الوحدة الأولى</div><div class="muted">اختر الدرس وابدأ الأسئلة مباشرة</div></div><span class="badge">سؤال بعد سؤال</span></div>
         <div class="qb-lessons-grid">
-          ${LESSONS.map(l=>{const n=lessonRows(l).length;return `<button type="button" class="qb-lesson-card" data-qb-lesson="${l.key}" ${n?'':'disabled'}><span class="qb-lesson-icon">${l.icon}</span><span class="qb-lesson-name">${htmlEsc(l.name)}</span><span class="qb-lesson-meta">${n?`${Math.min(n,10)} أسئلة جاهزة للتحدي`:'لا توجد أسئلة منشورة لهذا الدرس بعد'}</span></button>`}).join('')}
+          ${LESSONS.map(l=>{const n=lessonRows(l).length;return `<button type="button" class="qb-lesson-card" data-qb-lesson="${l.key}" ${n?'':'disabled'}><span class="qb-lesson-icon">${l.icon}</span><span class="qb-lesson-name">${htmlEsc(l.name)}</span><span class="qb-lesson-meta">${n?`${Math.min(n,15)} سؤالًا جاهزًا للتحدي`:'لا توجد أسئلة منشورة لهذا الدرس بعد'}</span></button>`}).join('')}
         </div>
       </div>
     </div>`;
@@ -70,7 +70,7 @@
 
   function startLesson(key){
     const lesson=LESSONS.find(l=>l.key===key); if(!lesson)return;
-    const qs=shuffle(lessonRows(lesson)).slice(0,10);
+    const qs=lessonRows(lesson).sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ar',{numeric:true})).slice(0,15);
     if(!qs.length)return;
     active={lesson,questions:qs,index:0,correct:0,wrong:0,score:0,addedPoints:0,answeredIds:new Set()};
     renderQuestion();
@@ -114,9 +114,8 @@
       <div class="qb-challenge-top"><div><div class="qb-challenge-title">${active.lesson.icon} ${htmlEsc(active.lesson.name)}</div><div class="qb-challenge-progress">السؤال ${current} من ${total}</div></div><button id="qbExitBtn" class="qb-exit" type="button">خروج</button></div>
       <div class="qb-progress-track-dark"><div class="qb-progress-fill-dark" style="width:${pct}%"></div></div>
       <div class="qb-question-card">
-        <div class="qb-q-kicker"><span>⭐ كل إجابة صحيحة = +0.5 نقطة في رصيد المنصة لأول مرة</span><span>${fmt(active.score)} / ${total*10}</span></div>
-        <h3 class="qb-q-title">${htmlEsc(q.title||`السؤال ${current}`)}</h3>
-        ${q.question_text?`<p class="qb-q-text">${htmlEsc(q.question_text).replace(/\n/g,'<br>')}</p>`:''}
+        <div class="qb-q-kicker"><span>⭐ الصحيح = 10 درجات + 0.5 نقطة في رصيدك لأول مرة</span><span>${fmt(active.score)} / ${total*10}</span></div>
+        <h3 class="qb-q-title">${htmlEsc(q.question_text||q.title||`السؤال ${current}`).replace(/\n/g,'<br>')}</h3>
         ${image?`<img class="qb-q-image" src="${image}" alt="صورة السؤال">`:''}
         ${questionControls(q,meta)}
         <div class="qb-challenge-actions"><button id="qbSubmitBtn" class="qb-submit-dark" type="button">إرسال الإجابة</button></div>
