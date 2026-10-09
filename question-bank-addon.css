@@ -40,3 +40,10 @@
 .qb-result-btn{border:0;border-radius:14px;padding:13px 18px;background:#fff;color:#0f766e;font-weight:900;cursor:pointer}
 
 @media(max-width:700px){.qb-lessons-grid{grid-template-columns:1fr}.qb-challenge-overlay{padding:10px}.qb-question-card{padding:17px;border-radius:20px}.qb-q-title{font-size:19px}.qb-match-row-dark{grid-template-columns:1fr}.qb-result-grid{grid-template-columns:1fr}.qb-result-score{font-size:46px}}
+
+
+/* تنظيم بنك الأسئلة للمعلم حسب الدرس */
+.teacher-bank-lesson-filter{display:grid;grid-template-columns:minmax(230px,380px) 1fr;gap:14px;align-items:end;padding:16px;margin:10px 0 18px;border:1px solid #cfe8e3;border-radius:18px;background:linear-gradient(135deg,#f0fdfa,#f8fbff)}
+.teacher-bank-lesson-filter select{width:100%;padding:12px;border:1px solid #cfe2df;border-radius:12px;background:#fff;color:#173233;font-weight:700}
+#teacherBankLessonFilterHint{padding:12px 0}
+@media(max-width:700px){.teacher-bank-lesson-filter{grid-template-columns:1fr}.teacher-bank-lesson-filter #teacherBankLessonFilterHint{padding:0}}

@@ -178,11 +178,84 @@
     el('qbResultBack')?.addEventListener('click',closeOverlay);
   }
 
+
+  // ===== تنظيم بنك الأسئلة في حساب المعلم حسب اسم الدرس =====
+  const teacherLessonNorm=s=>String(s??'').trim().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ');
+
+  function teacherLessonNameFromRow(q){
+    if(!q)return '';
+    try{return String(unpackBank(q)?.meta?.lessonName||'').trim()}catch(_e){return ''}
+  }
+
+  function teacherQuestionRowForItem(item){
+    const id=item?.querySelector('[data-action="edit-bank-question"]')?.dataset?.id;
+    return id && window.__teacherBankRows ? window.__teacherBankRows[id] : null;
+  }
+
+  function applyTeacherLessonFilter(){
+    const list=el('teacherBankList'),select=el('teacherBankLessonFilter'),hint=el('teacherBankLessonFilterHint');
+    if(!list||!select)return;
+    const value=select.value;
+    const items=[...list.querySelectorAll(':scope > .item')];
+    let shown=0;
+    items.forEach(item=>{
+      const row=teacherQuestionRowForItem(item);
+      const lesson=teacherLessonNameFromRow(row);
+      const visible=value==='__ALL__' ? true : (!!value && teacherLessonNorm(lesson)===teacherLessonNorm(value));
+      item.classList.toggle('hide',!visible);
+      if(visible)shown++;
+    });
+    if(hint){
+      if(!items.length) hint.textContent='لا توجد أسئلة محفوظة حاليًا.';
+      else if(!value) hint.textContent='اختر اسم الدرس لعرض أسئلته.';
+      else if(value==='__ALL__') hint.textContent=`عرض كل الأسئلة المحفوظة (${shown} سؤال).`;
+      else hint.textContent=`${value}: ${shown} سؤال.`;
+    }
+  }
+
+  function populateTeacherLessonFilter(){
+    const select=el('teacherBankLessonFilter');
+    if(!select)return;
+    const previous=select.value;
+    const rows=Object.values(window.__teacherBankRows||{});
+    const map=new Map();
+    rows.forEach(q=>{
+      const name=teacherLessonNameFromRow(q);
+      if(name){const key=teacherLessonNorm(name);if(!map.has(key))map.set(key,name)}
+    });
+    const lessons=[...map.values()].sort((a,b)=>a.localeCompare(b,'ar'));
+    select.innerHTML='<option value="">اختر اسم الدرس</option><option value="__ALL__">كل الدروس</option>'+lessons.map(name=>`<option value="${htmlEsc(name)}">${htmlEsc(name)}</option>`).join('');
+    if([...select.options].some(o=>o.value===previous))select.value=previous;
+    else select.value='';
+    applyTeacherLessonFilter();
+  }
+
+  function bindTeacherBankFilter(){
+    const select=el('teacherBankLessonFilter'),list=el('teacherBankList');
+    if(!select||!list)return;
+    if(!select.dataset.bound){
+      select.dataset.bound='1';
+      select.addEventListener('change',applyTeacherLessonFilter);
+    }
+    if(!list.dataset.lessonObserver){
+      list.dataset.lessonObserver='1';
+      const observer=new MutationObserver(()=>setTimeout(populateTeacherLessonFilter,0));
+      observer.observe(list,{childList:true});
+    }
+    const navBtn=document.querySelector('#teacherNav [data-sec="t-bank"]');
+    if(navBtn&&!navBtn.dataset.lessonFilterBound){
+      navBtn.dataset.lessonFilterBound='1';
+      navBtn.addEventListener('click',()=>setTimeout(populateTeacherLessonFilter,80));
+    }
+    setTimeout(populateTeacherLessonFilter,0);
+  }
+
   function bind(){
     const navBtn=document.querySelector('#studentNav [data-sec="s-bank"]');
     if(navBtn)navBtn.addEventListener('click',()=>setTimeout(openHome,0));
     const sec=el('s-bank');
     if(sec && sec.classList.contains('active'))openHome();
+    bindTeacherBankFilter();
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();

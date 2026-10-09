@@ -213,7 +213,18 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;ove
       <div class="inline-actions"><button id="bankAddBtn" class="btn primary">💾 حفظ السؤال</button><button id="bankCancelEditBtn" type="button" class="btn secondary hide">↩️ إلغاء التعديل</button></div><div id="bankMsg"></div>
     </div>
 
-    <h3>📚 الأسئلة المحفوظة</h3><div id="teacherBankList"></div>
+    <h3>📚 الأسئلة المحفوظة</h3>
+    <div class="teacher-bank-lesson-filter">
+      <div class="field" style="margin:0">
+        <label for="teacherBankLessonFilter">📘 اسم الدرس</label>
+        <select id="teacherBankLessonFilter">
+          <option value="">اختر اسم الدرس</option>
+          <option value="__ALL__">كل الدروس</option>
+        </select>
+      </div>
+      <div id="teacherBankLessonFilterHint" class="muted">اختر اسم الدرس لعرض أسئلته.</div>
+    </div>
+    <div id="teacherBankList"></div>
     <hr class="qb-divider">
     <h3>✍️ الإجابات المقالية الواردة</h3>
     <p class="muted">الإجابة المقالية لا تُصحح تلقائيًا. اكتب تصحيحك أو الدرجة في خانة الرد ثم اضغط «حفظ التصحيح».</p>
