@@ -45,7 +45,7 @@ function nav(root){root.querySelectorAll('button[data-sec]').forEach(b=>b.onclic
 nav($('studentNav'));nav($('teacherNav'));
 const lessonsNavBtn=$('studentNav')?.querySelector('[data-sec="s-lessons"]');
 if(lessonsNavBtn)lessonsNavBtn.addEventListener('click',()=>{if(!studentToken)return;loadMyLessons().catch(e=>{$('lessonList').innerHTML=`<div class="msg err">تعذر تحميل دروسك: ${esc(e.message||'خطأ غير معروف')}</div>`})});
-classes.forEach(c=>{['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass'].forEach(id=>$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`));['gradeClass','pointsClass'].forEach(id=>$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`))});
+classes.forEach(c=>{['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass'].forEach(id=>$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`));['gradeClass','pointsClass','gradeReportClass'].forEach(id=>{if($(id))$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`)});});
 $('pointsClass')&&$('pointsClass').insertAdjacentHTML('afterbegin','<option value="ALL">🌐 كل الشعب</option>');
 document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>{loginMode=b.dataset.login;document.querySelectorAll('[data-login]').forEach(x=>x.classList.toggle('active',x===b));$('teacherHint').style.display=loginMode==='teacher'?'block':'none';$('loginUser').placeholder=loginMode==='teacher'?'teacher':'مثال: 91001'});
 async function rpc(fn,args={}){if(!/^portal_[a-z0-9_]{1,80}$/i.test(String(fn)))throw new Error('RPC غير مسموح');const req=sb.rpc(fn,args);let timer;try{const result=await Promise.race([req,new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error('انتهت مهلة الاتصال. حاول مرة أخرى.')),SEC.rpcTimeoutMs)})]);const {data,error}=result;if(error)throw error;return data}finally{clearTimeout(timer)}}
@@ -557,7 +557,88 @@ async function loadStudents(c='ALL'){allStudents=await rpc('portal_teacher_stude
 $('studentFilter').onchange=()=>loadStudents($('studentFilter').value);$('studentSearch').oninput=renderStudentsTable;
 async function refreshStudentSelects(){const c=$('gradeClass').value||'9/1';const d=await rpc('portal_teacher_students',{p_token:teacherToken,p_class:c});$('gradeStudent').innerHTML=d.map(s=>`<option value="${s.id}">${studentName(s.full_name)}</option>`).join('');const pc=$('pointsClass').value||'9/1';const p=await rpc('portal_teacher_points_overview',{p_token:teacherToken,p_class:pc});$('pointsStudent').innerHTML=p.map(s=>`<option value="${s.student_id}">${studentName(s.full_name)} — ${fmtPoints(s.total_points)} نقطة</option>`).join('');if($('pointsRanking')){const sorted=[...p].sort((a,b)=>Number(b.total_points||0)-Number(a.total_points||0));$('pointsRanking').innerHTML=sorted.length?`<div style="overflow:auto"><table><thead><tr><th>#</th><th>الطالب</th><th>الشعبة</th><th>نقاط المعلم</th><th>نقاط الأسئلة</th><th>المجموع</th></tr></thead><tbody>${sorted.map((s,i)=>`<tr><td>${i+1}</td><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${fmtPoints(s.base_points)}</td><td>+${fmtPoints(s.quiz_points)}</td><td><b>⭐ ${fmtPoints(s.total_points)}</b></td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">لا يوجد طلاب.</div>'}}
 $('gradeClass').onchange=refreshStudentSelects;$('pointsClass').onchange=refreshStudentSelects;
-$('gradeAddBtn').onclick=async()=>{try{const id=await rpc('portal_teacher_add_grade',{p_token:teacherToken,p_student_id:Number($('gradeStudent').value),p_title:$('gradeTitle').value,p_score:Number($('gradeScore').value),p_max_score:Number($('gradeMax').value),p_note:$('gradeNote').value});if(!id)throw new Error('تحقق من البيانات');msg('gradeMsg','تم حفظ الدرجة ✅');$('gradeScore').value='';$('gradeNote').value=''}catch(e){msg('gradeMsg',e.message,false)}};
+$('gradeAddBtn').onclick=async()=>{try{const id=await rpc('portal_teacher_add_grade',{p_token:teacherToken,p_student_id:Number($('gradeStudent').value),p_title:$('gradeTitle').value,p_score:Number($('gradeScore').value),p_max_score:Number($('gradeMax').value),p_note:$('gradeNote').value});if(!id)throw new Error('تحقق من البيانات');msg('gradeMsg','تم حفظ الدرجة ✅');$('gradeScore').value='';$('gradeNote').value='';if(window.__gradeReportLoaded)await loadGradeReport()}catch(e){msg('gradeMsg',e.message,false)}};
+let gradeReportRows=[];
+let gradeReportStudents=[];
+function gradeAssessmentKey(r){return `${String(r.assessment_title||'')}|||${Number(r.max_score||0)}`}
+function gradeFmt(v){const n=Number(v);return Number.isFinite(n)?(Number.isInteger(n)?String(n):n.toFixed(2).replace(/0+$/,'').replace(/\.$/,'')):'0'}
+function latestGradeRows(rows){
+  const m=new Map();
+  (rows||[]).forEach(r=>{
+    const k=`${r.student_id}|||${gradeAssessmentKey(r)}`;
+    const old=m.get(k);
+    if(!old||Number(r.grade_id)>Number(old.grade_id))m.set(k,r);
+  });
+  return [...m.values()];
+}
+function fillGradeAssessmentSelect(){
+  const sel=$('gradeReportAssessment');if(!sel)return;
+  const prev=sel.value;
+  const unique=new Map();
+  latestGradeRows(gradeReportRows).forEach(r=>unique.set(gradeAssessmentKey(r),`${r.assessment_title} — من ${gradeFmt(r.max_score)}`));
+  const opts=[...unique.entries()].sort((a,b)=>a[1].localeCompare(b[1],'ar'));
+  sel.innerHTML='<option value="ALL">كل التقييمات</option>'+opts.map(([k,label])=>`<option value="${esc(k)}">${esc(label)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+  else if(opts.length)sel.value=opts[0][0];
+}
+function renderGradeReport(){
+  if(!$('gradeReportTable'))return;
+  const assessment=$('gradeReportAssessment')?.value||'ALL';
+  const latest=latestGradeRows(gradeReportRows);
+  let rows=assessment==='ALL'?latest:latest.filter(r=>gradeAssessmentKey(r)===assessment);
+  rows.sort((a,b)=>{
+    if(assessment!=='ALL')return Number(b.score)-Number(a.score)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar');
+    return String(a.assessment_title||'').localeCompare(String(b.assessment_title||''),'ar')||Number(b.max_score)-Number(a.max_score)||Number(b.score)-Number(a.score);
+  });
+
+  const studentTotal=gradeReportStudents.length;
+  const uniqueStudents=new Set(rows.map(r=>String(r.student_id))).size;
+  const full=rows.filter(r=>Number(r.score)===Number(r.max_score)).length;
+  const avgPct=rows.length?rows.reduce((s,r)=>s+(Number(r.max_score)>0?Number(r.score)/Number(r.max_score)*100:0),0)/rows.length:0;
+
+  if(assessment!=='ALL'&&rows.length){
+    const max=Number(rows[0].max_score||0);
+    const avg=rows.reduce((s,r)=>s+Number(r.score||0),0)/rows.length;
+    const high=Math.max(...rows.map(r=>Number(r.score||0)));
+    const low=Math.min(...rows.map(r=>Number(r.score||0)));
+    $('gradeReportStats').innerHTML=`<div class="visit-box"><b>${uniqueStudents}</b><br>طلاب لهم درجة${studentTotal?` من ${studentTotal}`:''}</div><div class="visit-box"><b>${full}</b><br>الدرجة الكاملة</div><div class="visit-box"><b>${gradeFmt(avg)} / ${gradeFmt(max)}</b><br>المتوسط</div><div class="visit-box"><b>${gradeFmt(high)} / ${gradeFmt(low)}</b><br>أعلى / أقل</div>`;
+    const dist=new Map();
+    rows.forEach(r=>{const k=Number(r.score||0);dist.set(k,(dist.get(k)||0)+1)});
+    const items=[...dist.entries()].sort((a,b)=>b[0]-a[0]);
+    $('gradeReportDistribution').innerHTML=`<h4 style="margin:0 0 8px">📊 توزيع الدرجات</h4><div class="visit-summary">${items.map(([score,count])=>`<div class="visit-box"><b>${gradeFmt(score)} / ${gradeFmt(max)}</b><br>${count} ${count===1?'طالب':'طلاب'}</div>`).join('')}</div>`;
+  }else{
+    $('gradeReportStats').innerHTML=`<div class="visit-box"><b>${rows.length}</b><br>سجلات التقييمات</div><div class="visit-box"><b>${uniqueStudents}</b><br>طلاب لهم درجات</div><div class="visit-box"><b>${full}</b><br>درجات كاملة</div><div class="visit-box"><b>${avgPct.toFixed(1)}%</b><br>متوسط النسبة</div>`;
+    const groups=new Map();
+    rows.forEach(r=>{const k=gradeAssessmentKey(r);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r)});
+    $('gradeReportDistribution').innerHTML=groups.size?`<h4 style="margin:0 0 8px">📊 ملخص حسب التقييم</h4><div class="grid">${[...groups.values()].map(g=>{const max=Number(g[0].max_score||0),f=g.filter(r=>Number(r.score)===Number(r.max_score)).length,avg=g.reduce((s,r)=>s+Number(r.score||0),0)/g.length;return `<div class="item"><b>${esc(g[0].assessment_title)}</b><div class="muted">من ${gradeFmt(max)}</div><p>المسجلون: <b>${g.length}</b> — الدرجة الكاملة: <b>${f}</b> — المتوسط: <b>${gradeFmt(avg)} / ${gradeFmt(max)}</b></p></div>`}).join('')}</div>`:'<div class="muted">لا توجد درجات مسجلة لهذه الشعبة.</div>';
+  }
+
+  $('gradeReportTable').innerHTML=rows.length?rows.map(r=>`<tr><td>${studentName(r.full_name)}</td><td>${esc(r.class_name)}</td><td>${esc(r.assessment_title)}</td><td>${Number(r.score)===Number(r.max_score)?'<span class="badge state-on">⭐ '+gradeFmt(r.score)+'</span>':`<b>${gradeFmt(r.score)}</b>`}</td><td>${gradeFmt(r.max_score)}</td><td>${r.note?esc(r.note):'—'}</td></tr>`).join(''):'<tr><td colspan="6" class="muted">لا توجد درجات مطابقة.</td></tr>';
+}
+async function loadGradeReport(){
+  if(!$('gradeReportTable'))return;
+  $('gradeReportTable').innerHTML='<tr><td colspan="6" class="muted">جاري تحميل الدرجات...</td></tr>';
+  $('gradeReportDistribution').innerHTML='';$('gradeReportStats').innerHTML='';
+  try{
+    const cls=$('gradeReportClass')?.value||'ALL';
+    const calls=[rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls})];
+    if(cls!=='ALL')calls.push(rpc('portal_teacher_students',{p_token:teacherToken,p_class:cls}));
+    const res=await Promise.all(calls);
+    gradeReportRows=res[0]||[];gradeReportStudents=cls==='ALL'?[]:(res[1]||[]);
+    fillGradeAssessmentSelect();renderGradeReport();window.__gradeReportLoaded=true;
+    msg('gradeReportMsg',`تم تحميل ${latestGradeRows(gradeReportRows).length} سجل للعرض ✅`);
+  }catch(e){
+    gradeReportRows=[];gradeReportStudents=[];
+    $('gradeReportTable').innerHTML=`<tr><td colspan="6"><div class="msg err">تعذر تحميل تقرير الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`;
+    msg('gradeReportMsg',e.message||'تعذر تحميل الدرجات',false);
+  }
+}
+$('gradeReportLoadBtn')&&($('gradeReportLoadBtn').onclick=loadGradeReport);
+$('gradeReportClass')&&($('gradeReportClass').onchange=loadGradeReport);
+$('gradeReportAssessment')&&($('gradeReportAssessment').onchange=renderGradeReport);
+const gradeNavBtn=$('teacherNav')?.querySelector('[data-sec="t-grades"]');
+gradeNavBtn&&gradeNavBtn.addEventListener('click',()=>{if(!window.__gradeReportLoaded)loadGradeReport()});
+
 function formatQuestionTime(v){if(!v)return '';try{return new Date(v).toLocaleString('ar-OM',{dateStyle:'short',timeStyle:'short'})}catch(e){return new Date(v).toLocaleString('ar')}}
 async function loadTeacherQuestions(){const all=await rpc('portal_teacher_questions',{p_token:teacherToken,p_status:null});const d=(all||[]).filter(q=>!String(q.question_text||'').startsWith(BANK_ESSAY_PREFIX));$('teacherQuestionList').innerHTML=d.length?d.map(q=>`<div class="item"><span class="badge">${esc(q.class_name)} • ${q.status==='new'?'جديد':'تمت الإجابة'}</span><h3>${studentName(q.full_name)}</h3>${q.created_at?`<div class="muted" style="margin-top:-6px;margin-bottom:10px">🕒 أرسل السؤال: ${formatQuestionTime(q.created_at)}</div>`:''}<p>${esc(q.question_text)}</p>${q.attachment_url?renderSafeAttachment(q.attachment_url,'فتح المرفق'):''}<div class="field"><textarea id="reply-${q.id}" rows="3" placeholder="اكتب ردك...">${esc(q.teacher_reply||'')}</textarea></div><button class="btn primary" data-action="reply-question" data-id="${q.id}">إرسال الرد</button></div>`).join(''):'<div class="muted">لا توجد أسئلة.</div>'}
 window.replyQ=async id=>{const ok=await rpc('portal_teacher_reply_question',{p_token:teacherToken,p_question_id:id,p_reply:$('reply-'+id).value});if(ok){await loadTeacherQuestions();await loadOverview()}};

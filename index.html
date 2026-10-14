@@ -237,7 +237,30 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;ove
     <div id="teacherEssayList"></div>
   </section>
   <section id="t-content" class="section card"><h2>📚 إضافة مواد تعليمية</h2><div class="row3"><div class="field"><label>النوع</label><select id="contentKind"><option value="lesson">درس</option><option value="homework">واجب</option><option value="question_solution">أسئلة وحلول</option><option value="experiment">تجربة</option><option value="test">اختبار</option><option value="file">ملف</option></select></div><div class="field"><label>الشعبة</label><select id="contentClass"><option value="ALL">كل الصفوف</option></select></div><div class="field"><label>موعد التسليم - اختياري</label><input id="contentDue" type="datetime-local"></div></div><div class="field"><label>العنوان</label><input id="contentTitle"></div><div class="field"><label>التفاصيل</label><textarea id="contentBody" rows="4"></textarea></div><div class="row"><div class="field"><label>رابط الملف/السؤال - اختياري</label><input id="contentLink" placeholder="https://..."></div><div class="field"><label>📄 أو رفع ملف PDF من الجهاز</label><input id="contentPdf" type="file" accept="application/pdf"></div></div><div class="field"><label>رابط الحل - اختياري</label><input id="contentSolution" placeholder="https://..."></div><button id="contentAddBtn" class="btn primary">نشر المادة التعليمية</button><div id="contentMsg"></div><h3>المواد التعليمية المنشورة</h3><div id="teacherContentList"></div></section>
-  <section id="t-grades" class="section card"><h2>📊 تسجيل الدرجات</h2><div class="row3"><div class="field"><label>الشعبة</label><select id="gradeClass"></select></div><div class="field"><label>الطالب</label><select id="gradeStudent"></select></div><div class="field"><label>اسم التقييم</label><input id="gradeTitle" placeholder="اختبار قصير 1"></div></div><div class="row3"><div class="field"><label>الدرجة</label><input id="gradeScore" type="number" step="0.01"></div><div class="field"><label>من</label><input id="gradeMax" type="number" step="0.01" value="10"></div><div class="field"><label>ملاحظة</label><input id="gradeNote"></div></div><button id="gradeAddBtn" class="btn primary">حفظ الدرجة</button><div id="gradeMsg"></div></section>
+  <section id="t-grades" class="section card">
+    <h2>📊 تسجيل الدرجات</h2>
+    <div class="row3"><div class="field"><label>الشعبة</label><select id="gradeClass"></select></div><div class="field"><label>الطالب</label><select id="gradeStudent"></select></div><div class="field"><label>اسم التقييم</label><input id="gradeTitle" placeholder="اختبار قصير 1"></div></div>
+    <div class="row3"><div class="field"><label>الدرجة</label><input id="gradeScore" type="number" step="0.01"></div><div class="field"><label>من</label><input id="gradeMax" type="number" step="0.01" value="10"></div><div class="field"><label>ملاحظة</label><input id="gradeNote"></div></div>
+    <button id="gradeAddBtn" class="btn primary">حفظ الدرجة</button><div id="gradeMsg"></div>
+
+    <hr style="margin:24px 0">
+    <h3>📋 استعراض درجات الطلاب</h3>
+    <p class="muted">عرض وملخص فقط — لا يتم تعديل الدرجات المسجلة من هذه الخانة.</p>
+    <div class="row3">
+      <div class="field"><label>الشعبة</label><select id="gradeReportClass"><option value="ALL">كل الشعب</option></select></div>
+      <div class="field"><label>التقييم</label><select id="gradeReportAssessment"><option value="ALL">كل التقييمات</option></select></div>
+      <div class="field"><label>&nbsp;</label><button id="gradeReportLoadBtn" class="btn primary" style="width:100%">🔄 عرض الدرجات</button></div>
+    </div>
+    <div id="gradeReportMsg"></div>
+    <div id="gradeReportStats" class="visit-summary" style="margin-top:14px"></div>
+    <div id="gradeReportDistribution" style="margin:14px 0"></div>
+    <div style="overflow:auto">
+      <table class="eng-table">
+        <thead><tr><th>الطالب</th><th>الشعبة</th><th>التقييم</th><th>الدرجة</th><th>من</th><th>ملاحظة</th></tr></thead>
+        <tbody id="gradeReportTable"><tr><td colspan="6" class="muted">اختر الشعبة ثم اضغط «عرض الدرجات».</td></tr></tbody>
+      </table>
+    </div>
+  </section>
   <section id="t-questions" class="section card"><h2>💬 أسئلة الطلاب</h2><div id="teacherQuestionList"></div></section>
   <section id="t-points" class="section card"><h2>⭐ نقاط الطلاب</h2><p class="muted">استخدم رقمًا موجبًا للإضافة أو سالبًا للخصم، أو الأزرار السريعة.</p><div class="row3"><div class="field"><label>الشعبة</label><select id="pointsClass"></select></div><div class="field"><label>الطالب</label><select id="pointsStudent"></select></div><div class="field"><label>التعديل</label><input id="pointsDelta" type="number" value="1"></div></div><div class="inline-actions"><button id="pointsPlusBtn" class="btn secondary">+1 ⭐</button><button id="pointsMinusBtn" class="btn danger">-1 ⭐ خصم نقطة</button><button id="pointsBtn" class="btn primary">تطبيق التعديل</button></div><div id="pointsMsg"></div><hr><h3>🏆 ترتيب الطلاب بالنقاط</h3><div id="pointsRanking"></div></section>
   <section id="t-students" class="section card"><h2>👥 الطلاب</h2><div class="teacher-lesson-builder"><h3>➕ إضافة طالب جديد</h3><div class="row3"><div class="field"><label>اسم الطالب</label><input id="newStudentName" placeholder="الاسم الكامل"></div><div class="field"><label>الشعبة</label><select id="newStudentClass"></select></div><div class="field"><label>اسم المستخدم</label><input id="newStudentUsername" placeholder="مثال: 91030"></div></div><div class="field"><label>كلمة مرور مؤقتة</label><input id="newStudentPassword" placeholder="6 أحرف/أرقام على الأقل"></div><button id="addStudentBtn" class="btn primary">➕ إضافة الطالب</button><div id="studentAdminMsg"></div></div><div class="row"><div class="field"><label>الشعبة</label><select id="studentFilter"><option value="ALL">الكل</option></select></div><div class="field"><label>🔎 بحث عن الطالب</label><input id="studentSearch" placeholder="اكتب جزءًا من اسم الطالب أو اسم المستخدم"></div></div><div id="studentSearchCount" class="muted"></div><div style="overflow:auto"><table><thead><tr><th>الاسم</th><th>الشعبة</th><th>المستخدم</th><th>النقاط</th><th>إجراء</th></tr></thead><tbody id="studentsTable"></tbody></table></div></section>
