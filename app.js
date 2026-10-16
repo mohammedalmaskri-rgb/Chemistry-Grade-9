@@ -46,6 +46,7 @@ nav($('studentNav'));nav($('teacherNav'));
 const lessonsNavBtn=$('studentNav')?.querySelector('[data-sec="s-lessons"]');
 if(lessonsNavBtn)lessonsNavBtn.addEventListener('click',()=>{if(!studentToken)return;loadMyLessons().catch(e=>{$('lessonList').innerHTML=`<div class="msg err">تعذر تحميل دروسك: ${esc(e.message||'خطأ غير معروف')}</div>`})});
 classes.forEach(c=>{['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass'].forEach(id=>$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`));['gradeClass','pointsClass'].forEach(id=>$(id).insertAdjacentHTML('beforeend',`<option value="${c}">${c}</option>`))});
+if($('gradeReportClass'))$('gradeReportClass').innerHTML='<option value="ALL">كل الشعب</option>'+classes.map(c=>`<option value="${c}">${c}</option>`).join('');
 $('pointsClass')&&$('pointsClass').insertAdjacentHTML('afterbegin','<option value="ALL">🌐 كل الشعب</option>');
 document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>{loginMode=b.dataset.login;document.querySelectorAll('[data-login]').forEach(x=>x.classList.toggle('active',x===b));$('teacherHint').style.display=loginMode==='teacher'?'block':'none';$('loginUser').placeholder=loginMode==='teacher'?'teacher':'مثال: 91001'});
 async function rpc(fn,args={}){if(!/^portal_[a-z0-9_]{1,80}$/i.test(String(fn)))throw new Error('RPC غير مسموح');const req=sb.rpc(fn,args);let timer;try{const result=await Promise.race([req,new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error('انتهت مهلة الاتصال. حاول مرة أخرى.')),SEC.rpcTimeoutMs)})]);const {data,error}=result;if(error)throw error;return data}finally{clearTimeout(timer)}}
@@ -552,12 +553,41 @@ $('loginClass')&&($('loginClass').onchange=loadStudentLogins);
 $('loginSearch')&&($('loginSearch').oninput=renderStudentLogins);
 const loginNavBtn=$('teacherNav')?.querySelector('[data-sec="t-logins"]');
 loginNavBtn&&loginNavBtn.addEventListener('click',()=>{if(!studentLoginRows.length)loadStudentLogins()});
-function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));$('studentsTable').innerHTML=list.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points}</td><td><button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button></td></tr>`).join('');if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;}
+function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));$('studentsTable').innerHTML=list.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points}</td><td><button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button></td></tr>`).join('');if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;}
 async function loadStudents(c='ALL'){allStudents=await rpc('portal_teacher_students',{p_token:teacherToken,p_class:c});renderStudentsTable()}
 $('studentFilter').onchange=()=>loadStudents($('studentFilter').value);$('studentSearch').oninput=renderStudentsTable;
 async function refreshStudentSelects(){const c=$('gradeClass').value||'9/1';const d=await rpc('portal_teacher_students',{p_token:teacherToken,p_class:c});$('gradeStudent').innerHTML=d.map(s=>`<option value="${s.id}">${studentName(s.full_name)}</option>`).join('');const pc=$('pointsClass').value||'9/1';const p=await rpc('portal_teacher_points_overview',{p_token:teacherToken,p_class:pc});$('pointsStudent').innerHTML=p.map(s=>`<option value="${s.student_id}">${studentName(s.full_name)} — ${fmtPoints(s.total_points)} نقطة</option>`).join('');if($('pointsRanking')){const sorted=[...p].sort((a,b)=>Number(b.total_points||0)-Number(a.total_points||0));$('pointsRanking').innerHTML=sorted.length?`<div style="overflow:auto"><table><thead><tr><th>#</th><th>الطالب</th><th>الشعبة</th><th>نقاط المعلم</th><th>نقاط الأسئلة</th><th>المجموع</th></tr></thead><tbody>${sorted.map((s,i)=>`<tr><td>${i+1}</td><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${fmtPoints(s.base_points)}</td><td>+${fmtPoints(s.quiz_points)}</td><td><b>⭐ ${fmtPoints(s.total_points)}</b></td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">لا يوجد طلاب.</div>'}}
 $('gradeClass').onchange=refreshStudentSelects;$('pointsClass').onchange=refreshStudentSelects;
 $('gradeAddBtn').onclick=async()=>{try{const id=await rpc('portal_teacher_add_grade',{p_token:teacherToken,p_student_id:Number($('gradeStudent').value),p_title:$('gradeTitle').value,p_score:Number($('gradeScore').value),p_max_score:Number($('gradeMax').value),p_note:$('gradeNote').value});if(!id)throw new Error('تحقق من البيانات');msg('gradeMsg','تم حفظ الدرجة ✅');$('gradeScore').value='';$('gradeNote').value=''}catch(e){msg('gradeMsg',e.message,false)}};
+let gradeReportRows=[];
+async function loadGradeReport(){
+  if(!$('gradeReportTable'))return;
+  $('gradeReportTable').innerHTML='<tr><td colspan="6" class="muted">جاري تحميل الدرجات...</td></tr>';
+  try{
+    const cls=$('gradeReportClass')?.value||'ALL';
+    // Reuse the existing teacher students + a report RPC dedicated to grades.
+    const d=await rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls});
+    gradeReportRows=d||[];
+    const assessments=[...new Set(gradeReportRows.map(x=>String(x.assessment_title||'')).filter(Boolean))].sort();
+    const sel=$('gradeReportAssessment');
+    const keep=sel?.value||'ALL';
+    if(sel){sel.innerHTML='<option value="ALL">كل التقييمات</option>'+assessments.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');if([...sel.options].some(o=>o.value===keep))sel.value=keep}
+    renderGradeReport();
+  }catch(e){$('gradeReportTable').innerHTML=`<tr><td colspan="6"><div class="msg err">تعذر تحميل الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
+}
+function renderGradeReport(){
+  if(!$('gradeReportTable'))return;
+  const assessment=$('gradeReportAssessment')?.value||'ALL';
+  const rows=assessment==='ALL'?gradeReportRows:gradeReportRows.filter(x=>String(x.assessment_title||'')===assessment);
+  const scores=rows.map(x=>Number(x.score)).filter(Number.isFinite),avg=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length):0;
+  if($('gradeReportStats'))$('gradeReportStats').innerHTML=`<div class="visit-box"><b>${rows.length}</b><br>درجة مسجلة</div><div class="visit-box"><b>${scores.length?avg.toFixed(1):'—'}</b><br>متوسط الدرجات</div><div class="visit-box"><b>${new Set(rows.map(x=>x.student_id)).size}</b><br>طالب</div>`;
+  if($('gradeReportDistribution'))$('gradeReportDistribution').innerHTML='';
+  $('gradeReportTable').innerHTML=rows.length?rows.map(x=>`<tr><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${esc(x.assessment_title)}</td><td>${esc(x.score)}</td><td>${esc(x.max_score)}</td><td>${esc(x.note||'')}</td></tr>`).join(''):'<tr><td colspan="6" class="muted">لا توجد درجات مطابقة.</td></tr>';
+}
+$('gradeReportLoadBtn')&&($('gradeReportLoadBtn').onclick=loadGradeReport);
+$('gradeReportClass')&&($('gradeReportClass').onchange=()=>{gradeReportRows=[];if($('gradeReportAssessment'))$('gradeReportAssessment').innerHTML='<option value="ALL">كل التقييمات</option>'});
+$('gradeReportAssessment')&&($('gradeReportAssessment').onchange=renderGradeReport);
+
 function formatQuestionTime(v){if(!v)return '';try{return new Date(v).toLocaleString('ar-OM',{dateStyle:'short',timeStyle:'short'})}catch(e){return new Date(v).toLocaleString('ar')}}
 async function loadTeacherQuestions(){const all=await rpc('portal_teacher_questions',{p_token:teacherToken,p_status:null});const d=(all||[]).filter(q=>!String(q.question_text||'').startsWith(BANK_ESSAY_PREFIX));$('teacherQuestionList').innerHTML=d.length?d.map(q=>`<div class="item"><span class="badge">${esc(q.class_name)} • ${q.status==='new'?'جديد':'تمت الإجابة'}</span><h3>${studentName(q.full_name)}</h3>${q.created_at?`<div class="muted" style="margin-top:-6px;margin-bottom:10px">🕒 أرسل السؤال: ${formatQuestionTime(q.created_at)}</div>`:''}<p>${esc(q.question_text)}</p>${q.attachment_url?renderSafeAttachment(q.attachment_url,'فتح المرفق'):''}<div class="field"><textarea id="reply-${q.id}" rows="3" placeholder="اكتب ردك...">${esc(q.teacher_reply||'')}</textarea></div><button class="btn primary" data-action="reply-question" data-id="${q.id}">إرسال الرد</button></div>`).join(''):'<div class="muted">لا توجد أسئلة.</div>'}
 window.replyQ=async id=>{const ok=await rpc('portal_teacher_reply_question',{p_token:teacherToken,p_question_id:id,p_reply:$('reply-'+id).value});if(ok){await loadTeacherQuestions();await loadOverview()}};
@@ -565,6 +595,7 @@ async function applyPoints(delta=null){try{const d=delta===null?Number($('points
 if($('newStudentClass'))$('newStudentClass').innerHTML=classes.map(c=>`<option value="${c}">${c}</option>`).join('');
 $('addStudentBtn')&&($('addStudentBtn').onclick=async()=>{try{$('addStudentBtn').disabled=true;const id=await rpc('portal_teacher_add_student',{p_token:teacherToken,p_full_name:$('newStudentName').value.trim(),p_class:$('newStudentClass').value,p_username:$('newStudentUsername').value.trim(),p_password:$('newStudentPassword').value});if(!id)throw new Error('تعذر إضافة الطالب');msg('studentAdminMsg','تمت إضافة الطالب بنجاح ✅');['newStudentName','newStudentUsername','newStudentPassword'].forEach(x=>$(x).value='');await loadStudents($('studentFilter').value||'ALL');await refreshStudentSelects()}catch(e){msg('studentAdminMsg',e.message,false)}finally{$('addStudentBtn').disabled=false}});
 window.editStudentName=async(id,nameEnc)=>{const old=decodeURIComponent(nameEnc),name=prompt('اكتب الاسم الصحيح للطالب:',old);if(name===null||!name.trim()||name.trim()===old)return;try{const ok=await rpc('portal_teacher_update_student_name',{p_token:teacherToken,p_student_id:id,p_full_name:name.trim()});if(!ok)throw new Error('تعذر تعديل الاسم');await loadStudents($('studentFilter').value||'ALL');await refreshStudentSelects();alert('تم تعديل اسم الطالب ✅')}catch(e){alert(e.message)}};
+window.moveStudent=async(id,nameEnc,classEnc)=>{const name=decodeURIComponent(nameEnc),oldClass=decodeURIComponent(classEnc);const choices=classes.filter(c=>c!==oldClass);const next=prompt(`نقل ${name} من ${oldClass}.\nاكتب الشعبة الجديدة: ${choices.join('، ')}`,choices[0]||'');if(next===null)return;const cls=next.trim();if(!classes.includes(cls)){alert('الشعبة غير صحيحة. استخدم: '+classes.join('، '));return}if(cls===oldClass)return;if(!confirm(`تأكيد نقل ${name} من ${oldClass} إلى ${cls}؟\nلن يتم حذف درجاته أو نقاطه أو سجلاته.`))return;try{const ok=await rpc('portal_teacher_move_student',{p_token:teacherToken,p_student_id:id,p_new_class:cls});if(!ok)throw new Error('تعذر نقل الطالب');await loadStudents($('studentFilter').value||'ALL');await refreshStudentSelects();alert('تم نقل الطالب إلى '+cls+' ✅')}catch(e){alert(e.message||'تعذر نقل الطالب')}};
 $('teacherPassBtn').onclick=async()=>{const ok=await rpc('portal_teacher_change_password',{p_token:teacherToken,p_new_password:$('teacherNewPass').value});if(ok){msg('teacherPassMsg','تم تغيير كلمة المرور ✅');$('teacherNewPass').value=''}else msg('teacherPassMsg','يجب أن تكون 8 أحرف على الأقل',false)};
 
 // CSP-safe delegated actions for dynamically rendered buttons.
@@ -595,6 +626,7 @@ document.addEventListener('click',e=>{
     case 'delete-behavior': return window.deleteBehavior(id);
     case 'save-progress': return window.saveProgress(decodeURIComponent(v1));
     case 'edit-student-name': return window.editStudentName(id,v1);
+     case 'move-student': return window.moveStudent(id,v1,v2);
     case 'reply-question': return window.replyQ(id);
   }
 });
