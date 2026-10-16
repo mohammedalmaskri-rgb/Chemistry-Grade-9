@@ -566,7 +566,7 @@ async function loadGradeReport(){
   try{
     const cls=$('gradeReportClass')?.value||'ALL';
     // Reuse the existing teacher students + a report RPC dedicated to grades.
-    const d=await rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls});
+    const d=await rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls,p_assessment:null});
     gradeReportRows=d||[];
     const assessments=[...new Set(gradeReportRows.map(x=>String(x.assessment_title||'')).filter(Boolean))].sort();
     const sel=$('gradeReportAssessment');
