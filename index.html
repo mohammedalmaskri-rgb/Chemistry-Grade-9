@@ -111,14 +111,11 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;ove
 
 .seo-intro{margin-bottom:16px;padding:14px 15px;border-radius:16px;background:linear-gradient(135deg,#f0fdfa,#eff6ff);border:1px solid #d3e9e5}.seo-intro h1{font-size:20px;margin:0 0 6px;color:#0f5f59}.seo-intro p{margin:0;color:#567;line-height:1.7;font-size:13px}
 
-/* Device-specific login artwork. CSS-only; no account or database changes. */
-body.login-screen{--login-art:url("login-bg-laptop.jpg");background:#031735;color:#fff;min-height:100svh;position:relative;isolation:isolate}
+/* Responsive login artwork: tablet selected by viewport aspect, not touch detection. */
+body.login-screen{--login-art:url("login-bg-laptop.jpg");background:#031735;color:#fff;min-height:100svh;background-image:var(--login-art);background-repeat:no-repeat;background-position:center center;background-size:cover}
 body.login-screen .top,body.login-screen .chem-bg{display:none}
-body.login-screen::before,body.login-screen::after{content:"";position:fixed;inset:0;pointer-events:none}
-body.login-screen::before{z-index:-2;background:var(--login-art) center/cover no-repeat;filter:blur(22px) brightness(.60);transform:scale(1.06)}
-body.login-screen::after{z-index:-1;background:var(--login-art) center/contain no-repeat}
-body.login-screen .wrap{max-width:none;min-height:100svh;padding:clamp(16px,3vw,38px);display:flex;align-items:center;justify-content:center}
-body.login-screen #loginView{width:min(100%,510px);max-width:510px;margin:0;padding:24px 30px 20px;background:rgba(3,26,61,.88);border:1px solid rgba(79,166,255,.65);border-radius:25px;box-shadow:0 16px 52px #0007;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);color:#fff}
+body.login-screen .wrap{max-width:none;min-height:100svh;padding:clamp(12px,2vw,30px);display:flex;align-items:center;justify-content:center}
+body.login-screen #loginView{width:min(100%,510px);margin:0;padding:24px 30px 20px;background:rgba(3,26,61,.88);border:1px solid rgba(79,166,255,.65);border-radius:25px;box-shadow:0 16px 52px #0007;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);color:#fff}
 body.login-screen #loginView::before{content:"⚗️";display:block;text-align:center;font-size:37px;line-height:1.2;margin-bottom:4px;filter:drop-shadow(0 0 10px #00aeff)}
 body.login-screen .seo-intro{margin:0 0 12px;padding:0;background:transparent;border:0;text-align:center}
 body.login-screen .seo-intro h1{color:#fff;font-size:clamp(19px,2vw,24px);line-height:1.45;margin:0 0 5px}
@@ -134,31 +131,21 @@ body.login-screen #loginView .field input:focus{outline:2px solid #65c5ff;outlin
 body.login-screen #loginBtn{height:48px;border-radius:10px;background:#098bf5;color:white;font-size:18px;margin-top:3px}
 body.login-screen #teacherHint{color:#dbeafe!important;text-align:center}
 body.login-screen #loginView::after{content:"نسأل الله أن يوفقك في رحلتك العلمية";display:block;text-align:center;color:#d5e7fa;font-size:11px;margin-top:10px}
-/* Tablet selection must NOT depend on pointer:coarse (Safari may report a trackpad). */
-@media (min-width:701px) and (max-width:1366px){
+/* Tablet portrait and landscape: no pointer:coarse requirement (Safari desktop mode). */
+@media (min-width:701px) and (max-aspect-ratio: 3/2){
  body.login-screen{--login-art:url("login-bg-ipad.jpg")}
- body.login-screen #loginView{width:min(84vw,490px);padding:20px 25px}
+ body.login-screen #loginView{width:min(90vw,490px);padding:20px 25px}
  body.login-screen .seo-intro h1{font-size:21px}
  body.login-screen .seo-intro p{font-size:11px}
 }
-/* In iPad landscape the supplied artwork matches 4:3, so fill the viewport. */
-@media (min-width:701px) and (max-width:1366px) and (orientation:landscape){
- body.login-screen::after{background-size:cover}
-}
-/* On iPad portrait keep the entire illustration; softly extend its edges. */
-@media (min-width:701px) and (max-width:1366px) and (orientation:portrait){
- body.login-screen::after{background-size:contain}
-}
-@media (max-width:700px){
+/* Phones always use portrait artwork even when rotated. */
+@media (max-width:700px), (max-height:500px) and (pointer:coarse){
  body.login-screen{--login-art:url("login-bg-phone.jpg")}
- body.login-screen::after{background-size:cover}
  body.login-screen .wrap{padding:16px 14px;min-height:100svh}
- body.login-screen #loginView{width:100%;max-width:390px;min-width:0;padding:19px 18px;border-radius:22px}
- body.login-screen #loginView::before{font-size:33px}
+ body.login-screen #loginView{width:100%;max-width:390px;padding:19px 18px;border-radius:22px}
  body.login-screen .seo-intro h1{font-size:20px}
  body.login-screen .seo-intro p{font-size:11px}
  body.login-screen .tab{font-size:16px;min-height:44px}
- body.login-screen #loginView .field input{height:46px}
 }
 @media (max-height:620px){body.login-screen .wrap{align-items:flex-start}}
 @media (prefers-reduced-motion:reduce){body.login-screen *{animation:none!important}}
