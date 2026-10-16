@@ -157,6 +157,32 @@ body.login-screen #loginView:after{content:"نسأل الله أن يوفقك ف
 }
 @media (max-height:600px) and (orientation:landscape){body.login-screen .wrap{align-items:flex-start;padding-block:12px}}
 
+
+/* Device-specific background fixes: desktop, iPad, phone. No app logic changes. */
+body.login-screen{overflow-x:hidden}
+body.login-screen:before{background-image:url("login-bg-desktop.jpeg");background-size:cover;background-position:center center}
+/* iPad: display the entire artwork over a full-bleed dark backdrop, without stretching. */
+@media (min-width:701px) and (max-width:1366px) and (pointer:coarse){
+ body.login-screen{background:#031633 url("login-bg-desktop.jpeg") center/cover fixed no-repeat}
+ body.login-screen:before{background-image:url("login-bg-desktop.jpeg");background-size:contain;background-position:center center;background-repeat:no-repeat}
+ body.login-screen #loginView{width:min(490px,90vw);min-width:0;max-width:490px}
+}
+/* Portrait tablet: fit the entire artwork horizontally while keeping the login accessible. */
+@media (min-width:701px) and (max-width:1100px) and (orientation:portrait){
+ body.login-screen .wrap{padding:24px 18px}
+ body.login-screen #loginView{width:min(490px,90vw)}
+}
+/* Phones: use a true portrait background instead of shrinking the landscape image into a stripe. */
+@media (max-width:700px){
+ body.login-screen{background:#031633}
+ body.login-screen:before{background-image:url("login-bg-phone.jpg");background-size:cover;background-position:center center}
+ body.login-screen .wrap{min-height:100svh;padding:20px 14px}
+ body.login-screen #loginView{width:100%;max-width:390px;min-width:0;margin:auto}
+}
+@media (max-width:700px) and (orientation:landscape){
+ body.login-screen .wrap{align-items:flex-start}
+ body.login-screen:before{background-size:cover}
+}
 </style>
 <link rel="stylesheet" href="question-bank-addon.css">
 </head>
