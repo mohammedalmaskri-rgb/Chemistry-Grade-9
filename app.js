@@ -562,18 +562,17 @@ $('gradeAddBtn').onclick=async()=>{try{const id=await rpc('portal_teacher_add_gr
 let gradeReportRows=[];
 async function loadGradeReport(){
   if(!$('gradeReportTable'))return;
-  $('gradeReportTable').innerHTML='<tr><td colspan="6" class="muted">جاري تحميل الدرجات...</td></tr>';
+  $('gradeReportTable').innerHTML='<tr><td colspan="7" class="muted">جاري تحميل الدرجات...</td></tr>';
   try{
     const cls=$('gradeReportClass')?.value||'ALL';
-    // Reuse the existing teacher students + a report RPC dedicated to grades.
-    const d=await rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls,p_assessment:null});
+    const d=await rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls,p_assessment:'ALL'});
     gradeReportRows=d||[];
     const assessments=[...new Set(gradeReportRows.map(x=>String(x.assessment_title||'')).filter(Boolean))].sort();
     const sel=$('gradeReportAssessment');
     const keep=sel?.value||'ALL';
     if(sel){sel.innerHTML='<option value="ALL">كل التقييمات</option>'+assessments.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');if([...sel.options].some(o=>o.value===keep))sel.value=keep}
     renderGradeReport();
-  }catch(e){$('gradeReportTable').innerHTML=`<tr><td colspan="6"><div class="msg err">تعذر تحميل الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
+  }catch(e){$('gradeReportTable').innerHTML=`<tr><td colspan="7"><div class="msg err">تعذر تحميل الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
 }
 function renderGradeReport(){
   if(!$('gradeReportTable'))return;
@@ -581,11 +580,30 @@ function renderGradeReport(){
   const rows=assessment==='ALL'?gradeReportRows:gradeReportRows.filter(x=>String(x.assessment_title||'')===assessment);
   const scores=rows.map(x=>Number(x.score)).filter(Number.isFinite),avg=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length):0;
   if($('gradeReportStats'))$('gradeReportStats').innerHTML=`<div class="visit-box"><b>${rows.length}</b><br>درجة مسجلة</div><div class="visit-box"><b>${scores.length?avg.toFixed(1):'—'}</b><br>متوسط الدرجات</div><div class="visit-box"><b>${new Set(rows.map(x=>x.student_id)).size}</b><br>طالب</div>`;
-  if($('gradeReportDistribution'))$('gradeReportDistribution').innerHTML='';
-  $('gradeReportTable').innerHTML=rows.length?rows.map(x=>`<tr><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${esc(x.assessment_title)}</td><td>${esc(x.score)}</td><td>${esc(x.max_score)}</td><td>${esc(x.note||'')}</td></tr>`).join(''):'<tr><td colspan="6" class="muted">لا توجد درجات مطابقة.</td></tr>';
+  if($('gradeReportDistribution')){
+    const counts=new Map();
+    rows.forEach(x=>{const n=Number(x.score);if(Number.isFinite(n)){const key=Number.isInteger(n)?String(n):String(Number(n.toFixed(2)));counts.set(key,(counts.get(key)||0)+1)}});
+    const ordered=[...counts.entries()].sort((a,b)=>Number(b[0])-Number(a[0]));
+    $('gradeReportDistribution').innerHTML=ordered.length?`<div class="item"><h3 style="margin-top:0">📊 توزيع الدرجات</h3><div class="visit-summary">${ordered.map(([score,count])=>`<div class="visit-box"><b>${esc(score)}</b><br>${count} ${count===1?'طالب':'طلاب'}</div>`).join('')}</div></div>`:'<div class="muted">لا توجد درجات لعرض التوزيع.</div>';
+  }
+  $('gradeReportTable').innerHTML=rows.length?rows.map(x=>`<tr><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${esc(x.assessment_title)}</td><td><b>${esc(x.score)}</b></td><td>${esc(x.max_score)}</td><td>${esc(x.note||'')}</td><td><button class="btn secondary" data-action="edit-grade" data-id="${x.grade_id}">✏️ تعديل الدرجة</button></td></tr>`).join(''):'<tr><td colspan="7" class="muted">لا توجد درجات مطابقة.</td></tr>';
 }
+window.editGrade=async gradeId=>{
+  const row=gradeReportRows.find(x=>Number(x.grade_id)===Number(gradeId));if(!row){alert('تعذر العثور على الدرجة. أعد تحميل الدرجات.');return}
+  const root=$('popupRoot');
+  root.innerHTML=`<div class="popup"><div class="card" style="max-width:620px"><h2>✏️ تعديل الدرجة</h2><p><b>${studentName(row.full_name)}</b><br><span class="muted">${esc(row.class_name)} • ${esc(row.assessment_title)}</span></p><div class="row3"><div class="field"><label>الدرجة</label><input id="editGradeScore" type="number" step="0.01" value="${esc(row.score)}"></div><div class="field"><label>من</label><input id="editGradeMax" type="number" step="0.01" value="${esc(row.max_score)}"></div><div class="field"><label>ملاحظة</label><input id="editGradeNote" value="${esc(row.note||'')}"></div></div><div id="editGradeMsg"></div><div class="inline-actions"><button id="saveGradeEdit" class="btn primary">💾 حفظ التعديل</button><button id="cancelGradeEdit" class="btn secondary">إلغاء</button></div></div></div>`;
+  $('cancelGradeEdit').onclick=()=>root.innerHTML='';
+  $('saveGradeEdit').onclick=async()=>{try{
+    const score=Number($('editGradeScore').value),max=Number($('editGradeMax').value),note=$('editGradeNote').value.trim();
+    if(!Number.isFinite(score)||!Number.isFinite(max)||max<=0||score<0||score>max)throw new Error('تأكد أن الدرجة صحيحة وأنها بين 0 والدرجة الكاملة.');
+    $('saveGradeEdit').disabled=true;
+    const ok=await rpc('portal_teacher_update_grade',{p_token:teacherToken,p_grade_id:Number(gradeId),p_score:score,p_max_score:max,p_note:note});
+    if(!ok)throw new Error('تعذر تعديل الدرجة. تأكد من تشغيل كود SQL الخاص بتعديل الدرجات.');
+    root.innerHTML='';await loadGradeReport();msg('gradeReportMsg','تم تعديل الدرجة وتحديث الإحصائية ✅');
+  }catch(e){msg('editGradeMsg',e.message||'تعذر تعديل الدرجة',false);if($('saveGradeEdit'))$('saveGradeEdit').disabled=false}}
+};
 $('gradeReportLoadBtn')&&($('gradeReportLoadBtn').onclick=loadGradeReport);
-$('gradeReportClass')&&($('gradeReportClass').onchange=()=>{gradeReportRows=[];if($('gradeReportAssessment'))$('gradeReportAssessment').innerHTML='<option value="ALL">كل التقييمات</option>'});
+$('gradeReportClass')&&($('gradeReportClass').onchange=()=>{gradeReportRows=[];if($('gradeReportAssessment'))$('gradeReportAssessment').innerHTML='<option value="ALL">كل التقييمات</option>';if($('gradeReportDistribution'))$('gradeReportDistribution').innerHTML=''});
 $('gradeReportAssessment')&&($('gradeReportAssessment').onchange=renderGradeReport);
 
 function formatQuestionTime(v){if(!v)return '';try{return new Date(v).toLocaleString('ar-OM',{dateStyle:'short',timeStyle:'short'})}catch(e){return new Date(v).toLocaleString('ar')}}
@@ -627,6 +645,7 @@ document.addEventListener('click',e=>{
     case 'save-progress': return window.saveProgress(decodeURIComponent(v1));
     case 'edit-student-name': return window.editStudentName(id,v1);
      case 'move-student': return window.moveStudent(id,v1,v2);
+    case 'edit-grade': return window.editGrade(id);
     case 'reply-question': return window.replyQ(id);
   }
 });
