@@ -387,7 +387,7 @@ async function loadStudentBank(){
 
 async function loadTeacherExperiments(){
   const d=await rpc('portal_teacher_experiments',{p_token:teacherToken});
-  $('teacherExperimentList').innerHTML=d?.length?d.map(e=>{const u=safeWebUrl(e.experiment_url);return `<div class="item"><span class="badge ${e.is_visible?'state-on':'state-off'}">${e.is_visible?'ظاهر للطلاب':'مخفي'}</span> <span class="badge">${e.target_class==='ALL'?'كل الصفوف':esc(e.target_class)}</span><h3>${esc(e.title)}</h3>${e.description?`<p>${esc(e.description)}</p>`:''}<div class="inline-actions"><button class="btn ${e.is_visible?'secondary':'primary'}" data-action="toggle-experiment" data-id="${e.id}" data-bool="${!e.is_visible}">${e.is_visible?'🙈 إخفاء عن الطلاب':'👁️ إظهار للطلاب'}</button>${u?`<a class="btn secondary" target="_blank" rel="noopener noreferrer" href="${esc(u)}">تجربة الرابط</a>`:'<span class="badge state-off">رابط غير صالح</span>'}<button class="btn danger" data-action="delete-experiment" data-id="${e.id}">حذف</button></div></div>`}).join(''):'<div class="muted">لم تضف تجارب 3D بعد.</div>';
+  $('teacherExperimentList').innerHTML=d?.length?d.map(e=>{const u=safeWebUrl(e.experiment_url);return `<div class="item"><span class="badge ${e.is_visible?'state-on':'state-off'}">${e.is_visible?'ظاهر للطلاب':'مخفي'}</span> <span class="badge">${e.target_class==='ALL'?'كل الصفوف':esc(e.target_class)}</span><h3>${esc(e.title)}</h3>${e.description?`<p>${esc(e.description)}</p>`:''}<div class="inline-actions"><button class="btn ${e.is_visible?'secondary':'primary'}" data-action="toggle-experiment" data-id="${e.id}" data-bool="${!e.is_visible}">${e.is_visible?'🙈 إخفاء عن الطلاب':'👁️ إظهار للطلاب'}</button>${u?`<button class="btn secondary" data-action="preview-teacher-experiment" data-id="${e.id}" data-v1="${safeEnc(u)}" data-v2="${safeEnc(e.title)}">▶️ فتح التجربة</button>`:'<span class="badge state-off">رابط غير صالح</span>'}<button class="btn danger" data-action="delete-experiment" data-id="${e.id}">حذف</button></div></div>`}).join(''):'<div class="muted">لم تضف تجارب 3D بعد.</div>';
 }
 $('expAddBtn').onclick=async()=>{try{const u=validTeacherUrlField('expUrl','رابط التجربة');const id=await rpc('portal_teacher_add_experiment',{p_token:teacherToken,p_title:$('expTitle').value.trim(),p_description:$('expDesc').value,p_experiment_url:u,p_target_class:$('expClass').value,p_is_visible:$('expVisible').checked});if(!id)throw new Error('تأكد من اسم التجربة والرابط');['expTitle','expDesc','expUrl'].forEach(x=>$(x).value='');$('expVisible').checked=false;msg('expMsg','تم حفظ التجربة ✅');await loadTeacherExperiments()}catch(e){msg('expMsg',e.message,false)}};
 window.toggleExperiment=async(id,v)=>{const ok=await rpc('portal_teacher_set_experiment_visibility',{p_token:teacherToken,p_experiment_id:id,p_is_visible:v});if(ok)await loadTeacherExperiments()};
@@ -562,17 +562,18 @@ $('gradeAddBtn').onclick=async()=>{try{const id=await rpc('portal_teacher_add_gr
 let gradeReportRows=[];
 async function loadGradeReport(){
   if(!$('gradeReportTable'))return;
-  $('gradeReportTable').innerHTML='<tr><td colspan="7" class="muted">جاري تحميل الدرجات...</td></tr>';
+  $('gradeReportTable').innerHTML='<tr><td colspan="6" class="muted">جاري تحميل الدرجات...</td></tr>';
   try{
     const cls=$('gradeReportClass')?.value||'ALL';
-    const d=await rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls,p_assessment:'ALL'});
+    // Reuse the existing teacher students + a report RPC dedicated to grades.
+    const d=await rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls});
     gradeReportRows=d||[];
     const assessments=[...new Set(gradeReportRows.map(x=>String(x.assessment_title||'')).filter(Boolean))].sort();
     const sel=$('gradeReportAssessment');
     const keep=sel?.value||'ALL';
     if(sel){sel.innerHTML='<option value="ALL">كل التقييمات</option>'+assessments.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');if([...sel.options].some(o=>o.value===keep))sel.value=keep}
     renderGradeReport();
-  }catch(e){$('gradeReportTable').innerHTML=`<tr><td colspan="7"><div class="msg err">تعذر تحميل الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
+  }catch(e){$('gradeReportTable').innerHTML=`<tr><td colspan="6"><div class="msg err">تعذر تحميل الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
 }
 function renderGradeReport(){
   if(!$('gradeReportTable'))return;
@@ -580,31 +581,50 @@ function renderGradeReport(){
   const rows=assessment==='ALL'?gradeReportRows:gradeReportRows.filter(x=>String(x.assessment_title||'')===assessment);
   const scores=rows.map(x=>Number(x.score)).filter(Number.isFinite),avg=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length):0;
   if($('gradeReportStats'))$('gradeReportStats').innerHTML=`<div class="visit-box"><b>${rows.length}</b><br>درجة مسجلة</div><div class="visit-box"><b>${scores.length?avg.toFixed(1):'—'}</b><br>متوسط الدرجات</div><div class="visit-box"><b>${new Set(rows.map(x=>x.student_id)).size}</b><br>طالب</div>`;
-  if($('gradeReportDistribution')){
-    const counts=new Map();
-    rows.forEach(x=>{const n=Number(x.score);if(Number.isFinite(n)){const key=Number.isInteger(n)?String(n):String(Number(n.toFixed(2)));counts.set(key,(counts.get(key)||0)+1)}});
-    const ordered=[...counts.entries()].sort((a,b)=>Number(b[0])-Number(a[0]));
-    $('gradeReportDistribution').innerHTML=ordered.length?`<div class="item"><h3 style="margin-top:0">📊 توزيع الدرجات</h3><div class="visit-summary">${ordered.map(([score,count])=>`<div class="visit-box"><b>${esc(score)}</b><br>${count} ${count===1?'طالب':'طلاب'}</div>`).join('')}</div></div>`:'<div class="muted">لا توجد درجات لعرض التوزيع.</div>';
-  }
-  $('gradeReportTable').innerHTML=rows.length?rows.map(x=>`<tr><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${esc(x.assessment_title)}</td><td><b>${esc(x.score)}</b></td><td>${esc(x.max_score)}</td><td>${esc(x.note||'')}</td><td><button class="btn secondary" data-action="edit-grade" data-id="${x.grade_id}">✏️ تعديل الدرجة</button></td></tr>`).join(''):'<tr><td colspan="7" class="muted">لا توجد درجات مطابقة.</td></tr>';
+  if($('gradeReportDistribution'))$('gradeReportDistribution').innerHTML='';
+  $('gradeReportTable').innerHTML=rows.length?rows.map(x=>`<tr><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${esc(x.assessment_title)}</td><td>${esc(x.score)}</td><td>${esc(x.max_score)}</td><td>${esc(x.note||'')}</td></tr>`).join(''):'<tr><td colspan="6" class="muted">لا توجد درجات مطابقة.</td></tr>';
 }
-window.editGrade=async gradeId=>{
-  const row=gradeReportRows.find(x=>Number(x.grade_id)===Number(gradeId));if(!row){alert('تعذر العثور على الدرجة. أعد تحميل الدرجات.');return}
-  const root=$('popupRoot');
-  root.innerHTML=`<div class="popup"><div class="card" style="max-width:620px"><h2>✏️ تعديل الدرجة</h2><p><b>${studentName(row.full_name)}</b><br><span class="muted">${esc(row.class_name)} • ${esc(row.assessment_title)}</span></p><div class="row3"><div class="field"><label>الدرجة</label><input id="editGradeScore" type="number" step="0.01" value="${esc(row.score)}"></div><div class="field"><label>من</label><input id="editGradeMax" type="number" step="0.01" value="${esc(row.max_score)}"></div><div class="field"><label>ملاحظة</label><input id="editGradeNote" value="${esc(row.note||'')}"></div></div><div id="editGradeMsg"></div><div class="inline-actions"><button id="saveGradeEdit" class="btn primary">💾 حفظ التعديل</button><button id="cancelGradeEdit" class="btn secondary">إلغاء</button></div></div></div>`;
-  $('cancelGradeEdit').onclick=()=>root.innerHTML='';
-  $('saveGradeEdit').onclick=async()=>{try{
-    const score=Number($('editGradeScore').value),max=Number($('editGradeMax').value),note=$('editGradeNote').value.trim();
-    if(!Number.isFinite(score)||!Number.isFinite(max)||max<=0||score<0||score>max)throw new Error('تأكد أن الدرجة صحيحة وأنها بين 0 والدرجة الكاملة.');
-    $('saveGradeEdit').disabled=true;
-    const ok=await rpc('portal_teacher_update_grade',{p_token:teacherToken,p_grade_id:Number(gradeId),p_score:score,p_max_score:max,p_note:note});
-    if(!ok)throw new Error('تعذر تعديل الدرجة. تأكد من تشغيل كود SQL الخاص بتعديل الدرجات.');
-    root.innerHTML='';await loadGradeReport();msg('gradeReportMsg','تم تعديل الدرجة وتحديث الإحصائية ✅');
-  }catch(e){msg('editGradeMsg',e.message||'تعذر تعديل الدرجة',false);if($('saveGradeEdit'))$('saveGradeEdit').disabled=false}}
-};
 $('gradeReportLoadBtn')&&($('gradeReportLoadBtn').onclick=loadGradeReport);
-$('gradeReportClass')&&($('gradeReportClass').onchange=()=>{gradeReportRows=[];if($('gradeReportAssessment'))$('gradeReportAssessment').innerHTML='<option value="ALL">كل التقييمات</option>';if($('gradeReportDistribution'))$('gradeReportDistribution').innerHTML=''});
+$('gradeReportClass')&&($('gradeReportClass').onchange=()=>{gradeReportRows=[];if($('gradeReportAssessment'))$('gradeReportAssessment').innerHTML='<option value="ALL">كل التقييمات</option>'});
 $('gradeReportAssessment')&&($('gradeReportAssessment').onchange=renderGradeReport);
+
+
+// ===== Teacher gradebook =====
+const GRADEBOOK_SLOTS={
+  hw1:['واجب 1','واجب1','الواجب الأول','الواجب الاول','واجب منزلي 1','الواجب المنزلي الأول','الواجب المنزلي الاول'],
+  hw2:['واجب 2','واجب2','الواجب الثاني','واجب منزلي 2','الواجب المنزلي الثاني'],
+  oral1:['حوار شفوي 1','الحوار الشفوي الأول','الحوار الشفوي الاول','شفوي 1','شفوي الأول','شفوي الاول'],
+  oral2:['حوار شفوي 2','الحوار الشفوي الثاني','شفوي 2','شفوي الثاني'],
+  practical:['النشاط العملي','نشاط عملي','عملي'],
+  quiz1:['اختبار قصير 1','اختبار قصير الأول','اختبار قصير الاول','الاختبار القصير الأول','الاختبار القصير الاول','الاختبار الأول','الاختبار الاول'],
+  quiz2:['اختبار قصير 2','اختبار قصير الثاني','الاختبار القصير الثاني','الاختبار الثاني'],
+  final:['امتحان نهاية الفصل','اختبار نهاية الفصل','الامتحان النهائي','الاختبار النهائي','نهائي']
+};
+function gradebookNorm(v){return String(v||'').trim().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ')}
+function gradebookSlot(title){const n=gradebookNorm(title);for(const [k,names] of Object.entries(GRADEBOOK_SLOTS)){if(names.some(x=>gradebookNorm(x)===n))return k}return null}
+function gradebookCell(v){return v==null?'<span class="gradebook-empty">—</span>':esc(Number(v).toFixed(Number(v)%1?1:0))}
+function gradebookLevel(p){if(p==null)return '—';if(p>=90)return 'ممتاز';if(p>=80)return 'جيد جدًا';if(p>=70)return 'جيد';if(p>=60)return 'مقبول';return 'يحتاج متابعة'}
+async function loadGradebook(){
+  if(!$('gradebookTable'))return;
+  const cls=$('gradebookClass')?.value||'9/1';$('gradebookTable').innerHTML='<tr><td colspan="17" class="muted">جاري تجهيز سجل الدرجات...</td></tr>';
+  try{
+    const [students,grades]=await Promise.all([rpc('portal_teacher_students',{p_token:teacherToken,p_class:cls}),rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls})]);
+    const byStudent=new Map();(grades||[]).forEach(g=>{const slot=gradebookSlot(g.assessment_title);if(!slot)return;const id=Number(g.student_id),cur=byStudent.get(id)||{};const prev=cur[slot];if(!prev||new Date(g.created_at||0)>=new Date(prev.created_at||0))cur[slot]=g;byStudent.set(id,cur)});
+    const rows=(students||[]).map((st,i)=>{const g=byStudent.get(Number(st.id))||{},v=k=>g[k]?Number(g[k].score):null;
+      const hw1=v('hw1'),hw2=v('hw2'),oral1=v('oral1'),oral2=v('oral2'),pr=v('practical'),q1=v('quiz1'),q2=v('quiz2'),fin=v('final');
+      const sum=(...xs)=>xs.every(x=>x==null)?null:xs.reduce((a,x)=>a+(x==null?0:x),0), hw=sum(hw1,hw2),oral=sum(oral1,oral2),quiz=sum(q1,q2),course=sum(hw,oral,pr,quiz),grand=sum(course,fin),pct=grand==null?null:Math.max(0,Math.min(100,grand));
+      return `<tr><td>${i+1}</td><td>${studentName(st.full_name)}</td><td>${gradebookCell(hw1)}</td><td>${gradebookCell(hw2)}</td><td class="gradebook-total">${gradebookCell(hw)}</td><td>${gradebookCell(oral1)}</td><td>${gradebookCell(oral2)}</td><td class="gradebook-total">${gradebookCell(oral)}</td><td>${gradebookCell(pr)}</td><td>${gradebookCell(q1)}</td><td>${gradebookCell(q2)}</td><td class="gradebook-total">${gradebookCell(quiz)}</td><td class="gradebook-total">${gradebookCell(course)}</td><td>${gradebookCell(fin)}</td><td class="gradebook-grand">${gradebookCell(grand)}</td><td>${esc(gradebookLevel(pct))}</td><td>${pct==null?'—':esc(pct.toFixed(1)+'%')}</td></tr>`;
+    });
+    $('gradebookTable').innerHTML=rows.length?rows.join(''):'<tr><td colspan="17" class="muted">لا يوجد طلاب في هذه الشعبة.</td></tr>';
+    if($('gradebookStats'))$('gradebookStats').innerHTML=`<div class="visit-box"><b>${students?.length||0}</b><br>طالب في ${esc(cls)}</div><div class="visit-box"><b>${grades?.length||0}</b><br>درجة مسجلة</div><div class="visit-box"><b>${new Set((grades||[]).map(x=>x.assessment_title)).size}</b><br>تقييم مختلف</div>`;
+    msg('gradebookMsg','تم تحميل جميع طلاب الشعبة وسجل درجاتهم ✅');
+  }catch(e){$('gradebookTable').innerHTML=`<tr><td colspan="17"><div class="msg err">تعذر تحميل السجل: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
+}
+if($('gradebookClass'))$('gradebookClass').innerHTML=classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+$('gradebookLoadBtn')&&($('gradebookLoadBtn').onclick=loadGradebook);
+$('gradebookClass')&&($('gradebookClass').onchange=loadGradebook);
+$('gradebookAddStudentBtn')&&($('gradebookAddStudentBtn').onclick=()=>{document.querySelectorAll('#teacherView .section').forEach(x=>x.classList.remove('active'));$('t-students').classList.add('active');document.querySelectorAll('#teacherNav button').forEach(x=>x.classList.toggle('active',x.dataset.sec==='t-students'));if($('newStudentClass'))$('newStudentClass').value=$('gradebookClass')?.value||'9/1';$('newStudentName')?.focus();$('t-students').scrollIntoView({behavior:'smooth',block:'start'})});
+const gradebookNavBtn=$('teacherNav')?.querySelector('[data-sec="t-gradebook"]');gradebookNavBtn&&gradebookNavBtn.addEventListener('click',()=>loadGradebook());
 
 function formatQuestionTime(v){if(!v)return '';try{return new Date(v).toLocaleString('ar-OM',{dateStyle:'short',timeStyle:'short'})}catch(e){return new Date(v).toLocaleString('ar')}}
 async function loadTeacherQuestions(){const all=await rpc('portal_teacher_questions',{p_token:teacherToken,p_status:null});const d=(all||[]).filter(q=>!String(q.question_text||'').startsWith(BANK_ESSAY_PREFIX));$('teacherQuestionList').innerHTML=d.length?d.map(q=>`<div class="item"><span class="badge">${esc(q.class_name)} • ${q.status==='new'?'جديد':'تمت الإجابة'}</span><h3>${studentName(q.full_name)}</h3>${q.created_at?`<div class="muted" style="margin-top:-6px;margin-bottom:10px">🕒 أرسل السؤال: ${formatQuestionTime(q.created_at)}</div>`:''}<p>${esc(q.question_text)}</p>${q.attachment_url?renderSafeAttachment(q.attachment_url,'فتح المرفق'):''}<div class="field"><textarea id="reply-${q.id}" rows="3" placeholder="اكتب ردك...">${esc(q.teacher_reply||'')}</textarea></div><button class="btn primary" data-action="reply-question" data-id="${q.id}">إرسال الرد</button></div>`).join(''):'<div class="muted">لا توجد أسئلة.</div>'}
@@ -625,6 +645,7 @@ document.addEventListener('click',e=>{
     case 'open-study-file': return window.openStudyFile(v1,v2);
     case 'open-lesson': return window.openLessonFromMyLessons(id,Number(v1));
     case 'open-experiment': return window.openExperiment(id,v1,v2);
+    case 'preview-teacher-experiment': return window.openExperiment(id,v1,v2);
     case 'remove-bank-option': return window.removeBankOption(id);
     case 'add-bank-option': return window.addBankOption();
     case 'remove-bank-pair': return window.removeBankPair(id);
@@ -645,7 +666,6 @@ document.addEventListener('click',e=>{
     case 'save-progress': return window.saveProgress(decodeURIComponent(v1));
     case 'edit-student-name': return window.editStudentName(id,v1);
      case 'move-student': return window.moveStudent(id,v1,v2);
-    case 'edit-grade': return window.editGrade(id);
     case 'reply-question': return window.replyQ(id);
   }
 });

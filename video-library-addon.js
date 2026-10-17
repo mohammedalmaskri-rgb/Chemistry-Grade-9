@@ -147,7 +147,7 @@
     try{
       teacherRows=await rpc('portal_teacher_videos',{p_token:teacherToken})||[];
       if(!teacherRows.length){list.innerHTML='<div class="lesson-empty">ما أضفت فيديوهات للحين.</div>';return;}
-      list.innerHTML=teacherRows.map(v=>`<div class="item" data-video-id="${Number(v.id)}"><span class="badge">${v.is_visible?'👁️ ظاهر':'🙈 مخفي'} • ${h(v.target_class==='ALL'?'كل الشعب':v.target_class)}</span><h3>${h(v.title)}</h3><div class="muted">${h(v.lesson_name||'بدون اسم درس')}</div>${v.description?`<p>${h(v.description)}</p>`:''}<div class="video-admin-actions"><button class="btn secondary" data-video-action="toggle" data-id="${Number(v.id)}">${v.is_visible?'🙈 إخفاء عن الطلاب':'👁️ إظهار للطلاب'}</button><button class="btn danger" data-video-action="delete" data-id="${Number(v.id)}">🗑️ حذف</button></div></div>`).join('');
+      list.innerHTML=teacherRows.map(v=>`<div class="item" data-video-id="${Number(v.id)}"><span class="badge">${v.is_visible?'👁️ ظاهر':'🙈 مخفي'} • ${h(v.target_class==='ALL'?'كل الشعب':v.target_class)}</span><h3>${h(v.title)}</h3><div class="muted">${h(v.lesson_name||'بدون اسم درس')}</div>${v.description?`<p>${h(v.description)}</p>`:''}${renderPlayer(v.video_url,v.title)}<div class="video-admin-actions"><button class="btn secondary" data-video-action="toggle" data-id="${Number(v.id)}">${v.is_visible?'🙈 إخفاء عن الطلاب':'👁️ إظهار للطلاب'}</button><button class="btn danger" data-video-action="delete" data-id="${Number(v.id)}">🗑️ حذف</button></div></div>`).join('');
     }catch(e){list.innerHTML=`<div class="msg err">تعذر تحميل الفيديوهات: ${h(e?.message||'خطأ غير معروف')}</div>`;}
   }
 
