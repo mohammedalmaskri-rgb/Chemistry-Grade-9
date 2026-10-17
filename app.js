@@ -591,37 +591,40 @@ $('gradeReportAssessment')&&($('gradeReportAssessment').onchange=renderGradeRepo
 
 // ===== Teacher gradebook =====
 const GRADEBOOK_SLOTS={
-  hw1:['واجب 1','واجب1','الواجب الأول','الواجب الاول','واجب منزلي 1','الواجب المنزلي الأول','الواجب المنزلي الاول'],
-  hw2:['واجب 2','واجب2','الواجب الثاني','واجب منزلي 2','الواجب المنزلي الثاني'],
-  oral1:['حوار شفوي 1','الحوار الشفوي الأول','الحوار الشفوي الاول','شفوي 1','شفوي الأول','شفوي الاول'],
-  oral2:['حوار شفوي 2','الحوار الشفوي الثاني','شفوي 2','شفوي الثاني'],
-  practical:['النشاط العملي','نشاط عملي','عملي'],
-  quiz1:['اختبار قصير 1','اختبار قصير الأول','اختبار قصير الاول','الاختبار القصير الأول','الاختبار القصير الاول','الاختبار الأول','الاختبار الاول'],
-  quiz2:['اختبار قصير 2','اختبار قصير الثاني','الاختبار القصير الثاني','الاختبار الثاني'],
-  final:['امتحان نهاية الفصل','اختبار نهاية الفصل','الامتحان النهائي','الاختبار النهائي','نهائي']
+  hw1:{title:'الواجب المنزلي الأول',max:5,names:['واجب 1','واجب1','الواجب الأول','الواجب الاول','واجب منزلي 1','الواجب المنزلي الأول','الواجب المنزلي الاول']},
+  hw2:{title:'الواجب المنزلي الثاني',max:5,names:['واجب 2','واجب2','الواجب الثاني','واجب منزلي 2','الواجب المنزلي الثاني']},
+  oral1:{title:'الحوار الشفوي الأول',max:5,names:['حوار شفوي 1','الحوار الشفوي الأول','الحوار الشفوي الاول','شفوي 1','شفوي الأول','شفوي الاول']},
+  oral2:{title:'الحوار الشفوي الثاني',max:5,names:['حوار شفوي 2','الحوار الشفوي الثاني','شفوي 2','شفوي الثاني']},
+  practical:{title:'النشاط العملي',max:10,names:['النشاط العملي','نشاط عملي','عملي']},
+  quiz1:{title:'الاختبار القصير الأول',max:15,names:['اختبار قصير 1','اختبار قصير الأول','اختبار قصير الاول','الاختبار القصير الأول','الاختبار القصير الاول','الاختبار الأول','الاختبار الاول']},
+  quiz2:{title:'الاختبار القصير الثاني',max:15,names:['اختبار قصير 2','اختبار قصير الثاني','الاختبار القصير الثاني','الاختبار الثاني']},
+  final:{title:'امتحان نهاية الفصل',max:40,names:['امتحان نهاية الفصل','اختبار نهاية الفصل','الامتحان النهائي','الاختبار النهائي','نهائي']}
 };
+let gradebookOriginal=new Map();
 function gradebookNorm(v){return String(v||'').trim().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ')}
-function gradebookSlot(title){const n=gradebookNorm(title);for(const [k,names] of Object.entries(GRADEBOOK_SLOTS)){if(names.some(x=>gradebookNorm(x)===n))return k}return null}
-function gradebookCell(v){return v==null?'<span class="gradebook-empty">—</span>':esc(Number(v).toFixed(Number(v)%1?1:0))}
+function gradebookSlot(title){const n=gradebookNorm(title);for(const [k,x] of Object.entries(GRADEBOOK_SLOTS)){if(x.names.some(v=>gradebookNorm(v)===n))return k}return null}
 function gradebookLevel(p){if(p==null)return '—';if(p>=90)return 'ممتاز';if(p>=80)return 'جيد جدًا';if(p>=70)return 'جيد';if(p>=60)return 'مقبول';return 'يحتاج متابعة'}
+function gbNum(v){const n=Number(v);return Number.isFinite(n)?n:0}
+function gradebookInput(studentId,slot,value){const cfg=GRADEBOOK_SLOTS[slot];return `<input class="gradebook-input" inputmode="decimal" type="number" min="0" max="${cfg.max}" step="0.5" data-gb-student="${studentId}" data-gb-slot="${slot}" value="${value==null?'':esc(value)}" placeholder="—" style="width:72px;min-width:66px;text-align:center;padding:7px 5px;border:1px solid #cfe2df;border-radius:9px;background:#fff">`}
+function refreshGradebookRow(tr){if(!tr)return;const val=slot=>{const el=tr.querySelector(`[data-gb-slot="${slot}"]`);return el&&el.value!==''?gbNum(el.value):null};const sum=(...xs)=>xs.every(x=>x==null)?null:xs.reduce((a,x)=>a+(x==null?0:x),0);const hw=sum(val('hw1'),val('hw2')),oral=sum(val('oral1'),val('oral2')),quiz=sum(val('quiz1'),val('quiz2')),course=sum(hw,oral,val('practical'),quiz),grand=sum(course,val('final')),pct=grand==null?null:Math.max(0,Math.min(100,grand));const put=(k,v)=>{const e=tr.querySelector(`[data-gb-total="${k}"]`);if(e)e.textContent=v==null?'—':(Number.isInteger(v)?String(v):v.toFixed(1))};put('hw',hw);put('oral',oral);put('quiz',quiz);put('course',course);put('grand',grand);const level=tr.querySelector('[data-gb-level]'),pctEl=tr.querySelector('[data-gb-pct]');if(level)level.textContent=gradebookLevel(pct);if(pctEl)pctEl.textContent=pct==null?'—':pct.toFixed(1)+'%'}
+function ensureGradebookSaveButton(){if(!$('gradebookLoadBtn')||$('gradebookSaveBtn'))return;const b=document.createElement('button');b.id='gradebookSaveBtn';b.className='btn primary';b.textContent='💾 حفظ الدرجات';b.style.marginInlineStart='8px';$('gradebookLoadBtn').insertAdjacentElement('afterend',b);b.addEventListener('click',saveGradebook)}
 async function loadGradebook(){
-  if(!$('gradebookTable'))return;
+  if(!$('gradebookTable'))return;ensureGradebookSaveButton();
   const cls=$('gradebookClass')?.value||'9/1';$('gradebookTable').innerHTML='<tr><td colspan="17" class="muted">جاري تجهيز سجل الدرجات...</td></tr>';
   try{
     const [students,grades]=await Promise.all([rpc('portal_teacher_students',{p_token:teacherToken,p_class:cls}),rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls,p_assessment:'ALL'})]);
     const byStudent=new Map();(grades||[]).forEach(g=>{const slot=gradebookSlot(g.assessment_title);if(!slot)return;const id=Number(g.student_id),cur=byStudent.get(id)||{};const prev=cur[slot];if(!prev||new Date(g.created_at||0)>=new Date(prev.created_at||0))cur[slot]=g;byStudent.set(id,cur)});
-    const rows=(students||[]).map((st,i)=>{const g=byStudent.get(Number(st.id))||{},v=k=>g[k]?Number(g[k].score):null;
-      const hw1=v('hw1'),hw2=v('hw2'),oral1=v('oral1'),oral2=v('oral2'),pr=v('practical'),q1=v('quiz1'),q2=v('quiz2'),fin=v('final');
-      const sum=(...xs)=>xs.every(x=>x==null)?null:xs.reduce((a,x)=>a+(x==null?0:x),0), hw=sum(hw1,hw2),oral=sum(oral1,oral2),quiz=sum(q1,q2),course=sum(hw,oral,pr,quiz),grand=sum(course,fin),pct=grand==null?null:Math.max(0,Math.min(100,grand));
-      return `<tr><td>${i+1}</td><td>${studentName(st.full_name)}</td><td>${gradebookCell(hw1)}</td><td>${gradebookCell(hw2)}</td><td class="gradebook-total">${gradebookCell(hw)}</td><td>${gradebookCell(oral1)}</td><td>${gradebookCell(oral2)}</td><td class="gradebook-total">${gradebookCell(oral)}</td><td>${gradebookCell(pr)}</td><td>${gradebookCell(q1)}</td><td>${gradebookCell(q2)}</td><td class="gradebook-total">${gradebookCell(quiz)}</td><td class="gradebook-total">${gradebookCell(course)}</td><td>${gradebookCell(fin)}</td><td class="gradebook-grand">${gradebookCell(grand)}</td><td>${esc(gradebookLevel(pct))}</td><td>${pct==null?'—':esc(pct.toFixed(1)+'%')}</td></tr>`;
-    });
+    gradebookOriginal=new Map();
+    const rows=(students||[]).map((st,i)=>{const sid=Number(st.id),g=byStudent.get(sid)||{},v=k=>g[k]?Number(g[k].score):null;const vals={hw1:v('hw1'),hw2:v('hw2'),oral1:v('oral1'),oral2:v('oral2'),practical:v('practical'),quiz1:v('quiz1'),quiz2:v('quiz2'),final:v('final')};Object.entries(vals).forEach(([k,val])=>gradebookOriginal.set(`${sid}:${k}`,val));const sum=(...xs)=>xs.every(x=>x==null)?null:xs.reduce((a,x)=>a+(x==null?0:x),0),hw=sum(vals.hw1,vals.hw2),oral=sum(vals.oral1,vals.oral2),quiz=sum(vals.quiz1,vals.quiz2),course=sum(hw,oral,vals.practical,quiz),grand=sum(course,vals.final),pct=grand==null?null:Math.max(0,Math.min(100,grand));return `<tr data-gb-row="${sid}"><td>${i+1}</td><td>${studentName(st.full_name)}</td><td>${gradebookInput(sid,'hw1',vals.hw1)}</td><td>${gradebookInput(sid,'hw2',vals.hw2)}</td><td class="gradebook-total" data-gb-total="hw">${hw==null?'—':hw}</td><td>${gradebookInput(sid,'oral1',vals.oral1)}</td><td>${gradebookInput(sid,'oral2',vals.oral2)}</td><td class="gradebook-total" data-gb-total="oral">${oral==null?'—':oral}</td><td>${gradebookInput(sid,'practical',vals.practical)}</td><td>${gradebookInput(sid,'quiz1',vals.quiz1)}</td><td>${gradebookInput(sid,'quiz2',vals.quiz2)}</td><td class="gradebook-total" data-gb-total="quiz">${quiz==null?'—':quiz}</td><td class="gradebook-total" data-gb-total="course">${course==null?'—':course}</td><td>${gradebookInput(sid,'final',vals.final)}</td><td class="gradebook-grand" data-gb-total="grand">${grand==null?'—':grand}</td><td data-gb-level>${esc(gradebookLevel(pct))}</td><td data-gb-pct>${pct==null?'—':esc(pct.toFixed(1)+'%')}</td></tr>`});
     $('gradebookTable').innerHTML=rows.length?rows.join(''):'<tr><td colspan="17" class="muted">لا يوجد طلاب في هذه الشعبة.</td></tr>';
+    $('gradebookTable').querySelectorAll('.gradebook-input').forEach(el=>el.addEventListener('input',()=>refreshGradebookRow(el.closest('tr'))));
     if($('gradebookStats'))$('gradebookStats').innerHTML=`<div class="visit-box"><b>${students?.length||0}</b><br>طالب في ${esc(cls)}</div><div class="visit-box"><b>${grades?.length||0}</b><br>درجة مسجلة</div><div class="visit-box"><b>${new Set((grades||[]).map(x=>x.assessment_title)).size}</b><br>تقييم مختلف</div>`;
-    msg('gradebookMsg','تم تحميل جميع طلاب الشعبة وسجل درجاتهم ✅');
+    msg('gradebookMsg','السجل جاهز للتعديل. اكتب الدرجات ثم اضغط «حفظ الدرجات» ✅');
   }catch(e){$('gradebookTable').innerHTML=`<tr><td colspan="17"><div class="msg err">تعذر تحميل السجل: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
 }
+async function saveGradebook(){const btn=$('gradebookSaveBtn');if(!btn)return;try{btn.disabled=true;msg('gradebookMsg','جاري حفظ التغييرات...');const inputs=[...$('gradebookTable').querySelectorAll('.gradebook-input')],changes=[];for(const el of inputs){const sid=Number(el.dataset.gbStudent),slot=el.dataset.gbSlot,cfg=GRADEBOOK_SLOTS[slot],raw=el.value.trim(),val=raw===''?null:Number(raw),old=gradebookOriginal.get(`${sid}:${slot}`);if(val!=null&&(!Number.isFinite(val)||val<0||val>cfg.max))throw new Error(`${cfg.title}: الدرجة يجب أن تكون من 0 إلى ${cfg.max}`);if(val==null){if(old!=null)throw new Error(`لا تترك ${cfg.title} فارغة بعد أن كانت مسجلة. اكتب 0 إذا أردت تصفيرها.`);continue}if(old==null||Math.abs(val-old)>0.0001)changes.push({sid,slot,val,cfg})}if(!changes.length){msg('gradebookMsg','لا توجد تغييرات جديدة للحفظ.');return}for(let i=0;i<changes.length;i++){const x=changes[i];msg('gradebookMsg',`جاري الحفظ ${i+1} من ${changes.length}...`);const id=await rpc('portal_teacher_add_grade',{p_token:teacherToken,p_student_id:x.sid,p_title:x.cfg.title,p_score:x.val,p_max_score:x.cfg.max,p_note:'سجل الدرجات'});if(!id)throw new Error('تعذر حفظ إحدى الدرجات')}await loadGradebook();msg('gradebookMsg',`تم حفظ ${changes.length} درجة بنجاح ✅`)}catch(e){msg('gradebookMsg',e.message||'تعذر حفظ سجل الدرجات',false)}finally{btn.disabled=false}}
 if($('gradebookClass'))$('gradebookClass').innerHTML=classes.map(c=>`<option value="${c}">${c}</option>`).join('');
-$('gradebookLoadBtn')&&($('gradebookLoadBtn').onclick=loadGradebook);
+$('gradebookLoadBtn')&&($('gradebookLoadBtn').onclick=loadGradebook);ensureGradebookSaveButton();
 $('gradebookClass')&&($('gradebookClass').onchange=loadGradebook);
 $('gradebookAddStudentBtn')&&($('gradebookAddStudentBtn').onclick=()=>{document.querySelectorAll('#teacherView .section').forEach(x=>x.classList.remove('active'));$('t-students').classList.add('active');document.querySelectorAll('#teacherNav button').forEach(x=>x.classList.toggle('active',x.dataset.sec==='t-students'));if($('newStudentClass'))$('newStudentClass').value=$('gradebookClass')?.value||'9/1';$('newStudentName')?.focus();$('t-students').scrollIntoView({behavior:'smooth',block:'start'})});
 const gradebookNavBtn=$('teacherNav')?.querySelector('[data-sec="t-gradebook"]');gradebookNavBtn&&gradebookNavBtn.addEventListener('click',()=>loadGradebook());
