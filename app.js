@@ -566,7 +566,7 @@ async function loadGradeReport(){
   try{
     const cls=$('gradeReportClass')?.value||'ALL';
     // Reuse the existing teacher students + a report RPC dedicated to grades.
-    const d=await rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls});
+    const d=await rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls,p_assessment:'ALL'});
     gradeReportRows=d||[];
     const assessments=[...new Set(gradeReportRows.map(x=>String(x.assessment_title||'')).filter(Boolean))].sort();
     const sel=$('gradeReportAssessment');
@@ -608,7 +608,7 @@ async function loadGradebook(){
   if(!$('gradebookTable'))return;
   const cls=$('gradebookClass')?.value||'9/1';$('gradebookTable').innerHTML='<tr><td colspan="17" class="muted">جاري تجهيز سجل الدرجات...</td></tr>';
   try{
-    const [students,grades]=await Promise.all([rpc('portal_teacher_students',{p_token:teacherToken,p_class:cls}),rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls})]);
+    const [students,grades]=await Promise.all([rpc('portal_teacher_students',{p_token:teacherToken,p_class:cls}),rpc('portal_teacher_grade_report',{p_token:teacherToken,p_class:cls,p_assessment:'ALL'})]);
     const byStudent=new Map();(grades||[]).forEach(g=>{const slot=gradebookSlot(g.assessment_title);if(!slot)return;const id=Number(g.student_id),cur=byStudent.get(id)||{};const prev=cur[slot];if(!prev||new Date(g.created_at||0)>=new Date(prev.created_at||0))cur[slot]=g;byStudent.set(id,cur)});
     const rows=(students||[]).map((st,i)=>{const g=byStudent.get(Number(st.id))||{},v=k=>g[k]?Number(g[k].score):null;
       const hw1=v('hw1'),hw2=v('hw2'),oral1=v('oral1'),oral2=v('oral2'),pr=v('practical'),q1=v('quiz1'),q2=v('quiz2'),fin=v('final');

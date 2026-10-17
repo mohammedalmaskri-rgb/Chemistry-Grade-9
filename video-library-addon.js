@@ -45,10 +45,20 @@
   function renderPlayer(url,title){
     const yid=youtubeId(url);
     if(yid && /^[A-Za-z0-9_-]{6,20}$/.test(yid)){
-      return `<div class="video-frame"><iframe loading="lazy" src="https://www.youtube-nocookie.com/embed/${h(yid)}" title="${h(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;
+      const thumb=`https://i.ytimg.com/vi/${h(yid)}/hqdefault.jpg`;
+      return `<button type="button" class="video-frame video-lazy" data-yid="${h(yid)}" data-title="${h(title)}" aria-label="تشغيل ${h(title)}" style="border:0;padding:0;cursor:pointer;background:#0f172a"><img src="${thumb}" alt="${h(title)}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><span style="position:absolute;inset:0;display:grid;place-items:center"><span style="display:grid;place-items:center;width:72px;height:52px;border-radius:16px;background:#ff0033;color:#fff;font-size:28px;box-shadow:0 8px 30px #0006">▶</span></span></button>`;
     }
     const safe=typeof safeWebUrl==='function'?safeWebUrl(url):'';
     return safe?`<div class="video-placeholder">هذا الرابط لا يدعم التشغيل داخل المنصة حاليًا.<br><br><a class="link" href="${h(safe)}" target="_blank" rel="noopener noreferrer">فتح الفيديو</a></div>`:'<div class="video-placeholder">رابط الفيديو غير صالح.</div>';
+  }
+
+  function activateLazyVideo(ev){
+    const box=ev.target.closest('.video-lazy'); if(!box)return;
+    const yid=box.dataset.yid||''; if(!/^[A-Za-z0-9_-]{6,20}$/.test(yid))return;
+    const title=box.dataset.title||'فيديو الشرح';
+    const wrap=document.createElement('div'); wrap.className='video-frame';
+    wrap.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${h(yid)}?autoplay=1" title="${h(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+    box.replaceWith(wrap);
   }
 
   function ensureUI(){
@@ -64,6 +74,7 @@
       sec.innerHTML='<h2>🎥 فيديوهات الشرح</h2><p class="muted">شروحات الدروس المسجلة من المعلم. اختر الفيديو وشاهده مباشرة من داخل البوابة.</p><div id="studentVideoList" class="video-library-grid"><div class="lesson-empty">اضغط «فيديوهات الشرح» لتحميل الفيديوهات.</div></div>';
       sView.appendChild(sec);
       b.addEventListener('click',()=>{activate(sNav,sView,b,'s-videos');loadStudentVideos();});
+      ID('studentVideoList')?.addEventListener('click',activateLazyVideo);
     }
 
     const tNav=ID('teacherNav'), tView=ID('teacherView');
@@ -98,6 +109,7 @@
       b.addEventListener('click',()=>{activate(tNav,tView,b,'t-videos');loadTeacherVideos();});
       ID('videoAddBtn')?.addEventListener('click',addVideo);
       ID('teacherVideoList')?.addEventListener('click',teacherVideoAction);
+      ID('teacherVideoList')?.addEventListener('click',activateLazyVideo);
     }
   }
 
