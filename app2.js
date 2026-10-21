@@ -51,7 +51,9 @@ classes.forEach(c=>{['annClass','contentClass','studentFilter','expClass','bankC
 if($('gradeReportClass'))$('gradeReportClass').innerHTML='<option value="ALL">كل الشعب</option>'+classes.map(c=>`<option value="${c}">${c}</option>`).join('');
 $('pointsClass')&&$('pointsClass').insertAdjacentHTML('afterbegin','<option value="ALL">🌐 كل الشعب</option>');
 document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>{loginMode=b.dataset.login;document.querySelectorAll('[data-login]').forEach(x=>x.classList.toggle('active',x===b));$('teacherHint').style.display=loginMode==='teacher'?'block':'none';$('loginUser').placeholder=loginMode==='teacher'?'teacher':'مثال: 91001'});
-async function rpc(fn,args={}){if(!/^portal_[a-z0-9_]{1,80}$/i.test(String(fn)))throw new Error('RPC غير مسموح');const req=sb.rpc(fn,args);let timer;try{const result=await Promise.race([req,new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error('انتهت مهلة الاتصال. حاول مرة أخرى.')),SEC.rpcTimeoutMs)})]);const {data,error}=result;if(error)throw error;return data}finally{clearTimeout(timer)}}
+const MT_RPC_MAP={
+'portal_teacher_overview':'portal_teacher_mt_overview','portal_teacher_topics':'portal_teacher_mt_topics','portal_teacher_progress':'portal_teacher_mt_progress','portal_teacher_set_progress':'portal_teacher_mt_set_progress','portal_teacher_lesson_plan':'portal_teacher_mt_lesson_plan','portal_teacher_save_lesson_plan':'portal_teacher_mt_save_lesson_plan','portal_teacher_lesson_visits':'portal_teacher_mt_lesson_visits','portal_teacher_lesson_nonvisitors':'portal_teacher_mt_lesson_nonvisitors','portal_teacher_announcements':'portal_teacher_mt_announcements','portal_teacher_add_announcement':'portal_teacher_mt_add_announcement','portal_teacher_content':'portal_teacher_mt_content','portal_teacher_add_content':'portal_teacher_mt_add_content','portal_teacher_experiments':'portal_teacher_mt_experiments','portal_teacher_add_experiment':'portal_teacher_mt_add_experiment','portal_teacher_set_experiment_visibility':'portal_teacher_mt_set_experiment_visibility','portal_teacher_delete_experiment':'portal_teacher_mt_delete_experiment','portal_teacher_question_bank':'portal_teacher_mt_question_bank','portal_teacher_add_question_bank':'portal_teacher_mt_add_question_bank','portal_teacher_update_question_bank':'portal_teacher_mt_update_question_bank','portal_teacher_set_question_state':'portal_teacher_mt_set_question_state','portal_teacher_delete_question_bank':'portal_teacher_mt_delete_question_bank','portal_teacher_lesson_materials':'portal_teacher_mt_lesson_materials','portal_teacher_add_lesson_material':'portal_teacher_mt_add_lesson_material','portal_teacher_set_lesson_material_visibility':'portal_teacher_mt_set_lesson_material_visibility','portal_teacher_delete_lesson_material':'portal_teacher_mt_delete_lesson_material','portal_teacher_add_grade':'portal_teacher_mt_add_grade','portal_teacher_grade_report':'portal_teacher_mt_grade_report','portal_teacher_update_grade_value':'portal_teacher_mt_update_grade_value','portal_teacher_points_overview':'portal_teacher_mt_points_overview','portal_teacher_adjust_points':'portal_teacher_mt_adjust_points','portal_teacher_questions':'portal_teacher_mt_questions','portal_teacher_reply_question':'portal_teacher_mt_reply_question','portal_teacher_behavior_records':'portal_teacher_mt_behavior_records','portal_teacher_add_behavior_record':'portal_teacher_mt_add_behavior_record','portal_teacher_resolve_behavior_record':'portal_teacher_mt_resolve_behavior_record','portal_teacher_delete_behavior_record':'portal_teacher_mt_delete_behavior_record'};
+async function rpc(fn,args={}){if(!/^portal_[a-z0-9_]{1,80}$/i.test(String(fn)))throw new Error('RPC غير مسموح');if(teacherToken&&currentTeacher&&!isPrimaryTeacher()&&teacherSubjectCode&&MT_RPC_MAP[fn]){fn=MT_RPC_MAP[fn];args={...args,p_subject_code:teacherSubjectCode}}const req=sb.rpc(fn,args);let timer;try{const result=await Promise.race([req,new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error('انتهت مهلة الاتصال. حاول مرة أخرى.')),SEC.rpcTimeoutMs)})]);const {data,error}=result;if(error)throw error;return data}finally{clearTimeout(timer)}}
 
 function teacherIdentity(){return Number(currentTeacher?.teacher_id??currentTeacher?.id??0)}
 function isPrimaryTeacher(){return teacherIdentity()===1||String(currentTeacher?.username||'')==='teacher'}
@@ -95,34 +97,18 @@ function renderTeacherContextBar(){
   const multi=teacherSubjects.length>1;
   const displaySubject=subjectDisplayName(teacherSubjectCode,teacherSubjectName);
   bar.innerHTML=`<div style="display:flex;flex-direction:column;gap:3px"><b>👨‍🏫 ${esc(currentTeacher?.full_name||'المعلم')}</b><span class="muted">${subjectIcon(teacherSubjectCode)} ${esc(displaySubject)} — ${esc(teacherGradeTitle())}</span></div><span class="badge">${classes.map(esc).join(' • ')}</span>${multi?'<button id="teacherSwitchSubject" class="btn secondary">🔄 تغيير المادة</button>':''}`;
-  if($('teacherSwitchSubject'))$('teacherSwitchSubject').onclick=async()=>{await chooseTeacherSubject(true);rebuildTeacherClassControls();renderTeacherContextBar();updateTeacherBranding();if(!isPrimaryTeacher())applyTeacherSafeMode();$('topSub').textContent=`${subjectDisplayName(teacherSubjectCode,teacherSubjectName)} — ${classes.join(' • ')}`;await loadOverview();await loadStudents('ALL')};
+  if($('teacherSwitchSubject'))$('teacherSwitchSubject').onclick=async()=>{await chooseTeacherSubject(true);rebuildTeacherClassControls();renderTeacherContextBar();updateTeacherBranding();if(!isPrimaryTeacher())applyTeacherSafeMode();$('topSub').textContent=`${subjectDisplayName(teacherSubjectCode,teacherSubjectName)} — ${classes.join(' • ')}`;await reloadTeacherSubjectPanels()};
 }
 function applyTeacherSafeMode(){
   if(isPrimaryTeacher())return;
   const nav=$('teacherNav');
-  if(nav){
-    nav.querySelectorAll('button[data-sec]').forEach(b=>{
-      b.style.display='';
-      b.classList.toggle('active',b.dataset.sec==='t-students');
-    });
-  }
-  const safeSections=new Set(['t-students','t-account']);
+  if(nav)nav.querySelectorAll('button[data-sec]').forEach(b=>{b.style.display='';b.disabled=false});
   document.querySelectorAll('#teacherView .section').forEach(sec=>{
-    sec.classList.remove('active');
-    if(!safeSections.has(sec.id)){
-      let note=sec.querySelector('.subject-safety-note');
-      if(!note){
-        note=document.createElement('div');
-        note.className='msg subject-safety-note';
-        note.style='margin-bottom:12px';
-        sec.prepend(note);
-      }
-      note.innerHTML=`🔒 هذا القسم ظاهر في لوحة ${esc(subjectDisplayName(teacherSubjectCode,teacherSubjectName))}، لكن بياناته مقفلة مؤقتًا حتى يتم ربطه بالمادة في قاعدة البيانات حتى لا تختلط ببيانات الكيمياء.`;
-      sec.querySelectorAll('button,input,select,textarea').forEach(el=>{if(!el.closest('.subject-safety-note'))el.disabled=true});
-    }
+    sec.querySelectorAll('.subject-safety-note').forEach(x=>x.remove());
+    sec.querySelectorAll('button,input,select,textarea').forEach(el=>el.disabled=false);
   });
-  if($('t-students'))$('t-students').classList.add('active');
 }
+
 async function chooseTeacherSubject(force=false){
   if(!teacherAssignments.length)teacherAssignments=await rpc('portal_teacher_assignments',{p_token:teacherToken})||[];
   const byCode=new Map();for(const r of teacherAssignments){if(!byCode.has(r.subject_code))byCode.set(r.subject_code,{code:r.subject_code,name:r.subject_name,rows:[]});byCode.get(r.subject_code).rows.push(r)}
@@ -545,7 +531,7 @@ async function searchRecoveryStudents(){
     const q=($('recoveryQuery').value||'').trim();
     if(q.length<2){msg('recoveryMsg','اكتب حرفين على الأقل من اسم الطالب أو اسم المستخدم.',false);return}
     $('recoverySearchBtn').disabled=true;msg('recoveryMsg','جاري البحث...');$('recoveryResults').innerHTML='';
-    const d=await rpc('portal_teacher_find_student_account',{p_token:teacherToken,p_query:q,p_class:$('recoveryClass').value});
+    let d;if(!isPrimaryTeacher()&&$('recoveryClass').value==='ALL'){const chunks=await Promise.all(classes.map(c=>rpc('portal_teacher_find_student_account',{p_token:teacherToken,p_query:q,p_class:c})));const by=new Map();chunks.flat().forEach(x=>by.set(x.student_id,x));d=[...by.values()]}else d=await rpc('portal_teacher_find_student_account',{p_token:teacherToken,p_query:q,p_class:$('recoveryClass').value});
     if(!d?.length){msg('recoveryMsg','لم يتم العثور على طالب مطابق.',false);return}
     msg('recoveryMsg',`تم العثور على ${d.length} طالب ✅`);
     $('recoveryResults').innerHTML=d.map(x=>`<div class="item"><span class="badge">${esc(x.class_name)}</span><h3>${studentName(x.full_name)}</h3><div class="lesson-detail" style="margin:10px 0"><b>اسم المستخدم</b><div style="font-size:20px;font-weight:900;direction:ltr;text-align:right">${esc(x.username)}</div></div><div class="lesson-actions"><button class="btn secondary" data-action="copy-student-username" data-v1="${safeEnc(x.username)}">📋 نسخ اسم المستخدم</button><button class="btn primary" data-action="reset-student-password" data-id="${x.student_id}" data-v1="${safeEnc(x.full_name)}">🔑 إعادة تعيين كلمة المرور</button></div></div>`).join('');
@@ -592,29 +578,29 @@ $('behaviorSaveBtn')&&($('behaviorSaveBtn').onclick=async()=>{try{$('behaviorSav
 window.resolveBehavior=async id=>{const ok=await rpc('portal_teacher_resolve_behavior_record',{p_token:teacherToken,p_record_id:id});if(ok)await loadBehaviorRecords()};
 window.deleteBehavior=async id=>{if(!confirm('حذف هذه الملاحظة السلوكية؟'))return;const ok=await rpc('portal_teacher_delete_behavior_record',{p_token:teacherToken,p_record_id:id});if(ok)await loadBehaviorRecords()};
 
+async function reloadTeacherSubjectPanels(){
+  topics=await rpc('portal_teacher_topics',{p_token:teacherToken});
+  fillStudyTopicSelects();
+  await initLessonPlanEditor();
+  const tasks=[loadOverview,loadProgressCards,loadTeacherAnnouncements,loadTeacherContent,loadTeacherQuestions,()=>loadStudents('ALL'),loadTeacherExperiments,loadTeacherBank,loadTeacherEssaySubmissions,loadTeacherStudyMaterials,refreshStudentSelects];
+  await Promise.allSettled(tasks.map(fn=>Promise.resolve().then(fn)));
+  if($('behaviorClass'))await Promise.resolve().then(refreshBehaviorStudents).then(loadBehaviorRecords).catch(e=>console.warn('Behavior panel unavailable',e));
+  if($('loginTable'))loadStudentLogins().catch(()=>{});
+}
+
 async function enterTeacher(){
   show('teacherView');$('topSub').textContent='جاري تحميل تكليفات المعلم...';
   await prepareTeacherContext();
   $('topSub').textContent=`${subjectDisplayName(teacherSubjectCode,teacherSubjectName)} — ${classes.join(' • ')}`;renderTeacherContextBar();updateTeacherBranding();
-  if(!isPrimaryTeacher()){
-    applyTeacherSafeMode();topics=[];
-    await Promise.allSettled([loadOverview(),loadStudents('ALL')]);
-    return;
-  }
-  topics=await rpc('portal_teacher_topics',{p_token:teacherToken});fillStudyTopicSelects();await initLessonPlanEditor();
-  const tasks=[loadOverview,loadProgressCards,loadTeacherAnnouncements,loadTeacherContent,loadTeacherQuestions,()=>loadStudents('ALL'),loadTeacherExperiments,loadTeacherBank,loadTeacherEssaySubmissions,loadTeacherStudyMaterials,refreshStudentSelects];
-  Promise.allSettled(tasks.map(fn=>Promise.resolve().then(fn))).then(results=>{if(results.some(r=>r.status==='rejected'))console.warn('Some teacher panels could not load')});
-  if($('behaviorClass'))Promise.resolve().then(refreshBehaviorStudents).then(loadBehaviorRecords).catch(e=>console.warn('Behavior panel unavailable',e));
+  if(!isPrimaryTeacher())applyTeacherSafeMode();
+  await reloadTeacherSubjectPanels();
 }
 async function loadOverview(){
-  if(!isPrimaryTeacher()){
-    const d=await rpc('portal_teacher_students_v2',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:'ALL'})||[];
-    if($('teacherStats'))$('teacherStats').innerHTML=`<div class="stat"><b>${d.length}</b>طالب</div><div class="stat"><b>${classes.length}</b>شعبة</div><div class="stat"><b>${subjectIcon(teacherSubjectCode)}</b>${esc(subjectDisplayName(teacherSubjectCode,teacherSubjectName))}</div>`;
-    if($('todaySummary'))$('todaySummary').innerHTML=`أنت الآن في <b>${esc(subjectDisplayName(teacherSubjectCode,teacherSubjectName))}</b> والشعب المسندة لك: <b>${classes.map(esc).join(' • ')}</b>.`;
-    return;
-  }
-  const d=await rpc('portal_teacher_overview',{p_token:teacherToken});const o=d?.[0]||{};$('teacherStats').innerHTML=`<div class="stat"><b>${o.total_students??0}</b>طالب</div><div class="stat"><b>${o.new_questions??0}</b>سؤال جديد</div><div class="stat"><b>${o.announcements??0}</b>إعلان</div><div class="stat"><b>${o.content_items??0}</b>محتوى منشور</div>`;if($('todaySummary'))$('todaySummary').innerHTML=`عندك اليوم <b>${o.new_questions??0}</b> سؤال جديد من الطلاب، و<b>${o.content_items??0}</b> محتوى منشور في البوابة.`
+  const d=await rpc('portal_teacher_overview',{p_token:teacherToken});const o=d?.[0]||{};
+  $('teacherStats').innerHTML=`<div class="stat"><b>${o.total_students??0}</b>طالب</div><div class="stat"><b>${o.new_questions??0}</b>سؤال جديد</div><div class="stat"><b>${o.announcements??0}</b>إعلان</div><div class="stat"><b>${o.content_items??0}</b>محتوى منشور</div>`;
+  if($('todaySummary'))$('todaySummary').innerHTML=isPrimaryTeacher()?`عندك اليوم <b>${o.new_questions??0}</b> سؤال جديد من الطلاب، و<b>${o.content_items??0}</b> محتوى منشور في البوابة.`:`أنت الآن في <b>${esc(subjectDisplayName(teacherSubjectCode,teacherSubjectName))}</b> — ${classes.map(esc).join(' • ')}. عندك <b>${o.new_questions??0}</b> سؤال جديد و<b>${o.content_items??0}</b> محتوى منشور.`;
 }
+
 async function loadProgressCards(){const p=await rpc('portal_teacher_progress',{p_token:teacherToken});$('progressCards').innerHTML=classes.map(c=>{const x=p.find(v=>v.class_name===c);return `<div class="class-card"><strong>${c}</strong><div class="muted" style="margin:6px 0">${x?.topic_title?esc(x.topic_title):'لم يحدد بعد'} ${x?.page_no?'— ص '+x.page_no:''}</div><select id="tp-${c.replace('/','-')}" style="width:100%;padding:9px;border-radius:10px;border:1px solid #cfe2df">${topics.map(t=>`<option value="${t.id}" ${x?.topic_id===t.id?'selected':''}>${esc(t.section_code)} — ${esc(t.title)}${t.page_no?' (ص '+t.page_no+')':''}</option>`).join('')}</select><input id="tn-${c.replace('/','-')}" value="${esc(x?.note||'')}" placeholder="ملاحظة اختيارية" style="width:100%;padding:9px;margin:7px 0;border:1px solid #cfe2df;border-radius:10px"><button class="btn primary" data-action="save-progress" data-v1="${safeEnc(c)}">حفظ التقدم</button></div>`}).join('')}
 window.saveProgress=async c=>{const key=c.replace('/','-');const ok=await rpc('portal_teacher_set_progress',{p_token:teacherToken,p_class:c,p_topic_id:Number($('tp-'+key).value),p_note:$('tn-'+key).value});if(ok){await loadProgressCards();alert('تم حفظ تقدم '+c+' ✅')}};
 $('annAddBtn').onclick=async()=>{try{const id=await rpc('portal_teacher_add_announcement',{p_token:teacherToken,p_title:$('annTitle').value,p_body:$('annBody').value,p_target_class:$('annClass').value,p_is_popup:$('annPopup').checked});if(!id)throw new Error('تعذر الإرسال');msg('annTeacherMsg','تم إرسال الرسالة ✅');$('annTitle').value='';$('annBody').value='';await loadTeacherAnnouncements();await loadOverview()}catch(e){msg('annTeacherMsg',e.message,false)}};
@@ -635,7 +621,7 @@ function renderStudentLogins(){
 async function loadStudentLogins(){
   if(!$('loginTable'))return;
   $('loginTable').innerHTML='<tr><td colspan="6" class="muted">جاري تحديث بيانات الدخول...</td></tr>';
-  try{studentLoginRows=await rpc('portal_teacher_student_logins_v2',{p_token:teacherToken,p_class:$('loginClass')?.value||'ALL'})||[];renderStudentLogins()}
+  try{const lc=$('loginClass')?.value||'ALL';if(!isPrimaryTeacher()&&lc==='ALL'){const chunks=await Promise.all(classes.map(c=>rpc('portal_teacher_student_logins_v2',{p_token:teacherToken,p_class:c})));studentLoginRows=chunks.flat()}else studentLoginRows=await rpc('portal_teacher_student_logins_v2',{p_token:teacherToken,p_class:lc})||[];renderStudentLogins()}
   catch(e){$('loginTable').innerHTML=`<tr><td colspan="6"><div class="msg bad">تعذر تحميل سجل الدخول: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
 }
 $('loginLoadBtn')&&($('loginLoadBtn').onclick=loadStudentLogins);
@@ -730,7 +716,7 @@ async function loadTeacherQuestions(){const all=await rpc('portal_teacher_questi
 window.replyQ=async id=>{const ok=await rpc('portal_teacher_reply_question',{p_token:teacherToken,p_question_id:id,p_reply:$('reply-'+id).value});if(ok){await loadTeacherQuestions();await loadOverview()}};
 async function applyPoints(delta=null){try{const d=delta===null?Number($('pointsDelta').value):delta;const sid=Number($('pointsStudent').value);const p=await rpc('portal_teacher_adjust_points',{p_token:teacherToken,p_student_id:sid,p_delta:d});if(p===null)throw new Error('تعذر التعديل');await refreshStudentSelects();const pc=$('pointsClass').value||'9/1';const rows=await rpc('portal_teacher_points_overview',{p_token:teacherToken,p_class:pc});const row=(rows||[]).find(x=>Number(x.student_id)===sid);const total=row?fmtPoints(row.total_points):fmtPoints(p);msg('pointsMsg',(d<0?'تم خصم '+Math.abs(d)+' نقطة. ':'تمت إضافة '+d+' نقطة. ')+'إجمالي رصيد الطالب الآن: '+total+' ⭐')}catch(e){msg('pointsMsg',e.message,false)}}$('pointsBtn').onclick=()=>applyPoints();$('pointsPlusBtn')&&($('pointsPlusBtn').onclick=()=>applyPoints(1));$('pointsMinusBtn')&&($('pointsMinusBtn').onclick=()=>applyPoints(-1));
 if($('newStudentClass'))$('newStudentClass').innerHTML=classes.map(c=>`<option value="${c}">${c}</option>`).join('');
-function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));const actions=s=>isPrimaryTeacher()?`<button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button> <button class="btn danger" data-action="delete-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">🗑️ حذف الطالب</button>`:'<span class="muted">التعديل مقفل مؤقتًا حتى اكتمال فصل بيانات المواد.</span>';$('studentsTable').innerHTML=list.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points??'—'}</td><td>${actions(s)}</td></tr>`).join('');if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;}
+function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));const actions=s=>isPrimaryTeacher()?`<button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button> <button class="btn danger" data-action="delete-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">🗑️ حذف الطالب</button>`:'<span class="muted">حساب الطالب مشترك بين المواد</span>';$('studentsTable').innerHTML=list.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points??'—'}</td><td>${actions(s)}</td></tr>`).join('');if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;}
 window.editStudentName=async(id,nameEnc)=>{const old=decodeURIComponent(nameEnc),name=prompt('اكتب الاسم الصحيح للطالب:',old);if(name===null||!name.trim()||name.trim()===old)return;try{const ok=await rpc('portal_teacher_update_student_name',{p_token:teacherToken,p_student_id:id,p_full_name:name.trim()});if(!ok)throw new Error('تعذر تعديل الاسم');await loadStudents($('studentFilter').value||'ALL');await refreshStudentSelects();alert('تم تعديل اسم الطالب ✅')}catch(e){alert(e.message)}};
 window.moveStudent=async(id,nameEnc,classEnc)=>{const name=decodeURIComponent(nameEnc),oldClass=decodeURIComponent(classEnc);const choices=classes.filter(c=>c!==oldClass);const next=prompt(`نقل ${name} من ${oldClass}.\nاكتب الشعبة الجديدة: ${choices.join('، ')}`,choices[0]||'');if(next===null)return;const cls=next.trim();if(!classes.includes(cls)){alert('الشعبة غير صحيحة. استخدم: '+classes.join('، '));return}if(cls===oldClass)return;if(!confirm(`تأكيد نقل ${name} من ${oldClass} إلى ${cls}؟\nلن يتم حذف درجاته أو نقاطه أو سجلاته.`))return;try{const ok=await rpc('portal_teacher_move_student',{p_token:teacherToken,p_student_id:id,p_new_class:cls});if(!ok)throw new Error('تعذر نقل الطالب');await loadStudents($('studentFilter').value||'ALL');await refreshStudentSelects();alert('تم نقل الطالب إلى '+cls+' ✅')}catch(e){alert(e.message||'تعذر نقل الطالب')}};
 window.deleteStudent=async(id,nameEnc)=>{const name=decodeURIComponent(nameEnc);if(!confirm(`هل أنت متأكد من حذف الطالب:\n${name}\n\nسيتم حذف حسابه وبياناته المرتبطة نهائيًا.`))return;const check=prompt(`تأكيد نهائي لحذف ${name}\nاكتب كلمة: حذف`,'');if(check!=='حذف'){if(check!==null)alert('تم إلغاء الحذف لأن كلمة التأكيد غير صحيحة.');return}try{const ok=await rpc('portal_teacher_delete_student',{p_token:teacherToken,p_student_id:id});if(!ok)throw new Error('تعذر حذف الطالب');await loadStudents($('studentFilter').value||'ALL');await refreshStudentSelects();await loadOverview();alert('تم حذف الطالب نهائيًا ✅')}catch(e){alert(e.message||'تعذر حذف الطالب')}};
