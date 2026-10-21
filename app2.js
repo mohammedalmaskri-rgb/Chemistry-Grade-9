@@ -57,6 +57,24 @@ function teacherIdentity(){return Number(currentTeacher?.teacher_id??currentTeac
 function isPrimaryTeacher(){return teacherIdentity()===1||String(currentTeacher?.username||'')==='teacher'}
 function classSort(a,b){const pa=String(a).split('/').map(Number),pb=String(b).split('/').map(Number);return (pa[0]||0)-(pb[0]||0)||(pa[1]||0)-(pb[1]||0)||String(a).localeCompare(String(b),'ar')}
 function subjectIcon(code){return code==='chemistry'?'🧪':code==='physics'?'⚛️':code==='biology'?'🧬':'🔬'}
+function teacherGradeTitle(){
+  const grade=String(classes?.[0]||'').split('/')[0];
+  if(grade==='7')return 'الصف السابع';
+  if(grade==='8')return 'الصف الثامن';
+  if(grade==='9')return 'الصف التاسع';
+  return '';
+}
+function updateTeacherBranding(){
+  const teacherName=currentTeacher?.full_name||'المعلم';
+  const subject=teacherSubjectName||'';
+  const grade=teacherGradeTitle();
+  document.title=`بوابة ${subject} | ${grade} | ${teacherName}`;
+  const candidates=[...document.querySelectorAll('h1,h2,strong,.brand,.title')];
+  const portalTitle=candidates.find(x=>/بوابة (الكيمياء|الأحياء|العلوم|الفيزياء)/.test(x.textContent||''));
+  if(portalTitle)portalTitle.textContent=`${subjectIcon(teacherSubjectCode)} بوابة ${subject} | ${grade}`;
+  const todayTitle=[...document.querySelectorAll('#teacherView h1,#teacherView h2,#teacherView h3')].find(x=>/اليوم في بوابة/.test(x.textContent||''));
+  if(todayTitle)todayTitle.textContent=`☀️ اليوم في بوابة ${subject}`;
+}
 function rebuildTeacherClassControls(){
   const allLabel='<option value="ALL">🌐 كل الشعب</option>', opts=classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
   ['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass','recoveryClass','behaviorFilterClass','loginClass','gradeReportClass'].forEach(id=>{if($(id))$(id).innerHTML=allLabel+opts});
@@ -67,8 +85,8 @@ function renderTeacherContextBar(){
   const host=$('teacherView');if(!host)return;
   let bar=$('teacherContextBar');if(!bar){bar=document.createElement('div');bar.id='teacherContextBar';bar.style='margin:12px 0;padding:12px 14px;border:1px solid #cfe2df;border-radius:14px;background:#f7fbfa;display:flex;gap:10px;align-items:center;flex-wrap:wrap';host.prepend(bar)}
   const multi=teacherSubjects.length>1;
-  bar.innerHTML=`<b>${subjectIcon(teacherSubjectCode)} ${esc(teacherSubjectName||'')}</b><span class="badge">${classes.map(esc).join(' • ')}</span>${multi?'<button id="teacherSwitchSubject" class="btn secondary">🔄 تغيير المادة</button>':''}${!isPrimaryTeacher()?'<span class="muted">وضع الحماية المؤقت مفعّل</span>':''}`;
-  if($('teacherSwitchSubject'))$('teacherSwitchSubject').onclick=async()=>{await chooseTeacherSubject(true);rebuildTeacherClassControls();renderTeacherContextBar();$('topSub').textContent=`${teacherSubjectName} — ${classes.join(' • ')}`;await loadOverview();await loadStudents('ALL')};
+  bar.innerHTML=`<div style="display:flex;flex-direction:column;gap:3px"><b>👨‍🏫 ${esc(currentTeacher?.full_name||'المعلم')}</b><span class="muted">${subjectIcon(teacherSubjectCode)} ${esc(teacherSubjectName||'')} — ${esc(teacherGradeTitle())}</span></div><span class="badge">${classes.map(esc).join(' • ')}</span>${multi?'<button id="teacherSwitchSubject" class="btn secondary">🔄 تغيير المادة</button>':''}`;
+  if($('teacherSwitchSubject'))$('teacherSwitchSubject').onclick=async()=>{await chooseTeacherSubject(true);rebuildTeacherClassControls();renderTeacherContextBar();updateTeacherBranding();$('topSub').textContent=`${teacherSubjectName} — ${classes.join(' • ')}`;await loadOverview();await loadStudents('ALL')};
 }
 function applyTeacherSafeMode(){
   if(isPrimaryTeacher())return;
@@ -491,7 +509,7 @@ async function loadTeacherStudyMaterials(){
 $('studyAddBtn').onclick=async()=>{try{$('studyAddBtn').disabled=true;msg('studyMsg','جاري تجهيز الملف...');const f=await prepareStudyFile($('studyFile').files?.[0]);const type=$('studyType').value;const topic=topics.find(t=>t.id===Number($('studyTopic').value));const typeLabels={summary:'ملخص',questions:'أسئلة',activity_solution:'حل كتاب النشاط وأوراق العمل',studentbook_solution:'حل كتاب الطالب'};const defaultTitle=`${typeLabels[type]||'محتوى'} ${topic?.title||'الدرس'}`;const id=await rpc('portal_teacher_add_lesson_material',{p_token:teacherToken,p_topic_id:Number($('studyTopic').value),p_material_type:type,p_title:$('studyTitle').value.trim()||defaultTitle,p_note:$('studyNote').value,p_attachment_data:f.data,p_attachment_name:f.name,p_attachment_mime:f.mime,p_target_class:$('studyClass').value,p_is_visible:$('studyVisible').checked});if(!id)throw new Error('تعذر حفظ المحتوى');$('studyTitle').value='';$('studyNote').value='';$('studyFile').value='';$('studyVisible').checked=false;msg('studyMsg','تم حفظ المحتوى ✅');await loadTeacherStudyMaterials()}catch(e){msg('studyMsg',e.message,false)}finally{$('studyAddBtn').disabled=false}};
 window.toggleStudyMaterial=async(id,v)=>{const ok=await rpc('portal_teacher_set_lesson_material_visibility',{p_token:teacherToken,p_material_id:id,p_is_visible:v});if(ok)await loadTeacherStudyMaterials()};
 window.deleteStudyMaterial=async id=>{if(!confirm('حذف هذا المحتوى؟'))return;const ok=await rpc('portal_teacher_delete_lesson_material',{p_token:teacherToken,p_material_id:id});if(ok)await loadTeacherStudyMaterials()};
-$('engLoadBtn').onclick=async()=>{const topicId=Number($('engTopic').value),cls=$('engClass').value;$('engResults').innerHTML='<div class="muted">جاري تحميل الإحصائية...</div>';const [v,n]=await Promise.all([rpc('portal_teacher_lesson_visits',{p_token:teacherToken,p_topic_id:topicId,p_class:cls}),rpc('portal_teacher_lesson_nonvisitors',{p_token:teacherToken,p_topic_id:topicId,p_class:cls})]);const total=(v?.length||0)+(n?.length||0);$('engResults').innerHTML=`<div class="visit-summary"><div class="visit-box"><b>${v?.length||0}</b><br>دخلوا الدرس</div><div class="visit-box"><b>${n?.length||0}</b><br>لم يدخلوا</div><div class="visit-box"><b>${total?Math.round((v.length/total)*100):0}%</b><br>نسبة الدخول</div></div><h3>✅ الطلاب الذين دخلوا</h3>${v?.length?`<div style="overflow:auto"><table class="eng-table"><thead><tr><th>الطالب</th><th>الشعبة</th><th>أول دخول</th><th>آخر دخول</th><th>مرات الفتح</th></tr></thead><tbody>${v.map(x=>`<tr><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${new Date(x.first_opened_at).toLocaleString('ar')}</td><td>${new Date(x.last_opened_at).toLocaleString('ar')}</td><td>${x.open_count}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">لم يدخل أحد بعد.</div>'}<h3>⏳ لم يدخلوا بعد</h3>${n?.length?`<div class="grid">${n.map(x=>`<div class="item"><b>${studentName(x.full_name)}</b><div class="muted">${esc(x.class_name)} • ${esc(x.username)}</div></div>`).join('')}</div>`:'<div class="msg ok">كل الطلاب المستهدفين دخلوا الدرس ✅</div>'}`};
+$('engLoadBtn').onclick=async()=>{const topicId=Number($('engTopic').value),cls=$('engClass').value;$('engResults').innerHTML='<div class="muted">جاري تحميل الإحصائية...</div>';const [v,n]=await Promise.all([rpc('portal_teacher_lesson_visits',{p_token:teacherToken,p_topic_id:topicId,p_class:cls}),rpc('portal_teacher_lesson_nonvisitors',{p_token:teacherToken,p_topic_id:topicId,p_class:cls})]);const total=(v?.length||0)+(n?.length||0);$('engResults').innerHTML=`<div class="visit-summary"><div class="visit-box"><b>${v?.length||0}</b><br>دخلوا الدرس</div><div class="visit-box"><b>${n?.length||0}</b><br>لم يدخلوا</div><div class="visit-box"><b>${total?Math.round((v.length/total)*100):0}%</b><br>نسبة الدخول</div></div><h3>✅ الطلاب الذين دخلوا</h3>${v?.length?`<div style="overflow:auto"><table class="eng-table"><thead><tr><th>الطالب</th><th>الشعبة</th><th>أول دخول</th><th>آخر دخول</th><th>مرات الفتح</th></tr></thead><tbody>${v.map(x=>`<tr><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${new Date(x.first_opened_at).toLocaleString('ar')}</td><td>${new Date(x.last_opened_at).toLocaleString('ar')}</td><td>${x.open_count}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">لم يدخل أحد بعد.</div>'}<h3>⏳ لم يدخلوا بعد</h3>${n?.length?`<div class="grid">${n.map(x=>`<div class="item"><b>${studentName(x.full_name)}</b><div class="muted">${esc(x.class_name)} • ${esc(x.username)}</div></div>`).join('')}</div>`:'<div class="msg ok">كل الطلاب المستهدفين دخلوا الدرس ✅</div>'}`;};
 
 async function searchRecoveryStudents(){
   try{
@@ -548,7 +566,7 @@ window.deleteBehavior=async id=>{if(!confirm('حذف هذه الملاحظة ا�
 async function enterTeacher(){
   show('teacherView');$('topSub').textContent='جاري تحميل تكليفات المعلم...';
   await prepareTeacherContext();
-  $('topSub').textContent=`${teacherSubjectName} — ${classes.join(' • ')}`;renderTeacherContextBar();
+  $('topSub').textContent=`${teacherSubjectName} — ${classes.join(' • ')}`;renderTeacherContextBar();updateTeacherBranding();
   if(!isPrimaryTeacher()){
     applyTeacherSafeMode();topics=[];
     await Promise.allSettled([loadOverview(),loadStudents('ALL')]);
