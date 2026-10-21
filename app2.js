@@ -57,6 +57,14 @@ function teacherIdentity(){return Number(currentTeacher?.teacher_id??currentTeac
 function isPrimaryTeacher(){return teacherIdentity()===1||String(currentTeacher?.username||'')==='teacher'}
 function classSort(a,b){const pa=String(a).split('/').map(Number),pb=String(b).split('/').map(Number);return (pa[0]||0)-(pb[0]||0)||(pa[1]||0)-(pb[1]||0)||String(a).localeCompare(String(b),'ar')}
 function subjectIcon(code){return code==='chemistry'?'🧪':code==='physics'?'⚛️':code==='biology'?'🧬':'🔬'}
+function subjectDisplayName(code,name=''){
+  if(code==='biology')return 'الأحياء';
+  if(code==='science')return 'العلوم';
+  if(code==='chemistry')return 'الكيمياء';
+  if(code==='physics')return 'الفيزياء';
+  const n=String(name||'').trim();
+  return n.startsWith('ال')?n:(n?'ال'+n:'');
+}
 function teacherGradeTitle(){
   const grade=String(classes?.[0]||'').split('/')[0];
   if(grade==='7')return 'الصف السابع';
@@ -66,11 +74,11 @@ function teacherGradeTitle(){
 }
 function updateTeacherBranding(){
   const teacherName=currentTeacher?.full_name||'المعلم';
-  const subject=teacherSubjectName||'';
+  const subject=subjectDisplayName(teacherSubjectCode,teacherSubjectName);
   const grade=teacherGradeTitle();
   document.title=`بوابة ${subject} | ${grade} | ${teacherName}`;
   const candidates=[...document.querySelectorAll('h1,h2,strong,.brand,.title')];
-  const portalTitle=candidates.find(x=>/بوابة (الكيمياء|الأحياء|العلوم|الفيزياء)/.test(x.textContent||''));
+  const portalTitle=candidates.find(x=>/بوابة (?:ال)?(?:كيمياء|الكيمياء|أحياء|الأحياء|علوم|العلوم|فيزياء|الفيزياء)/.test(x.textContent||''));
   if(portalTitle)portalTitle.textContent=`${subjectIcon(teacherSubjectCode)} بوابة ${subject} | ${grade}`;
   const todayTitle=[...document.querySelectorAll('#teacherView h1,#teacherView h2,#teacherView h3')].find(x=>/اليوم في بوابة/.test(x.textContent||''));
   if(todayTitle)todayTitle.textContent=`☀️ اليوم في بوابة ${subject}`;
@@ -85,13 +93,34 @@ function renderTeacherContextBar(){
   const host=$('teacherView');if(!host)return;
   let bar=$('teacherContextBar');if(!bar){bar=document.createElement('div');bar.id='teacherContextBar';bar.style='margin:12px 0;padding:12px 14px;border:1px solid #cfe2df;border-radius:14px;background:#f7fbfa;display:flex;gap:10px;align-items:center;flex-wrap:wrap';host.prepend(bar)}
   const multi=teacherSubjects.length>1;
-  bar.innerHTML=`<div style="display:flex;flex-direction:column;gap:3px"><b>👨‍🏫 ${esc(currentTeacher?.full_name||'المعلم')}</b><span class="muted">${subjectIcon(teacherSubjectCode)} ${esc(teacherSubjectName||'')} — ${esc(teacherGradeTitle())}</span></div><span class="badge">${classes.map(esc).join(' • ')}</span>${multi?'<button id="teacherSwitchSubject" class="btn secondary">🔄 تغيير المادة</button>':''}`;
-  if($('teacherSwitchSubject'))$('teacherSwitchSubject').onclick=async()=>{await chooseTeacherSubject(true);rebuildTeacherClassControls();renderTeacherContextBar();updateTeacherBranding();$('topSub').textContent=`${teacherSubjectName} — ${classes.join(' • ')}`;await loadOverview();await loadStudents('ALL')};
+  const displaySubject=subjectDisplayName(teacherSubjectCode,teacherSubjectName);
+  bar.innerHTML=`<div style="display:flex;flex-direction:column;gap:3px"><b>👨‍🏫 ${esc(currentTeacher?.full_name||'المعلم')}</b><span class="muted">${subjectIcon(teacherSubjectCode)} ${esc(displaySubject)} — ${esc(teacherGradeTitle())}</span></div><span class="badge">${classes.map(esc).join(' • ')}</span>${multi?'<button id="teacherSwitchSubject" class="btn secondary">🔄 تغيير المادة</button>':''}`;
+  if($('teacherSwitchSubject'))$('teacherSwitchSubject').onclick=async()=>{await chooseTeacherSubject(true);rebuildTeacherClassControls();renderTeacherContextBar();updateTeacherBranding();if(!isPrimaryTeacher())applyTeacherSafeMode();$('topSub').textContent=`${subjectDisplayName(teacherSubjectCode,teacherSubjectName)} — ${classes.join(' • ')}`;await loadOverview();await loadStudents('ALL')};
 }
 function applyTeacherSafeMode(){
   if(isPrimaryTeacher())return;
-  const nav=$('teacherNav');if(nav){nav.querySelectorAll('button[data-sec]').forEach(b=>{const keep=b.dataset.sec==='t-students'||b.dataset.sec==='t-account';b.style.display=keep?'':'none';b.classList.toggle('active',b.dataset.sec==='t-students')})}
-  document.querySelectorAll('#teacherView .section').forEach(x=>x.classList.remove('active'));
+  const nav=$('teacherNav');
+  if(nav){
+    nav.querySelectorAll('button[data-sec]').forEach(b=>{
+      b.style.display='';
+      b.classList.toggle('active',b.dataset.sec==='t-students');
+    });
+  }
+  const safeSections=new Set(['t-students','t-account']);
+  document.querySelectorAll('#teacherView .section').forEach(sec=>{
+    sec.classList.remove('active');
+    if(!safeSections.has(sec.id)){
+      let note=sec.querySelector('.subject-safety-note');
+      if(!note){
+        note=document.createElement('div');
+        note.className='msg subject-safety-note';
+        note.style='margin-bottom:12px';
+        sec.prepend(note);
+      }
+      note.innerHTML=`🔒 هذا القسم ظاهر في لوحة ${esc(subjectDisplayName(teacherSubjectCode,teacherSubjectName))}، لكن بياناته مقفلة مؤقتًا حتى يتم ربطه بالمادة في قاعدة البيانات حتى لا تختلط ببيانات الكيمياء.`;
+      sec.querySelectorAll('button,input,select,textarea').forEach(el=>{if(!el.closest('.subject-safety-note'))el.disabled=true});
+    }
+  });
   if($('t-students'))$('t-students').classList.add('active');
 }
 async function chooseTeacherSubject(force=false){
@@ -100,7 +129,7 @@ async function chooseTeacherSubject(force=false){
   teacherSubjects=[...byCode.values()];if(!teacherSubjects.length)throw new Error('لم يتم إسناد مادة أو شعبة لهذا المعلم.');
   const apply=x=>{teacherSubjectCode=x.code;teacherSubjectName=x.name;classes=[...new Set(x.rows.map(r=>r.class_name).filter(Boolean))].sort(classSort)};
   if(!force&&teacherSubjects.length===1){apply(teacherSubjects[0]);return}
-  await new Promise(resolve=>{const root=$('popupRoot');root.innerHTML=`<div class="popup"><div class="card"><h2>📚 اختر المادة / المنهج</h2><p class="muted">ستظهر لك فقط الشعب المسندة لهذه المادة.</p><div id="teacherSubjectChoices" class="grid">${teacherSubjects.map((x,i)=>`<button class="btn ${x.code===teacherSubjectCode?'primary':'secondary'}" data-teacher-subject="${i}">${subjectIcon(x.code)} ${esc(x.name)}<br><span class="small">${[...new Set(x.rows.map(r=>r.class_name))].sort(classSort).map(esc).join(' • ')}</span></button>`).join('')}</div></div></div>`;root.querySelectorAll('[data-teacher-subject]').forEach(b=>b.onclick=()=>{apply(teacherSubjects[Number(b.dataset.teacherSubject)]);root.innerHTML='';resolve()})});
+  await new Promise(resolve=>{const root=$('popupRoot');root.innerHTML=`<div class="popup"><div class="card"><h2>📚 اختر المادة / المنهج</h2><p class="muted">ستظهر لك فقط الشعب المسندة لهذه المادة.</p><div id="teacherSubjectChoices" class="grid">${teacherSubjects.map((x,i)=>`<button class="btn ${x.code===teacherSubjectCode?'primary':'secondary'}" data-teacher-subject="${i}">${subjectIcon(x.code)} ${esc(subjectDisplayName(x.code,x.name))}<br><span class="small">${[...new Set(x.rows.map(r=>r.class_name))].sort(classSort).map(esc).join(' • ')}</span></button>`).join('')}</div></div></div>`;root.querySelectorAll('[data-teacher-subject]').forEach(b=>b.onclick=()=>{apply(teacherSubjects[Number(b.dataset.teacherSubject)]);root.innerHTML='';resolve()})});
 }
 async function prepareTeacherContext(){teacherAssignments=[];teacherSubjects=[];await chooseTeacherSubject(false);rebuildTeacherClassControls()}
 $('loginBtn').onclick=async()=>{try{const wait=loginGuard();if(wait)throw new Error(`محاولات كثيرة. انتظر ${wait} ثانية ثم حاول مرة أخرى.`);$('loginBtn').disabled=true;$('loginMsg').innerHTML='';const username=$('loginUser').value.trim(),password=$('loginPass').value;if(!username||!password)throw new Error('اكتب اسم المستخدم وكلمة المرور.');if(username.length>80||password.length>200)throw new Error('بيانات الدخول غير صالحة.');if(loginMode==='student'){const d=await rpc('portal_student_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');studentToken=d[0].token;currentStudent=d[0];sessionSave('student',studentToken);loginSucceeded();await enterStudent(d[0])}else{const d=await rpc('portal_teacher_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');teacherToken=d[0].token;currentTeacher=d[0];sessionSave('teacher',teacherToken);loginSucceeded();if(d[0].must_change_password)await forceTeacherPasswordChange();await enterTeacher()}}catch(e){if(!String(e.message||'').startsWith('محاولات كثيرة')&&!String(e.message||'').startsWith('اكتب اسم'))loginFailed();const wait=loginGuard();msg('loginMsg',wait?`محاولات كثيرة. انتظر ${wait} ثانية ثم حاول مرة أخرى.`:(e.message==='بيانات الدخول غير صحيحة'?e.message:'تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.'),false)}finally{$('loginBtn').disabled=false}};
@@ -566,7 +595,7 @@ window.deleteBehavior=async id=>{if(!confirm('حذف هذه الملاحظة ا�
 async function enterTeacher(){
   show('teacherView');$('topSub').textContent='جاري تحميل تكليفات المعلم...';
   await prepareTeacherContext();
-  $('topSub').textContent=`${teacherSubjectName} — ${classes.join(' • ')}`;renderTeacherContextBar();updateTeacherBranding();
+  $('topSub').textContent=`${subjectDisplayName(teacherSubjectCode,teacherSubjectName)} — ${classes.join(' • ')}`;renderTeacherContextBar();updateTeacherBranding();
   if(!isPrimaryTeacher()){
     applyTeacherSafeMode();topics=[];
     await Promise.allSettled([loadOverview(),loadStudents('ALL')]);
@@ -580,8 +609,8 @@ async function enterTeacher(){
 async function loadOverview(){
   if(!isPrimaryTeacher()){
     const d=await rpc('portal_teacher_students_v2',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:'ALL'})||[];
-    if($('teacherStats'))$('teacherStats').innerHTML=`<div class="stat"><b>${d.length}</b>طالب</div><div class="stat"><b>${classes.length}</b>شعبة</div><div class="stat"><b>${subjectIcon(teacherSubjectCode)}</b>${esc(teacherSubjectName)}</div>`;
-    if($('todaySummary'))$('todaySummary').innerHTML=`أنت الآن في <b>${esc(teacherSubjectName)}</b> والشعب المسندة لك: <b>${classes.map(esc).join(' • ')}</b>.`;
+    if($('teacherStats'))$('teacherStats').innerHTML=`<div class="stat"><b>${d.length}</b>طالب</div><div class="stat"><b>${classes.length}</b>شعبة</div><div class="stat"><b>${subjectIcon(teacherSubjectCode)}</b>${esc(subjectDisplayName(teacherSubjectCode,teacherSubjectName))}</div>`;
+    if($('todaySummary'))$('todaySummary').innerHTML=`أنت الآن في <b>${esc(subjectDisplayName(teacherSubjectCode,teacherSubjectName))}</b> والشعب المسندة لك: <b>${classes.map(esc).join(' • ')}</b>.`;
     return;
   }
   const d=await rpc('portal_teacher_overview',{p_token:teacherToken});const o=d?.[0]||{};$('teacherStats').innerHTML=`<div class="stat"><b>${o.total_students??0}</b>طالب</div><div class="stat"><b>${o.new_questions??0}</b>سؤال جديد</div><div class="stat"><b>${o.announcements??0}</b>إعلان</div><div class="stat"><b>${o.content_items??0}</b>محتوى منشور</div>`;if($('todaySummary'))$('todaySummary').innerHTML=`عندك اليوم <b>${o.new_questions??0}</b> سؤال جديد من الطلاب، و<b>${o.content_items??0}</b> محتوى منشور في البوابة.`
