@@ -109,7 +109,7 @@ function renderTeacherContextBar(){
   const multi=teacherSubjects.length>1;
   const displaySubject=subjectDisplayName(teacherSubjectCode,teacherSubjectName);
   bar.innerHTML=`<div style="display:flex;flex-direction:column;gap:3px"><b>👨‍🏫 ${esc(currentTeacher?.full_name||'المعلم')}</b><span class="muted">${subjectIcon(teacherSubjectCode)} ${esc(displaySubject)} — ${esc(teacherGradeTitle())}</span></div><span class="badge">${classes.map(esc).join(' • ')}</span>${multi?'<button id="teacherSwitchSubject" class="btn secondary">🔄 تغيير المادة</button>':''}`;
-  if($('teacherSwitchSubject'))$('teacherSwitchSubject').onclick=async()=>{await chooseTeacherSubject(true);clearSubjectTransientMessages();rebuildTeacherClassControls();renderTeacherContextBar();updateTeacherBranding();if(!isPrimaryTeacher())applyTeacherSafeMode();if(isPrimaryTeacher()&&teacherSubjectCode==='chemistry'){try{await rpc('portal_teacher_mt_migrate_legacy_chemistry',{p_token:teacherToken})}catch(e){alert('تعذر تجهيز بيانات الكيمياء في النظام الجديد. بياناتك القديمة لم تتغير. أرسل لي صورة الخطأ قبل أن يدخل الطلاب.');throw e}}$('topSub').textContent=`${subjectDisplayName(teacherSubjectCode,teacherSubjectName)} — ${classes.join(' • ')}`;await reloadTeacherSubjectPanels()};
+  if($('teacherSwitchSubject'))$('teacherSwitchSubject').onclick=async()=>{await chooseTeacherSubject(true);clearSubjectTransientMessages();rebuildTeacherClassControls();renderTeacherContextBar();updateTeacherBranding();if(!isPrimaryTeacher())applyTeacherSafeMode();if(isPrimaryTeacher()&&teacherSubjectCode==='chemistry'){try{await rpc('portal_teacher_mt_migrate_legacy_chemistry',{p_token:teacherToken})}catch(e){alert('تعذر تجهيز بيانات الكيمياء في النظام الجديد. بياناتك القديمة لم تتغير.\n\nسبب الخطأ:\n'+(e?.message||String(e)));throw e}}$('topSub').textContent=`${subjectDisplayName(teacherSubjectCode,teacherSubjectName)} — ${classes.join(' • ')}`;await reloadTeacherSubjectPanels()};
 }
 function applyTeacherSafeMode(){
   if(isPrimaryTeacher())return;
@@ -689,7 +689,7 @@ async function enterTeacher(){
   show('teacherView');$('topSub').textContent='جاري تحميل تكليفات المعلم...';
   await prepareTeacherContext();
   if(isPrimaryTeacher()&&teacherSubjectCode==='chemistry'){
-    try{await rpc('portal_teacher_mt_migrate_legacy_chemistry',{p_token:teacherToken})}catch(e){alert('تعذر تجهيز بيانات الكيمياء في النظام الجديد. بياناتك القديمة لم تتغير. أرسل لي صورة الخطأ قبل أن يدخل الطلاب.');throw e}
+    try{await rpc('portal_teacher_mt_migrate_legacy_chemistry',{p_token:teacherToken})}catch(e){alert('تعذر تجهيز بيانات الكيمياء في النظام الجديد. بياناتك القديمة لم تتغير.\n\nسبب الخطأ:\n'+(e?.message||String(e)));throw e}
   }
   $('topSub').textContent=`${subjectDisplayName(teacherSubjectCode,teacherSubjectName)} — ${classes.join(' • ')}`;renderTeacherContextBar();updateTeacherBranding();
   if(!isPrimaryTeacher())applyTeacherSafeMode();
