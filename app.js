@@ -25,67 +25,70 @@ const $=id=>document.getElementById(id); const esc=s=>String(s??'').replace(/[&<
 })();
 
 
-// Responsive login background: tablet/desktop + phone.
-// Keep the background painted on the root element too so iOS Safari can
-// continue the image behind its translucent browser chrome.
+// Responsive login background: ONE layer only (prevents duplicate image on scroll).
 (function(){
   const style=document.createElement('style');
   style.textContent=`
     html.login-bg-root{
       min-height:100%!important;
-      background-color:#031a3d!important;
-      background-image:url('login-bg-desktop.jpeg')!important;
-      background-size:cover!important;
-      background-position:center center!important;
-      background-repeat:no-repeat!important;
-      background-attachment:fixed!important;
+      background:#031a3d!important;
+      background-image:none!important;
     }
     body.login-screen{
+      position:relative!important;
+      isolation:isolate!important;
       min-height:100vh!important;
       min-height:100svh!important;
       min-height:100dvh!important;
-      background-color:transparent!important;
-      background-image:url('login-bg-desktop.jpeg')!important;
-      background-size:cover!important;
-      background-position:center center!important;
-      background-repeat:no-repeat!important;
-      background-attachment:fixed!important;
+      background:#031a3d!important;
+      background-image:none!important;
     }
     body.login-screen::before{
-      position:fixed!important;
-      inset:0!important;
-      width:100vw!important;
-      height:100vh!important;
-      height:100dvh!important;
-      min-height:100svh!important;
-      background-image:url('login-bg-desktop.jpeg')!important;
-      background-size:cover!important;
-      background-position:center center!important;
-      background-repeat:no-repeat!important;
+      content:none!important;
+      display:none!important;
+      background-image:none!important;
     }
+    #portalLoginBg{
+      display:none;
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100vh;
+      height:100dvh;
+      z-index:-1;
+      pointer-events:none;
+      background-color:#031a3d;
+      background-image:url('login-bg-desktop.jpeg');
+      background-size:cover;
+      background-position:center center;
+      background-repeat:no-repeat;
+      transform:translateZ(0);
+      -webkit-transform:translateZ(0);
+    }
+    body.login-screen #portalLoginBg{display:block}
     @media (min-width:601px) and (max-width:1100px){
-      html.login-bg-root,body.login-screen,body.login-screen::before{
-        background-image:url('login-bg-ipad.jpg')!important;
+      #portalLoginBg{
+        background-image:url('login-bg-ipad.jpg');
+        background-size:cover;
+        background-position:center center;
       }
     }
     @media (max-width:600px) and (orientation:portrait){
-      html.login-bg-root{
-        background-image:url('login-bg-phone.jpg')!important;
-        background-position:center center!important;
-        background-attachment:scroll!important;
-      }
-      body.login-screen{
-        background-image:url('login-bg-phone.jpg')!important;
-        background-position:center center!important;
-        background-attachment:scroll!important;
-      }
-      body.login-screen::before{
-        background-image:url('login-bg-phone.jpg')!important;
-        background-position:center center!important;
+      #portalLoginBg{
+        background-image:url('login-bg-phone.jpg');
+        background-size:100% 100%;
+        background-position:center top;
       }
     }
   `;
   document.head.appendChild(style);
+  let bg=document.getElementById('portalLoginBg');
+  if(!bg){
+    bg=document.createElement('div');
+    bg.id='portalLoginBg';
+    bg.setAttribute('aria-hidden','true');
+    document.body.prepend(bg);
+  }
 })();
 
 // ===== Security hardening =====
