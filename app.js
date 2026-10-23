@@ -991,3 +991,23 @@ applyInputSecurity();
 (async()=>{const st=sessionRead('student'),tt=sessionRead('teacher');try{if(st){const d=await rpc('portal_student_me',{p_token:st});if(d?.length){studentToken=st;currentStudent=d[0];await enterStudent(d[0]);return}else sessionClear()}if(tt){teacherToken=tt;const me=await rpc('portal_teacher_me',{p_token:tt});if(me?.length){currentTeacher=me[0];if(me[0].must_change_password)await forceTeacherPasswordChange();await enterTeacher();return}else sessionClear()}}catch(e){sessionClear()}show('loginView')})();
 setInterval(()=>{if(teacherToken&&!sessionRead('teacher'))secureLogout('انتهت جلسة المعلم لأسباب أمنية. سجّل الدخول من جديد.');else if(studentToken&&!sessionRead('student'))secureLogout('انتهت الجلسة. سجّل الدخول من جديد.')},60000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(teacherToken&&!sessionRead('teacher'))secureLogout('انتهت جلسة المعلم لأسباب أمنية. سجّل الدخول من جديد.');else if(studentToken&&!sessionRead('student'))secureLogout('انتهت الجلسة. سجّل الدخول من جديد.')}});
+// ===== Rawafid Al-Uloom platform branding =====
+(function applyRawafidBranding(){
+  const login = document.getElementById('loginView');
+  if(!login) return;
+
+  document.title = 'منصة روافد العلوم';
+
+  const heading = login.querySelector('h1');
+  if(heading) heading.textContent = '🔬 منصة روافد العلوم';
+
+  const paragraphs = Array.from(login.querySelectorAll('p'));
+  const intro = paragraphs.find(p => /بوابة|كيمياء|محمد المسكري/.test((p.textContent || '').trim()));
+  if(intro){
+    intro.innerHTML = 'بوابة التعلم الرقمي للعلوم والكيمياء والفيزياء والأحياء<br><span style="opacity:.92">مدرسة الشيخ سعيد بن حمد الحارثي للبنين | الصفوف 7–9</span>';
+  }
+
+  const allTextEls = Array.from(login.querySelectorAll('small,p,div,span'));
+  const motto = allTextEls.find(el => /نسأل الله أن يوفقك في رحلتك العلمية/.test((el.textContent || '').trim()));
+  if(motto) motto.textContent = 'نتعلم • نكتشف • نجرّب • نبدع';
+})();
