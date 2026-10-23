@@ -103,6 +103,31 @@ const $=id=>document.getElementById(id); const esc=s=>String(s??'').replace(/[&<
   }
 })();
 
+
+
+// Mobile login card: shrink the whole existing card without changing its internal layout.
+(function(){
+  const applyMobileLoginScale=()=>{
+    const view=document.getElementById('loginView');
+    const btn=document.getElementById('loginBtn');
+    if(!view||!btn)return;
+    const card=btn.closest('.card,.login-card,.login-box,.auth-card');
+    if(card&&view.contains(card))card.classList.add('portal-mobile-login-card');
+  };
+  const style=document.createElement('style');
+  style.textContent=`
+    @media (max-width:600px) and (orientation:portrait){
+      body.login-screen .portal-mobile-login-card{
+        transform:scale(.86)!important;
+        transform-origin:center center!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyMobileLoginScale,{once:true});
+  else applyMobileLoginScale();
+})();
+
 // ===== Security hardening =====
 // The Supabase publishable key below is intentionally public. Never place a service_role/secret key in this file.
 const SEC={studentMaxAge:12*60*60*1000,teacherMaxAge:8*60*60*1000,maxLoginAttempts:5,loginCooldownMs:60*1000,maxImageBytes:20*1024*1024,maxImagePixels:50_000_000,maxPdfBytes:6*1024*1024,maxText:10000,maxUrl:2048,rpcTimeoutMs:25000};
