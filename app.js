@@ -24,6 +24,70 @@ const $=id=>document.getElementById(id); const esc=s=>String(s??'').replace(/[&<
   document.head.appendChild(style);
 })();
 
+
+// Responsive login background: tablet/desktop + phone.
+// Keep the background painted on the root element too so iOS Safari can
+// continue the image behind its translucent browser chrome.
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+    html.login-bg-root{
+      min-height:100%!important;
+      background-color:#031a3d!important;
+      background-image:url('login-bg-desktop.jpeg')!important;
+      background-size:cover!important;
+      background-position:center center!important;
+      background-repeat:no-repeat!important;
+      background-attachment:fixed!important;
+    }
+    body.login-screen{
+      min-height:100vh!important;
+      min-height:100svh!important;
+      min-height:100dvh!important;
+      background-color:transparent!important;
+      background-image:url('login-bg-desktop.jpeg')!important;
+      background-size:cover!important;
+      background-position:center center!important;
+      background-repeat:no-repeat!important;
+      background-attachment:fixed!important;
+    }
+    body.login-screen::before{
+      position:fixed!important;
+      inset:0!important;
+      width:100vw!important;
+      height:100vh!important;
+      height:100dvh!important;
+      min-height:100svh!important;
+      background-image:url('login-bg-desktop.jpeg')!important;
+      background-size:cover!important;
+      background-position:center center!important;
+      background-repeat:no-repeat!important;
+    }
+    @media (min-width:601px) and (max-width:1100px){
+      html.login-bg-root,body.login-screen,body.login-screen::before{
+        background-image:url('login-bg-ipad.jpg')!important;
+      }
+    }
+    @media (max-width:600px) and (orientation:portrait){
+      html.login-bg-root{
+        background-image:url('login-bg-phone.jpg')!important;
+        background-position:center center!important;
+        background-attachment:scroll!important;
+      }
+      body.login-screen{
+        background-image:url('login-bg-phone.jpg')!important;
+        background-position:center center!important;
+        background-attachment:scroll!important;
+      }
+      body.login-screen::before{
+        background-image:url('login-bg-phone.jpg')!important;
+        background-position:center center!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
 // ===== Security hardening =====
 // The Supabase publishable key below is intentionally public. Never place a service_role/secret key in this file.
 const SEC={studentMaxAge:12*60*60*1000,teacherMaxAge:8*60*60*1000,maxLoginAttempts:5,loginCooldownMs:60*1000,maxImageBytes:20*1024*1024,maxImagePixels:50_000_000,maxPdfBytes:6*1024*1024,maxText:10000,maxUrl:2048,rpcTimeoutMs:25000};
@@ -59,7 +123,7 @@ const studentName=n=>esc(fixStudentName(n));
 const fmtPoints=n=>{const x=Number(n||0);return Number.isInteger(x)?String(x):x.toFixed(1)};
 async function loadStudentQuizPoints(){try{const d=await rpc('portal_student_quiz_points',{p_token:studentToken});const x=d?.[0];quizPoints=Number(x?.quiz_points||0);if($('studentPoints'))$('studentPoints').textContent=fmtPoints(x?.total_points??((Number(currentStudent?.points||0))+quizPoints));}catch(_e){quizPoints=0;if($('studentPoints'))$('studentPoints').textContent=fmtPoints(currentStudent?.points||0)}}
 function msg(id,t,ok=true){$(id).innerHTML=`<div class="msg ${ok?'ok':'err'}">${esc(t)}</div>`}
-function show(view){['loginView','studentView','teacherView'].forEach(x=>$(x).classList.add('hide'));$(view).classList.remove('hide');$('logoutBtn').classList.toggle('hide',view==='loginView');document.body.classList.toggle('login-screen',view==='loginView')}
+function show(view){['loginView','studentView','teacherView'].forEach(x=>$(x).classList.add('hide'));$(view).classList.remove('hide');$('logoutBtn').classList.toggle('hide',view==='loginView');const isLogin=view==='loginView';document.body.classList.toggle('login-screen',isLogin);document.documentElement.classList.toggle('login-bg-root',isLogin)}
 function nav(root){root.querySelectorAll('button[data-sec]').forEach(b=>b.onclick=()=>{root.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));$(b.dataset.sec).classList.add('active')})}
 nav($('studentNav'));nav($('teacherNav'));
 const lessonsNavBtn=$('studentNav')?.querySelector('[data-sec="s-lessons"]');
