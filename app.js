@@ -74,10 +74,22 @@ const $=id=>document.getElementById(id); const esc=s=>String(s??'').replace(/[&<
       }
     }
     @media (max-width:600px) and (orientation:portrait){
+      html.login-bg-root,body.login-screen{
+        background:#020b1f!important;
+      }
       #portalLoginBg{
-        background-image:url('login-bg-phone.jpg');
-        background-size:100% 100%;
-        background-position:center top;
+        top:0!important;
+        right:0!important;
+        bottom:auto!important;
+        left:0!important;
+        width:100vw!important;
+        height:100svh!important;
+        min-height:100svh!important;
+        background-color:#020b1f!important;
+        background-image:url('login-bg-phone.jpg')!important;
+        background-size:contain!important;
+        background-position:center center!important;
+        background-repeat:no-repeat!important;
       }
     }
   `;
