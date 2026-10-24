@@ -377,11 +377,23 @@ async function loadAdminGrades(){
     fillAdminClassFilter(students,'adminGradeClassFilter');
     if($('adminGradeClassFilter'))$('adminGradeClassFilter').value=selected;
     const rows=await rpc('portal_admin_grades_filtered',{p_token:adminToken,p_query:q,p_class:adminFilterValue('adminGradeClassFilter')})||[];
-    const ordered=[...rows].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar',{numeric:true})||String(a.assessment_title||'').localeCompare(String(b.assessment_title||''),'ar'));
-    const uniqueStudents=new Set(ordered.map(x=>x.student_id));
-    if($('adminGradesStats'))$('adminGradesStats').innerHTML=`<div class="visit-box"><b>${uniqueStudents.size}</b><br>طلاب لديهم درجات</div><div class="visit-box"><b>${ordered.length}</b><br>سجلات الدرجات</div><div class="visit-box"><b>${new Set(ordered.map(x=>x.assessment_title)).size}</b><br>تقييمات مختلفة</div>`;
-    host.innerHTML=ordered.length?ordered.map(g=>`<tr><td>${studentName(g.full_name)}</td><td>${esc(g.class_name)}</td><td>${esc(g.subject_label||'عام')}</td><td>${esc(g.assessment_title||'')}</td><td>${esc(g.score)}</td><td>${esc(g.max_score)}</td><td>${esc(g.note||'')}</td><td>${g.created_at?formatLoginTime(g.created_at):'—'}</td></tr>`).join(''):'<tr><td colspan="8">لا توجد درجات مطابقة.</td></tr>';
-  }catch(e){host.innerHTML=`<tr><td colspan="8"><div class="msg err">تعذر تحميل الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
+    const ordered=[...rows].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar',{numeric:true})||new Date(b.created_at||0)-new Date(a.created_at||0));
+    const byStudent=new Map();
+    for(const r of ordered){
+      const id=String(r.student_id);
+      if(!byStudent.has(id))byStudent.set(id,{student_id:r.student_id,full_name:r.full_name,class_name:r.class_name,username:r.username,grades:[]});
+      if(r.assessment_title!=null || r.score!=null || r.max_score!=null)byStudent.get(id).grades.push(r);
+    }
+    const studentsList=[...byStudent.values()].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar',{numeric:true}));
+    const gradeRecords=studentsList.reduce((n,s)=>n+s.grades.length,0);
+    const withGrades=studentsList.filter(s=>s.grades.length>0).length;
+    const assessments=new Set(studentsList.flatMap(s=>s.grades.map(g=>`${g.subject_label||'عام'}|${g.assessment_title||''}`)));
+    if($('adminGradesStats'))$('adminGradesStats').innerHTML=`<div class="visit-box"><b>${studentsList.length}</b><br>طلاب في النطاق المحدد</div><div class="visit-box"><b>${withGrades}</b><br>طلاب لديهم درجات</div><div class="visit-box"><b>${gradeRecords}</b><br>سجلات الدرجات</div><div class="visit-box"><b>${assessments.size}</b><br>تقييمات مختلفة</div>`;
+    host.innerHTML=studentsList.length?studentsList.map(st=>{
+      const gradeHtml=st.grades.length?st.grades.map(g=>`<div style="padding:5px 0;border-bottom:1px solid var(--line,#ddd)"><b>${esc(g.subject_label||'عام')}</b> — ${esc(g.assessment_title||'تقييم')} : <b>${esc(g.score??'—')} / ${esc(g.max_score??'—')}</b>${g.note?`<div class="muted">${esc(g.note)}</div>`:''}<div class="muted">${g.created_at?formatLoginTime(g.created_at):''}</div></div>`).join(''):'<span class="muted">لا توجد درجات مسجلة بعد</span>';
+      return `<tr><td><button class="link" style="border:0;background:none;cursor:pointer;font-weight:800" data-action="admin-student-profile" data-id="${st.student_id}" data-v1="${safeEnc(st.username)}">${studentName(st.full_name)}</button></td><td>${esc(st.class_name||'—')}</td><td>${gradeHtml}</td></tr>`;
+    }).join(''):'<tr><td colspan="3">لا يوجد طلاب مطابقون للتصفية.</td></tr>';
+  }catch(e){host.innerHTML=`<tr><td colspan="3"><div class="msg err">تعذر تحميل الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
 }
 async function openAdminStudentProfile(studentId,usernameEnc){
   const username=decodeURIComponent(usernameEnc||'');
@@ -395,7 +407,7 @@ async function openAdminStudentProfile(studentId,usernameEnc){
     const st=(students||[]).find(x=>Number(x.student_id)===Number(studentId))||(students||[])[0];
     if(!st)throw new Error('لم يتم العثور على ملف الطالب.');
     const br=(behaviors||[]).filter(x=>Number(x.student_id)===Number(studentId));
-    const gr=(grades||[]).filter(x=>Number(x.student_id)===Number(studentId));
+    const gr=(grades||[]).filter(x=>Number(x.student_id)===Number(studentId)&&(x.assessment_title!=null||x.score!=null||x.max_score!=null));
     root.innerHTML=`<div class="popup"><div class="card" style="max-width:1050px;max-height:88vh;overflow:auto"><div class="lesson-head"><div><h2>ملف الطالب: ${studentName(st.full_name)}</h2><p class="muted">الشعبة ${esc(st.class_name)} • المستخدم ${esc(st.username)}</p></div><button id="closeAdminStudentProfile" class="btn secondary">إغلاق</button></div><div class="visit-summary"><div class="visit-box"><b>${br.length}</b><br>إجمالي الإنذارات والملاحظات</div><div class="visit-box"><b>${br.filter(x=>!x.is_resolved).length}</b><br>تحتاج متابعة</div><div class="visit-box"><b>${gr.length}</b><br>سجلات الدرجات</div></div><h3>🔔 سجل الإنذارات والملاحظات</h3><div style="overflow:auto"><table><thead><tr><th>التاريخ</th><th>المعلم</th><th>الملاحظة</th><th>المستوى</th><th>التفاصيل</th><th>الإجراء</th><th>الحالة</th></tr></thead><tbody>${br.length?br.map(x=>`<tr><td>${formatLoginTime(x.created_at)}</td><td>${esc(x.teacher_name||'غير محدد')}</td><td>${esc(x.behavior_type||'')}</td><td>${esc(x.level||'')}</td><td>${esc(x.details||'')}</td><td>${esc(x.action_taken||'')}</td><td>${x.is_resolved?'تمت المعالجة':'تحتاج متابعة'}</td></tr>`).join(''):'<tr><td colspan="7">لا توجد ملاحظات مسجلة لهذا الطالب.</td></tr>'}</tbody></table></div><h3 style="margin-top:18px">📊 درجات الطالب</h3><div style="overflow:auto"><table><thead><tr><th>المادة</th><th>التقييم</th><th>الدرجة</th><th>من</th><th>ملاحظة</th><th>التاريخ</th></tr></thead><tbody>${gr.length?gr.map(g=>`<tr><td>${esc(g.subject_label||'عام')}</td><td>${esc(g.assessment_title||'')}</td><td>${esc(g.score)}</td><td>${esc(g.max_score)}</td><td>${esc(g.note||'')}</td><td>${g.created_at?formatLoginTime(g.created_at):'—'}</td></tr>`).join(''):'<tr><td colspan="6">لا توجد درجات مسجلة لهذا الطالب.</td></tr>'}</tbody></table></div></div></div>`;
     $('closeAdminStudentProfile').onclick=()=>root.innerHTML='';
   }catch(e){root.innerHTML=`<div class="popup"><div class="card"><div class="msg err">تعذر تحميل ملف الطالب: ${esc(e.message||'خطأ غير معروف')}</div><button id="closeAdminStudentProfile" class="btn secondary">إغلاق</button></div></div>`;$('closeAdminStudentProfile').onclick=()=>root.innerHTML=''}
