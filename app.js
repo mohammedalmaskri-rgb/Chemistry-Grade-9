@@ -390,20 +390,23 @@ async function loadAdminStudents(){try{
 // Admin grades: subject -> grade -> section, with independent achievement analysis.
 let adminGradesView='grades';
 const ADMIN_SUBJECTS={7:[['science','العلوم']],8:[['science','العلوم']],9:[['chemistry','الكيمياء'],['physics','الفيزياء'],['biology','الأحياء']]};
+const ADMIN_SUBJECT_IDS={science:1,chemistry:2,physics:3,biology:4};
 function adminSubjectKey(row){
+  const id=Number(row.subject_id);
+  if(Number.isInteger(id)&&id>=1&&id<=4)return Object.keys(ADMIN_SUBJECT_IDS).find(k=>ADMIN_SUBJECT_IDS[k]===id);
   const raw=String(row.subject_code||row.subject_name||row.subject_label||'').trim().toLowerCase();
   if(/chemistry|كيمياء/.test(raw))return 'chemistry';
   if(/physics|فيزياء/.test(raw))return 'physics';
   if(/biology|أحياء|احياء/.test(raw))return 'biology';
   if(/science|علوم/.test(raw))return 'science';
-  // Legacy grades are chemistry for grade 9 only, when explicitly marked legacy.
-  if((row.source==='legacy'||row.source==='student_grades')&&String(row.class_name||'').startsWith('9/'))return 'chemistry';
+  if((row.source==='general'||row.source==='legacy'||row.source==='student_grades')&&String(row.class_name||'').startsWith('9/'))return 'chemistry';
   return null;
 }
+
 function adminGradesControls(){
   const host=$('adminGradesTable');if(!host)return;
   let bar=$('adminGradesControls');
-  if(!bar){bar=document.createElement('div');bar.id='adminGradesControls';bar.style='padding:14px;margin:12px 0;border:1px solid #cbd5e1;border-radius:14px;background:#f8fafc';const sec=host.closest('.section');if(sec)sec.insertBefore(bar,sec.querySelector('#adminGradesStats')||host.closest('table')||host);}
+  if(!bar){bar=document.createElement('div');bar.id='adminGradesControls';bar.style='padding:14px;margin:12px 0;border:1px solid #cbd5e1;border-radius:14px;background:#f8fafc';const sec=host.closest('.section');if(sec){const heading=[...sec.querySelectorAll('h2,h3')].find(h=>/درجات الطلاب/.test(h.textContent||''));sec.insertBefore(bar,heading||sec.querySelector('#adminGradesStats')||host.closest('table')||host);if(heading)heading.style.display='none';}const legacyFilter=$('adminGradeClassFilter');if(legacyFilter){const wrapper=legacyFilter.closest('.field')||legacyFilter.parentElement;if(wrapper&&wrapper!==sec)wrapper.style.display='none';else legacyFilter.style.display='none';}const legacyRefresh=$('adminGradesRefreshBtn');if(legacyRefresh)legacyRefresh.style.display='none';}
   const oldGrade=$('adminSubjectGrade')?.value||'9',oldSubject=$('adminSubjectChoice')?.value||'chemistry',oldClass=$('adminSubjectClass')?.value||'ALL';
   const subjects=ADMIN_SUBJECTS[oldGrade]||ADMIN_SUBJECTS[9];
   const chosen=subjects.some(x=>x[0]===oldSubject)?oldSubject:subjects[0][0];
@@ -432,13 +435,13 @@ async function loadAdminGrades(){
     }
     const ids=new Set(matched.map(s=>String(s.student_id)));
     const unknown=new Set();const byStudent=new Map(matched.map(s=>[String(s.student_id),{...s,grades:[]}]));
-    const seen=new Set();
+    const seen=new Map();
     for(const r of chunks){
       const id=String(r.student_id);if(!ids.has(id)||r.assessment_title==null||r.score==null)continue;
       const key=adminSubjectKey(r);
       if(!key){unknown.add(String(r.subject_label||r.subject_code||'غير محددة'));continue}
       if(key!==subject)continue;
-      const signature=[id,key,r.assessment_title,r.score,r.max_score,r.created_at||''].join('|');
+      const signature=[id,key,String(r.assessment_title||'').trim(),Number(r.score),Number(r.max_score)].join('|');
       if(seen.has(signature))continue;seen.add(signature);
       byStudent.get(id).grades.push(r);
     }
