@@ -342,7 +342,7 @@ async function addTeacherTopic(){try{const title=$('mtTopicTitle').value.trim();
 async function refreshGenericTeacherTopics(){topics=await rpc('portal_teacher_topics',{p_token:teacherToken})||[];fillStudyTopicSelects();await initLessonPlanEditor();await loadManagedTeacherTopics();await loadProgressCards();}
 
 $('loginBtn').onclick=async()=>{try{const wait=loginGuard();if(wait)throw new Error(`محاولات كثيرة. انتظر ${wait} ثانية ثم حاول مرة أخرى.`);$('loginBtn').disabled=true;$('loginMsg').innerHTML='';const username=$('loginUser').value.trim(),password=$('loginPass').value;if(!username||!password)throw new Error('اكتب اسم المستخدم وكلمة المرور.');if(username.length>80||password.length>200)throw new Error('بيانات الدخول غير صالحة.');if(loginMode==='student'){const d=await rpc('portal_student_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');sessionClear();studentToken=d[0].token;currentStudent=d[0];sessionSave('student',studentToken);loginSucceeded();if(d[0].must_change_password)await forcePasswordChange();await enterStudent(d[0],true)}else if(loginMode==='teacher'){const d=await rpc('portal_teacher_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');sessionClear();teacherToken=d[0].token;currentTeacher=d[0];sessionSave('teacher',teacherToken);loginSucceeded();if(d[0].must_change_password)await forceTeacherPasswordChange();await enterTeacher()}else{const d=await rpc('portal_admin_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');sessionClear();adminToken=d[0].token;currentAdmin=d[0];sessionSave('admin',adminToken);loginSucceeded();await enterAdmin()}}catch(e){if(!String(e.message||'').startsWith('محاولات كثيرة')&&!String(e.message||'').startsWith('اكتب اسم'))loginFailed();const wait=loginGuard();msg('loginMsg',wait?`محاولات كثيرة. انتظر ${wait} ثانية ثم حاول مرة أخرى.`:(e.message==='بيانات الدخول غير صحيحة'?e.message:'تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.'),false)}finally{$('loginBtn').disabled=false}};
-async function enterAdmin(){show('adminView');$('adminWelcome').textContent=`مرحبًا، ${currentAdmin?.full_name||'مشرف المنصة'}`;activateDynamicSection('adminView','adminNav','a-overview');await Promise.allSettled([loadAdminOverview(),loadAdminStudents(),loadAdminTeachers(),loadAdminBehavior(true),loadAdminGrades()])}
+async function enterAdmin(){adminAllStudentRows=null;show('adminView');$('adminWelcome').textContent=`مرحبًا، ${currentAdmin?.full_name||'مشرف المنصة'}`;activateDynamicSection('adminView','adminNav','a-overview');await Promise.allSettled([loadAdminOverview(),loadAdminStudents(),loadAdminTeachers(),loadAdminBehavior(true),loadAdminGrades()])}
 async function loadAdminOverview(){try{const o=await rpc('portal_admin_overview',{p_token:adminToken});if(!o)throw new Error('انتهت جلسة المشرف');$('adminStats').innerHTML=`<div class="stat"><b>${Number(o.students_total||0)}</b>إجمالي الطلاب</div><div class="stat"><b>${Number(o.students_logged_in||0)}</b>طلاب دخلوا</div><div class="stat"><b>${Number(o.students_never_logged_in||0)}</b>طلاب لم يدخلوا</div><div class="stat"><b>${Number(o.teachers_total||0)}</b>إجمالي المعلمين</div><div class="stat"><b>${Number(o.teachers_logged_in||0)}</b>معلمون سجلوا الدخول</div><div class="stat"><b>${Number(o.teachers_never_logged_in||0)}</b>معلمون لم يسجلوا</div><div class="stat"><b>${Number(o.behavior_total||0)}</b>إجمالي الملاحظات</div><div class="stat"><b>${Number(o.behavior_open||0)}</b>ملاحظات تحتاج متابعة</div><div class="stat"><b>${Number(o.students_with_repeated_behavior||0)}</b>طلاب تكررت ملاحظاتهم</div>`;const st=Number(o.students_total||0),te=Number(o.teachers_total||0);$('adminSummary').textContent=`نسبة دخول الطلاب: ${st?Math.round(Number(o.students_logged_in||0)/st*100):0}% • نسبة دخول المعلمين: ${te?Math.round(Number(o.teachers_logged_in||0)/te*100):0}%. عدّاد دخول المعلمين يبدأ من تفعيل سجل المتابعة.`}catch(e){$('adminStats').innerHTML=`<div class="msg err">تعذر تحميل الإحصائيات: ${esc(e.message||'خطأ غير معروف')}</div>`}}
 function adminClassSort(a,b){
   const parse=v=>{const m=String(v||'').match(/(\d+)\s*[/\-]\s*(\d+)/);return m?[Number(m[1]),Number(m[2])]:[Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER]};
@@ -350,22 +350,41 @@ function adminClassSort(a,b){
 }
 function adminGradeLabel(g){return ({7:'الصف السابع',8:'الصف الثامن',9:'الصف التاسع'})[g]||`الصف ${g}`;}
 function fillAdminClassFilter(rows, elementId='adminStudentClassFilter'){
-  const el=$(elementId);if(!el||el.dataset.ready==='1')return;
+  const el=$(elementId);if(!el)return;
   const previous=el.value||'ALL';
   const names=[...new Set((rows||[]).map(x=>String(x.class_name||'').trim()).filter(Boolean))].sort(adminClassSort);
   const grades=[...new Set(names.map(n=>{const m=n.match(/^(\d+)\s*[/\-]\s*(\d+)$/);return m?Number(m[1]):null}).filter(Number.isFinite))].sort((a,b)=>a-b);
   el.innerHTML='<option value="ALL">كل الصفوف والشعب</option>'+grades.map(g=>`<option value="GRADE:${g}">${adminGradeLabel(g)} — كل الشعب</option>`).join('')+names.map(n=>`<option value="CLASS:${esc(n)}">الشعبة ${esc(n)}</option>`).join('');
-  if([...el.options].some(o=>o.value===previous))el.value=previous;
-  if(names.length)el.dataset.ready='1';
+  el.value=[...el.options].some(o=>o.value===previous)?previous:'ALL';
+}
+// Each grade contains fewer than the Supabase default 1000-row response limit.
+// Never request all 1322 students in one RPC call.
+const ADMIN_GRADE_NUMBERS=[7,8,9];
+let adminAllStudentRows=null;
+async function adminStudentsAll(force=false){
+  if(adminAllStudentRows&&!force)return adminAllStudentRows;
+  const groups=await Promise.all(ADMIN_GRADE_NUMBERS.map(g=>rpc('portal_admin_students_filtered',{p_token:adminToken,p_query:'',p_class:`GRADE:${g}`})));
+  const byId=new Map();groups.flat().forEach(s=>byId.set(String(s.student_id),s));
+  const rows=[...byId.values()].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar'));
+  // Do not cache partial results after a failed request.
+  adminAllStudentRows=rows;
+  return rows;
+}
+function adminFilteredStudents(rows,selected,q){
+  const query=String(q||'').trim().toLocaleLowerCase('ar');
+  return rows.filter(s=>{
+    const cls=String(s.class_name||'').trim();
+    if(selected.startsWith('GRADE:')&&cls.split('/')[0]!==selected.slice(6))return false;
+    if(selected.startsWith('CLASS:')&&cls!==selected.slice(6))return false;
+    return !query||[s.full_name,s.username,cls].some(v=>String(v||'').toLocaleLowerCase('ar').includes(query));
+  });
 }
 async function loadAdminStudents(){try{
   const q=$('adminStudentSearch')?.value.trim()||'', selected=$('adminStudentClassFilter')?.value||'ALL';
-  const classFilter=selected==='ALL'?'ALL':selected.startsWith('GRADE:')?selected:selected.slice(6);
-  const d=await rpc('portal_admin_students_filtered',{p_token:adminToken,p_query:q,p_class:classFilter})||[];
-  fillAdminClassFilter(d);
-  // Keep filter selection after the list options refresh.
+  const all=await adminStudentsAll();
+  fillAdminClassFilter(all);
   if($('adminStudentClassFilter'))$('adminStudentClassFilter').value=selected;
-  const rows=[...d].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar'));
+  const rows=adminFilteredStudents(all,selected,q);
   $('adminStudentsTable').innerHTML=rows.length?rows.map(s=>`<tr><td><button class="link" style="border:0;background:none;cursor:pointer;font-weight:800" data-action="admin-student-profile" data-id="${s.student_id}" data-v1="${safeEnc(s.username)}">${studentName(s.full_name)}</button></td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.is_active?'نشط':'موقوف'}</td><td>${Number(s.login_count||0)}</td><td>${s.last_login?formatLoginTime(s.last_login):'لم يدخل'}</td><td>${Number(s.behavior_count||0)}</td><td><button class="btn secondary" data-action="admin-reset-student" data-id="${s.student_id}" data-v1="${safeEnc(s.full_name)}">استرجاع الحساب</button></td></tr>`).join(''):'<tr><td colspan="8">لا توجد نتائج.</td></tr>';
 }catch(e){$('adminStudentsTable').innerHTML=`<tr><td colspan="8">${esc(e.message||'تعذر التحميل')}</td></tr>`}}
 function adminFilterValue(id){const v=$(id)?.value||'ALL';return v==='ALL'?'ALL':v.startsWith('GRADE:')?v:v.slice(6)}
@@ -373,10 +392,20 @@ async function loadAdminGrades(){
   const host=$('adminGradesTable');if(!host)return;
   const q=$('adminGradeSearch')?.value.trim()||'',selected=$('adminGradeClassFilter')?.value||'ALL';
   try{
-    const students=await rpc('portal_admin_students_filtered',{p_token:adminToken,p_query:'',p_class:'ALL'})||[];
+    const students=await adminStudentsAll();
     fillAdminClassFilter(students,'adminGradeClassFilter');
     if($('adminGradeClassFilter'))$('adminGradeClassFilter').value=selected;
-    const rows=await rpc('portal_admin_grades_filtered',{p_token:adminToken,p_query:q,p_class:adminFilterValue('adminGradeClassFilter')})||[];
+    const scope=adminFilterValue('adminGradeClassFilter');
+    const matched=adminFilteredStudents(students,selected,q);
+    const targetClasses=[...new Set(matched.map(s=>s.class_name).filter(Boolean))].sort(adminClassSort);
+    // Request each class separately so grade-heavy classes never hide later classes.
+    const chunks=[];
+    for(let i=0;i<targetClasses.length;i+=5){
+      const batch=await Promise.all(targetClasses.slice(i,i+5).map(cls=>rpc('portal_admin_grades_filtered',{p_token:adminToken,p_query:'',p_class:cls})));
+      chunks.push(...batch.flat());
+    }
+    const ids=new Set(matched.map(s=>String(s.student_id)));
+    const rows=chunks.filter(r=>ids.has(String(r.student_id)));
     const ordered=[...rows].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar',{numeric:true})||new Date(b.created_at||0)-new Date(a.created_at||0));
     const byStudent=new Map();
     for(const r of ordered){
@@ -419,7 +448,7 @@ async function loadAdminTeachers(){try{const q=$('adminTeacherSearch')?.value.tr
 let adminBehaviorSeen=new Set(),adminBehaviorFirstLoad=true;
 async function loadAdminBehavior(silent=false){try{const q=$('adminBehaviorSearch')?.value.trim()||'';const d=await rpc('portal_admin_behavior_records',{p_token:adminToken,p_query:q})||[];const fresh=d.filter(x=>!adminBehaviorSeen.has(`${x.source}-${x.record_id}`));if(adminBehaviorFirstLoad){d.forEach(x=>adminBehaviorSeen.add(`${x.source}-${x.record_id}`));adminBehaviorFirstLoad=false}else if(fresh.length&&!silent){fresh.forEach(x=>adminBehaviorSeen.add(`${x.source}-${x.record_id}`));$('adminBehaviorAlert').innerHTML=`<div class="msg err">🔔 وصل ${fresh.length} تنبيه سلوكي جديد. ${fresh.slice(0,3).map(x=>`${studentName(x.full_name)} (${esc(x.class_name)})`).join('، ')}</div>`}else{fresh.forEach(x=>adminBehaviorSeen.add(`${x.source}-${x.record_id}`))}$('adminBehaviorStats').innerHTML=`<div class="visit-box"><b>${d.length}</b><br>إجمالي الملاحظات المعروضة</div><div class="visit-box"><b>${d.filter(x=>!x.is_resolved).length}</b><br>تحتاج متابعة</div><div class="visit-box"><b>${d.filter(x=>Number(x.repeat_count||0)>=2).length}</b><br>ملاحظات لطلاب تكررت حالاتهم</div>`;$('adminBehaviorTable').innerHTML=d.length?d.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString('ar-OM')}</td><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${esc(x.teacher_name||'المعلم غير محدد')}</td><td>${esc(x.behavior_type)}</td><td>${esc(x.level)}</td><td>${Number(x.repeat_count||0)}</td><td>${esc(x.details||'')}</td><td>${esc(x.action_taken||'')}</td><td>${x.is_resolved?'تمت المعالجة':'تحتاج متابعة'}</td></tr>`).join(''):'<tr><td colspan="10">لا توجد ملاحظات.</td></tr>'}catch(e){$('adminBehaviorTable').innerHTML=`<tr><td colspan="10">${esc(e.message||'تعذر التحميل')}</td></tr>`}}
 async function adminResetAccount(kind,id,nameEnc){const name=decodeURIComponent(nameEnc);if(!confirm(`إعادة تعيين كلمة مرور ${kind==='student'?'الطالب':'المعلم'}: ${name}؟`))return;try{const fn=kind==='student'?'portal_admin_reset_student_password':'portal_admin_reset_teacher_password';const arg=kind==='student'?{p_token:adminToken,p_student_id:id,p_new_password:null}:{p_token:adminToken,p_teacher_id:id,p_new_password:null};const d=await rpc(fn,arg);const x=d?.[0];const pass=x?.temporary_password;if(!pass)throw new Error('تعذر استرجاع الحساب. تحقق من الجلسة وصلاحيات المشرف.');const user=x.username;const text=`اسم المستخدم: ${user}\nكلمة المرور المؤقتة: ${pass}`;$('popupRoot').innerHTML=`<div class="popup"><div class="card"><h2>تم إنشاء كلمة مرور مؤقتة</h2><p>أرسلها لصاحب الحساب عبر قناة آمنة. لن تظهر كلمة المرور القديمة.</p><div class="lesson-detail"><b>اسم المستخدم</b><div dir="ltr">${esc(user)}</div></div><div class="lesson-detail"><b>كلمة المرور المؤقتة</b><div dir="ltr" style="font-size:20px;font-weight:900">${esc(pass)}</div></div><div class="lesson-actions"><button id="adminCopyPass" class="btn primary">نسخ البيانات</button><button id="adminClosePass" class="btn secondary">إغلاق</button></div></div></div>`;$('adminCopyPass').onclick=async()=>{try{await navigator.clipboard.writeText(text);alert('تم نسخ البيانات')}catch(_e){prompt('انسخ البيانات:',text)}};$('adminClosePass').onclick=()=>{$('popupRoot').innerHTML=''};if(kind==='student')await loadAdminStudents();else await loadAdminTeachers()}catch(e){alert(e.message||'تعذر استرجاع الحساب')}}
-$('adminRefreshBtn')?.addEventListener('click',()=>Promise.allSettled([loadAdminOverview(),loadAdminStudents(),loadAdminTeachers(),loadAdminBehavior(true),loadAdminGrades()]));
+$('adminRefreshBtn')?.addEventListener('click',()=>{adminAllStudentRows=null;return Promise.allSettled([loadAdminOverview(),loadAdminStudents(),loadAdminTeachers(),loadAdminBehavior(true),loadAdminGrades()])});
 $('adminStudentSearch')?.addEventListener('input',()=>{clearTimeout(window.__adminStudentSearchTimer);window.__adminStudentSearchTimer=setTimeout(loadAdminStudents,250)});
 $('adminStudentClassFilter')?.addEventListener('change',loadAdminStudents);
 $('adminTeacherSearch')?.addEventListener('input',()=>{clearTimeout(window.__adminTeacherSearchTimer);window.__adminTeacherSearchTimer=setTimeout(loadAdminTeachers,250)});
