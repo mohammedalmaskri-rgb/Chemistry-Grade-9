@@ -342,7 +342,7 @@ async function addTeacherTopic(){try{const title=$('mtTopicTitle').value.trim();
 async function refreshGenericTeacherTopics(){topics=await rpc('portal_teacher_topics',{p_token:teacherToken})||[];fillStudyTopicSelects();await initLessonPlanEditor();await loadManagedTeacherTopics();await loadProgressCards();}
 
 $('loginBtn').onclick=async()=>{try{const wait=loginGuard();if(wait)throw new Error(`محاولات كثيرة. انتظر ${wait} ثانية ثم حاول مرة أخرى.`);$('loginBtn').disabled=true;$('loginMsg').innerHTML='';const username=$('loginUser').value.trim(),password=$('loginPass').value;if(!username||!password)throw new Error('اكتب اسم المستخدم وكلمة المرور.');if(username.length>80||password.length>200)throw new Error('بيانات الدخول غير صالحة.');if(loginMode==='student'){const d=await rpc('portal_student_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');sessionClear();studentToken=d[0].token;currentStudent=d[0];sessionSave('student',studentToken);loginSucceeded();if(d[0].must_change_password)await forcePasswordChange();await enterStudent(d[0],true)}else if(loginMode==='teacher'){const d=await rpc('portal_teacher_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');sessionClear();teacherToken=d[0].token;currentTeacher=d[0];sessionSave('teacher',teacherToken);loginSucceeded();if(d[0].must_change_password)await forceTeacherPasswordChange();await enterTeacher()}else{const d=await rpc('portal_admin_login',{p_username:username,p_password:password});if(!d?.length)throw new Error('بيانات الدخول غير صحيحة');sessionClear();adminToken=d[0].token;currentAdmin=d[0];sessionSave('admin',adminToken);loginSucceeded();await enterAdmin()}}catch(e){if(!String(e.message||'').startsWith('محاولات كثيرة')&&!String(e.message||'').startsWith('اكتب اسم'))loginFailed();const wait=loginGuard();msg('loginMsg',wait?`محاولات كثيرة. انتظر ${wait} ثانية ثم حاول مرة أخرى.`:(e.message==='بيانات الدخول غير صحيحة'?e.message:'تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.'),false)}finally{$('loginBtn').disabled=false}};
-async function enterAdmin(){adminAllStudentRows=null;adminAllStudentRowsPromise=null;adminStudentDisplayRows=[];adminStudentRenderLimit=60;show('adminView');$('adminWelcome').textContent=`مرحبًا، ${currentAdmin?.full_name||'مشرف المنصة'}`;activateDynamicSection('adminView','adminNav','a-overview');await loadAdminOverview()}
+async function enterAdmin(){adminAllStudentRows=null;show('adminView');$('adminWelcome').textContent=`مرحبًا، ${currentAdmin?.full_name||'مشرف المنصة'}`;activateDynamicSection('adminView','adminNav','a-overview');await loadAdminOverview()}
 async function loadAdminOverview(){try{const o=await rpc('portal_admin_overview',{p_token:adminToken});if(!o)throw new Error('انتهت جلسة المشرف');$('adminStats').innerHTML=`<div class="stat"><b>${Number(o.students_total||0)}</b>إجمالي الطلاب</div><div class="stat"><b>${Number(o.students_logged_in||0)}</b>طلاب دخلوا</div><div class="stat"><b>${Number(o.students_never_logged_in||0)}</b>طلاب لم يدخلوا</div><div class="stat"><b>${Number(o.teachers_total||0)}</b>إجمالي المعلمين</div><div class="stat"><b>${Number(o.teachers_logged_in||0)}</b>معلمون سجلوا الدخول</div><div class="stat"><b>${Number(o.teachers_never_logged_in||0)}</b>معلمون لم يسجلوا</div><div class="stat"><b>${Number(o.behavior_total||0)}</b>إجمالي الملاحظات</div><div class="stat"><b>${Number(o.behavior_open||0)}</b>ملاحظات تحتاج متابعة</div><div class="stat"><b>${Number(o.students_with_repeated_behavior||0)}</b>طلاب تكررت ملاحظاتهم</div>`;const st=Number(o.students_total||0),te=Number(o.teachers_total||0);$('adminSummary').textContent=`نسبة دخول الطلاب: ${st?Math.round(Number(o.students_logged_in||0)/st*100):0}% • نسبة دخول المعلمين: ${te?Math.round(Number(o.teachers_logged_in||0)/te*100):0}%. عدّاد دخول المعلمين يبدأ من تفعيل سجل المتابعة.`}catch(e){$('adminStats').innerHTML=`<div class="msg err">تعذر تحميل الإحصائيات: ${esc(e.message||'خطأ غير معروف')}</div>`}}
 function adminClassSort(a,b){
   const parse=v=>{const m=String(v||'').match(/(\d+)\s*[/\-]\s*(\d+)/);return m?[Number(m[1]),Number(m[2])]:[Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER]};
@@ -358,29 +358,17 @@ function fillAdminClassFilter(rows, elementId='adminStudentClassFilter'){
   el.value=[...el.options].some(o=>o.value===previous)?previous:'ALL';
 }
 // Each grade contains fewer than the Supabase default 1000-row response limit.
-// Share an in-flight request so the students page and grades page do not fetch all students twice.
+// Never request all 1322 students in one RPC call.
 const ADMIN_GRADE_NUMBERS=[7,8,9];
-let adminAllStudentRows=null,adminAllStudentRowsPromise=null;
+let adminAllStudentRows=null;
 async function adminStudentsAll(force=false){
-  if(force){adminAllStudentRows=null;adminAllStudentRowsPromise=null;}
   if(adminAllStudentRows&&!force)return adminAllStudentRows;
-  if(adminAllStudentRowsPromise)return adminAllStudentRowsPromise;
-  adminAllStudentRowsPromise=(async()=>{
-    const groups=await Promise.all(ADMIN_GRADE_NUMBERS.map(g=>rpc('portal_admin_students_filtered',{p_token:adminToken,p_query:'',p_class:`GRADE:${g}`})));
-    const byId=new Map();groups.flat().forEach(s=>byId.set(String(s.student_id),s));
-    const rows=[...byId.values()].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar'));
-    adminAllStudentRows=rows;
-    return rows;
-  })();
-  try{return await adminAllStudentRowsPromise;}catch(e){adminAllStudentRows=null;throw e;}finally{adminAllStudentRowsPromise=null;}
-}
-let adminStudentDisplayRows=[],adminStudentRenderLimit=60;
-function renderAdminStudentRows(rows){
-  const host=$('adminStudentsTable');if(!host)return;
-  adminStudentDisplayRows=rows||[];
-  const visible=adminStudentDisplayRows.slice(0,adminStudentRenderLimit);
-  host.innerHTML=visible.length?visible.map(s=>`<tr><td><button class="link" style="border:0;background:none;cursor:pointer;font-weight:800" data-action="admin-student-profile" data-id="${s.student_id}" data-v1="${safeEnc(s.username)}">${studentName(s.full_name)}</button></td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.is_active?'نشط':'موقوف'}</td><td>${Number(s.login_count||0)}</td><td>${s.last_login?formatLoginTime(s.last_login):'لم يدخل'}</td><td>${Number(s.behavior_count||0)}</td><td><button class="btn secondary" data-action="admin-reset-student" data-id="${s.student_id}" data-v1="${safeEnc(s.full_name)}">استرجاع الحساب</button></td></tr>`).join(''):'<tr><td colspan="8">لا توجد نتائج.</td></tr>';
-  if(adminStudentDisplayRows.length>visible.length){host.insertAdjacentHTML('beforeend',`<tr><td colspan="8" style="text-align:center;padding:14px"><button id="adminStudentsMore" class="btn secondary">عرض 60 طالبًا إضافيًا (${adminStudentDisplayRows.length-visible.length} متبقٍ)</button></td></tr>`);$('adminStudentsMore').onclick=()=>{adminStudentRenderLimit+=60;renderAdminStudentRows(adminStudentDisplayRows)}}
+  const groups=await Promise.all(ADMIN_GRADE_NUMBERS.map(g=>rpc('portal_admin_students_filtered',{p_token:adminToken,p_query:'',p_class:`GRADE:${g}`})));
+  const byId=new Map();groups.flat().forEach(s=>byId.set(String(s.student_id),s));
+  const rows=[...byId.values()].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar'));
+  // Do not cache partial results after a failed request.
+  adminAllStudentRows=rows;
+  return rows;
 }
 function adminFilteredStudents(rows,selected,q){
   const query=String(q||'').trim().toLocaleLowerCase('ar');
@@ -391,43 +379,66 @@ function adminFilteredStudents(rows,selected,q){
     return !query||[s.full_name,s.username,cls].some(v=>String(v||'').toLocaleLowerCase('ar').includes(query));
   });
 }
+const UI_PAGE_SIZE=50;
+function ensureTablePager(id, tableBody){
+  let el=$(id);if(el)return el;
+  const table=tableBody?.closest('table');if(!table)return null;
+  el=document.createElement('div');el.id=id;el.style='display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:12px 0;padding:8px';
+  table.insertAdjacentElement('afterend',el);return el;
+}
+function renderTablePager(id,tableBody,page,total,pageSize,onPage){
+  const el=ensureTablePager(id,tableBody);if(!el)return;
+  const pages=Math.max(1,Math.ceil(total/pageSize));const safePage=Math.min(Math.max(1,page),pages);
+  el.innerHTML=`<button type="button" class="btn secondary" ${safePage<=1?'disabled':''} data-pager-prev>السابق</button><span class="muted">صفحة ${safePage} من ${pages} • ${total} سجل</span><button type="button" class="btn secondary" ${safePage>=pages?'disabled':''} data-pager-next>التالي</button>`;
+  el.querySelector('[data-pager-prev]')?.addEventListener('click',()=>onPage(Math.max(1,safePage-1)));
+  el.querySelector('[data-pager-next]')?.addEventListener('click',()=>onPage(Math.min(pages,safePage+1)));
+}
+function adminDedupeBehaviorRows(rows){
+  const seen=new Set();return (rows||[]).filter(x=>{const key=[x.student_id||x.full_name||'',x.class_name||'',x.teacher_name||'',x.behavior_type||'',x.level||'',x.details||'',x.action_taken||'',x.is_resolved?'1':'0',x.created_at||''].join('|');if(seen.has(key))return false;seen.add(key);return true});
+}
+let adminStudentsPage=1;
 async function loadAdminStudents(){try{
   const q=$('adminStudentSearch')?.value.trim()||'', selected=$('adminStudentClassFilter')?.value||'ALL';
   const all=await adminStudentsAll();
   fillAdminClassFilter(all);
   if($('adminStudentClassFilter'))$('adminStudentClassFilter').value=selected;
   const rows=adminFilteredStudents(all,selected,q);
-  adminStudentRenderLimit=60;renderAdminStudentRows(rows);
+  adminStudentsPage=1;renderAdminStudentsRows(rows);
 }catch(e){$('adminStudentsTable').innerHTML=`<tr><td colspan="8">${esc(e.message||'تعذر التحميل')}</td></tr>`}}
+function renderAdminStudentsRows(rows){
+  const host=$('adminStudentsTable');if(!host)return;
+  const pages=Math.max(1,Math.ceil(rows.length/UI_PAGE_SIZE));adminStudentsPage=Math.min(Math.max(1,adminStudentsPage),pages);
+  const pageRows=rows.slice((adminStudentsPage-1)*UI_PAGE_SIZE,adminStudentsPage*UI_PAGE_SIZE);
+  host.innerHTML=pageRows.length?pageRows.map(s=>`<tr><td><button class="link" style="border:0;background:none;cursor:pointer;font-weight:800" data-action="admin-student-profile" data-id="${s.student_id}" data-v1="${safeEnc(s.username)}">${studentName(s.full_name)}</button></td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.is_active?'نشط':'موقوف'}</td><td>${Number(s.login_count||0)}</td><td>${s.last_login?formatLoginTime(s.last_login):'لم يدخل'}</td><td>${Number(s.behavior_count||0)}</td><td><button class="btn secondary" data-action="admin-reset-student" data-id="${s.student_id}" data-v1="${safeEnc(s.full_name)}">استرجاع الحساب</button></td></tr>`).join(''):'<tr><td colspan="8">لا توجد نتائج.</td></tr>';
+  renderTablePager('adminStudentsPager',host,adminStudentsPage,rows.length,UI_PAGE_SIZE,p=>{adminStudentsPage=p;const all=adminAllStudentRows||[];renderAdminStudentsRows(adminFilteredStudents(all,$('adminStudentClassFilter')?.value||'ALL',$('adminStudentSearch')?.value||''))});
+}
 // Admin grades: subject -> grade -> section, with independent achievement analysis.
 let adminGradesView='grades';
+let adminGradesPage=1;
 const ADMIN_SUBJECTS={7:[['science','العلوم']],8:[['science','العلوم']],9:[['chemistry','الكيمياء'],['physics','الفيزياء'],['biology','الأحياء']]};
-const ADMIN_SUBJECT_IDS={science:1,chemistry:2,physics:3,biology:4};
 function adminSubjectKey(row){
-  const id=Number(row.subject_id);
-  if(Number.isInteger(id)&&id>=1&&id<=4)return Object.keys(ADMIN_SUBJECT_IDS).find(k=>ADMIN_SUBJECT_IDS[k]===id);
   const raw=String(row.subject_code||row.subject_name||row.subject_label||'').trim().toLowerCase();
   if(/chemistry|كيمياء/.test(raw))return 'chemistry';
   if(/physics|فيزياء/.test(raw))return 'physics';
   if(/biology|أحياء|احياء/.test(raw))return 'biology';
   if(/science|علوم/.test(raw))return 'science';
-  if((row.source==='general'||row.source==='legacy'||row.source==='student_grades')&&String(row.class_name||'').startsWith('9/'))return 'chemistry';
+  // Legacy grades are chemistry for grade 9 only, when explicitly marked legacy.
+  if((row.source==='legacy'||row.source==='student_grades')&&String(row.class_name||'').startsWith('9/'))return 'chemistry';
   return null;
 }
-
 function adminGradesControls(){
   const host=$('adminGradesTable');if(!host)return;
   let bar=$('adminGradesControls');
-  if(!bar){bar=document.createElement('div');bar.id='adminGradesControls';bar.style='padding:14px;margin:12px 0;border:1px solid #cbd5e1;border-radius:14px;background:#f8fafc';const sec=host.closest('.section');if(sec){const heading=[...sec.querySelectorAll('h2,h3')].find(h=>/درجات الطلاب/.test(h.textContent||''));sec.insertBefore(bar,heading||sec.querySelector('#adminGradesStats')||host.closest('table')||host);if(heading)heading.style.display='none';}const legacyFilter=$('adminGradeClassFilter');if(legacyFilter){const wrapper=legacyFilter.closest('.field')||legacyFilter.parentElement;if(wrapper&&wrapper!==sec)wrapper.style.display='none';else legacyFilter.style.display='none';}const legacyRefresh=$('adminGradesRefreshBtn');if(legacyRefresh)legacyRefresh.style.display='none';}
+  if(!bar){bar=document.createElement('div');bar.id='adminGradesControls';bar.style='padding:14px;margin:12px 0;border:1px solid #cbd5e1;border-radius:14px;background:#f8fafc';const sec=host.closest('.section');if(sec)sec.insertBefore(bar,sec.querySelector('#adminGradesStats')||host.closest('table')||host);}
   const oldGrade=$('adminSubjectGrade')?.value||'9',oldSubject=$('adminSubjectChoice')?.value||'chemistry',oldClass=$('adminSubjectClass')?.value||'ALL';
   const subjects=ADMIN_SUBJECTS[oldGrade]||ADMIN_SUBJECTS[9];
   const chosen=subjects.some(x=>x[0]===oldSubject)?oldSubject:subjects[0][0];
   const classNames=(adminAllStudentRows||[]).map(x=>String(x.class_name||'')).filter(x=>x.startsWith(oldGrade+'/'));
   const names=[...new Set(classNames)].sort(adminClassSort);
   bar.innerHTML=`<h3 style="margin:0 0 10px">📚 درجات الطلاب ونسب التحصيل</h3><div style="display:flex;flex-wrap:wrap;gap:10px"><label>الصف<br><select id="adminSubjectGrade"><option value="7" ${oldGrade==='7'?'selected':''}>السابع</option><option value="8" ${oldGrade==='8'?'selected':''}>الثامن</option><option value="9" ${oldGrade==='9'?'selected':''}>التاسع</option></select></label><label>المادة<br><select id="adminSubjectChoice">${subjects.map(([v,t])=>`<option value="${v}" ${v===chosen?'selected':''}>${t}</option>`).join('')}</select></label><label>الشعبة<br><select id="adminSubjectClass"><option value="ALL">كل شعب الصف</option>${names.map(n=>`<option value="${esc(n)}" ${oldClass===n?'selected':''}>${esc(n)}</option>`).join('')}</select></label></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button type="button" id="adminShowGrades" class="btn ${adminGradesView==='grades'?'primary':'secondary'}">درجات الطلاب</button><button type="button" id="adminShowRates" class="btn ${adminGradesView==='rates'?'primary':'secondary'}">نسب التحصيل</button></div><p class="muted" style="margin:8px 0 0">النسب للتقييمات المرصودة فقط، وليست النتيجة النهائية للفصل.</p>`;
-  $('adminSubjectGrade').onchange=()=>{const v=$('adminSubjectGrade').value;$('adminSubjectChoice').innerHTML=ADMIN_SUBJECTS[v].map(([k,n])=>`<option value="${k}">${n}</option>`).join('');const ns=[...new Set((adminAllStudentRows||[]).map(x=>String(x.class_name||'')).filter(x=>x.startsWith(v+'/')))].sort(adminClassSort);$('adminSubjectClass').innerHTML='<option value="ALL">كل شعب الصف</option>'+ns.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');loadAdminGrades()};
-  $('adminSubjectChoice').onchange=loadAdminGrades;
-  $('adminSubjectClass').onchange=loadAdminGrades;
+  $('adminSubjectGrade').onchange=()=>{adminGradesPage=1;const v=$('adminSubjectGrade').value;$('adminSubjectChoice').innerHTML=ADMIN_SUBJECTS[v].map(([k,n])=>`<option value="${k}">${n}</option>`).join('');const ns=[...new Set((adminAllStudentRows||[]).map(x=>String(x.class_name||'')).filter(x=>x.startsWith(v+'/')))].sort(adminClassSort);$('adminSubjectClass').innerHTML='<option value="ALL">كل شعب الصف</option>'+ns.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');loadAdminGrades()};
+  $('adminSubjectChoice').onchange=()=>{adminGradesPage=1;loadAdminGrades()};
+  $('adminSubjectClass').onchange=()=>{adminGradesPage=1;loadAdminGrades()};
   $('adminShowGrades').onclick=()=>{adminGradesView='grades';loadAdminGrades()};
   $('adminShowRates').onclick=()=>{adminGradesView='rates';loadAdminGrades()};
 }
@@ -453,7 +464,7 @@ async function loadAdminGrades(){
       const key=adminSubjectKey(r);
       if(!key){unknown.add(String(r.subject_label||r.subject_code||'غير محددة'));continue}
       if(key!==subject)continue;
-      const signature=[id,key,String(r.assessment_title||'').trim(),Number(r.score),Number(r.max_score)].join('|');
+      const signature=[id,key,r.assessment_title,r.score,r.max_score,r.created_at||''].join('|');
       if(seen.has(signature))continue;seen.add(signature);
       byStudent.get(id).grades.push(r);
     }
@@ -467,7 +478,7 @@ async function loadAdminGrades(){
       const groups=new Map();for(const st of list){if(!groups.has(st.class_name))groups.set(st.class_name,[]);groups.get(st.class_name).push(st)}
       host.innerHTML=[...groups].sort((a,b)=>adminClassSort(a[0],b[0])).map(([name,arr])=>{const g=arr.flatMap(s=>s.grades.filter(x=>Number(x.max_score)>0&&Number.isFinite(Number(x.score))));const total=g.reduce((n,x)=>n+Number(x.score),0),full=g.reduce((n,x)=>n+Number(x.max_score),0);return `<tr><td>${esc(name)}</td><td>${arr.length} طالب، ${arr.filter(x=>x.grades.length).length} لديهم درجات</td><td><b>${full?(total/full*100).toFixed(1)+'%':'—'}</b></td></tr>`}).join('')||'<tr><td colspan="3">لا توجد بيانات.</td></tr>';
     }else{
-      host.innerHTML=list.map(st=>`<tr><td><button class="link" style="border:0;background:none;cursor:pointer;font-weight:800" data-action="admin-student-profile" data-id="${st.student_id}" data-v1="${safeEnc(st.username)}">${studentName(st.full_name)}</button></td><td>${esc(st.class_name)}</td><td>${st.grades.length?st.grades.map(g=>`<div>${esc(g.assessment_title)}: <b>${esc(g.score)} / ${esc(g.max_score)}</b></div>`).join(''):'<span class="muted">لم تُرصد درجات لهذه المادة</span>'}</td></tr>`).join('')||'<tr><td colspan="3">لا يوجد طلاب.</td></tr>';
+      const pages=Math.max(1,Math.ceil(list.length/UI_PAGE_SIZE));adminGradesPage=Math.min(Math.max(1,adminGradesPage),pages);const pageRows=list.slice((adminGradesPage-1)*UI_PAGE_SIZE,adminGradesPage*UI_PAGE_SIZE);host.innerHTML=pageRows.map(st=>`<tr><td><button class="link" style="border:0;background:none;cursor:pointer;font-weight:800" data-action="admin-student-profile" data-id="${st.student_id}" data-v1="${safeEnc(st.username)}">${studentName(st.full_name)}</button></td><td>${esc(st.class_name)}</td><td>${st.grades.length?st.grades.map(g=>`<div>${esc(g.assessment_title)}: <b>${esc(g.score)} / ${esc(g.max_score)}</b></div>`).join(''):'<span class="muted">لم تُرصد درجات لهذه المادة</span>'}</td></tr>`).join('')||'<tr><td colspan="3">لا يوجد طلاب.</td></tr>';renderTablePager('adminGradesPager',host,adminGradesPage,list.length,UI_PAGE_SIZE,p=>{adminGradesPage=p;loadAdminGrades()});
     }
   }catch(e){host.innerHTML=`<tr><td colspan="3"><div class="msg err">تعذر تحميل الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
 }
@@ -493,20 +504,12 @@ $('adminGradeSearch')?.addEventListener('input',()=>{clearTimeout(window.__admin
 $('adminGradesRefreshBtn')?.addEventListener('click',loadAdminGrades);
 async function loadAdminTeachers(){try{const q=$('adminTeacherSearch')?.value.trim()||'';const d=await rpc('portal_admin_teachers',{p_token:adminToken,p_query:q})||[];$('adminTeachersTable').innerHTML=d.length?d.map(t=>`<tr><td>${esc(t.full_name)}</td><td>${esc(t.username)}</td><td>${t.is_active?'نشط':'موقوف'}</td><td>${Number(t.login_count||0)}</td><td>${t.last_login?formatLoginTime(t.last_login):'لم يدخل'}</td><td><button class="btn secondary" data-action="admin-reset-teacher" data-id="${t.teacher_id}" data-v1="${safeEnc(t.full_name)}">استرجاع الحساب</button></td></tr>`).join(''):'<tr><td colspan="6">لا توجد نتائج.</td></tr>'}catch(e){$('adminTeachersTable').innerHTML=`<tr><td colspan="6">${esc(e.message||'تعذر التحميل')}</td></tr>`}}
 let adminBehaviorSeen=new Set(),adminBehaviorFirstLoad=true;
-function dedupeAdminBehaviorRows(rows){
-  const unique=new Map();
-  for(const x of rows||[]){
-    const key=[x.student_id??x.username??x.full_name,x.class_name,String(x.created_at||''),x.behavior_type,x.level,String(x.details||'').trim(),String(x.action_taken||'').trim(),Boolean(x.is_resolved)].join('|');
-    if(!unique.has(key))unique.set(key,x);
-  }
-  return [...unique.values()];
-}
-async function loadAdminBehavior(silent=false){try{const q=$('adminBehaviorSearch')?.value.trim()||'';const raw=await rpc('portal_admin_behavior_records',{p_token:adminToken,p_query:q})||[];const d=dedupeAdminBehaviorRows(raw);const fresh=d.filter(x=>!adminBehaviorSeen.has(`${x.source}-${x.record_id}`));if(adminBehaviorFirstLoad){d.forEach(x=>adminBehaviorSeen.add(`${x.source}-${x.record_id}`));adminBehaviorFirstLoad=false}else if(fresh.length&&!silent){fresh.forEach(x=>adminBehaviorSeen.add(`${x.source}-${x.record_id}`));$('adminBehaviorAlert').innerHTML=`<div class="msg err">🔔 وصل ${fresh.length} تنبيه سلوكي جديد. ${fresh.slice(0,3).map(x=>`${studentName(x.full_name)} (${esc(x.class_name)})`).join('، ')}</div>`}else{fresh.forEach(x=>adminBehaviorSeen.add(`${x.source}-${x.record_id}`))}$('adminBehaviorStats').innerHTML=`<div class="visit-box"><b>${d.length}</b><br>إجمالي الملاحظات المعروضة</div><div class="visit-box"><b>${d.filter(x=>!x.is_resolved).length}</b><br>تحتاج متابعة</div><div class="visit-box"><b>${d.filter(x=>Number(x.repeat_count||0)>=2).length}</b><br>ملاحظات لطلاب تكررت حالاتهم</div>`;$('adminBehaviorTable').innerHTML=d.length?d.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString('ar-OM')}</td><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${esc(x.teacher_name||'المعلم غير محدد')}</td><td>${esc(x.behavior_type)}</td><td>${esc(x.level)}</td><td>${Number(x.repeat_count||0)}</td><td>${esc(x.details||'')}</td><td>${esc(x.action_taken||'')}</td><td>${x.is_resolved?'تمت المعالجة':'تحتاج متابعة'}</td></tr>`).join(''):'<tr><td colspan="10">لا توجد ملاحظات.</td></tr>'}catch(e){$('adminBehaviorTable').innerHTML=`<tr><td colspan="10">${esc(e.message||'تعذر التحميل')}</td></tr>`}}
+async function loadAdminBehavior(silent=false){try{const q=$('adminBehaviorSearch')?.value.trim()||'';const raw=await rpc('portal_admin_behavior_records',{p_token:adminToken,p_query:q})||[];const d=adminDedupeBehaviorRows(raw);const fresh=d.filter(x=>!adminBehaviorSeen.has(`${x.source}-${x.record_id}`));if(adminBehaviorFirstLoad){d.forEach(x=>adminBehaviorSeen.add(`${x.source}-${x.record_id}`));adminBehaviorFirstLoad=false}else if(fresh.length&&!silent){fresh.forEach(x=>adminBehaviorSeen.add(`${x.source}-${x.record_id}`));$('adminBehaviorAlert').innerHTML=`<div class="msg err">🔔 وصل ${fresh.length} تنبيه سلوكي جديد. ${fresh.slice(0,3).map(x=>`${studentName(x.full_name)} (${esc(x.class_name)})`).join('، ')}</div>`}else{fresh.forEach(x=>adminBehaviorSeen.add(`${x.source}-${x.record_id}`))}$('adminBehaviorStats').innerHTML=`<div class="visit-box"><b>${d.length}</b><br>إجمالي الملاحظات المعروضة</div><div class="visit-box"><b>${d.filter(x=>!x.is_resolved).length}</b><br>تحتاج متابعة</div><div class="visit-box"><b>${d.filter(x=>Number(x.repeat_count||0)>=2).length}</b><br>ملاحظات لطلاب تكررت حالاتهم</div>`;$('adminBehaviorTable').innerHTML=d.length?d.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString('ar-OM')}</td><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${esc(x.teacher_name||'المعلم غير محدد')}</td><td>${esc(x.behavior_type)}</td><td>${esc(x.level)}</td><td>${Number(x.repeat_count||0)}</td><td>${esc(x.details||'')}</td><td>${esc(x.action_taken||'')}</td><td>${x.is_resolved?'تمت المعالجة':'تحتاج متابعة'}</td></tr>`).join(''):'<tr><td colspan="10">لا توجد ملاحظات.</td></tr>'}catch(e){$('adminBehaviorTable').innerHTML=`<tr><td colspan="10">${esc(e.message||'تعذر التحميل')}</td></tr>`}}
 async function adminResetAccount(kind,id,nameEnc){const name=decodeURIComponent(nameEnc);if(!confirm(`إعادة تعيين كلمة مرور ${kind==='student'?'الطالب':'المعلم'}: ${name}؟`))return;try{const fn=kind==='student'?'portal_admin_reset_student_password':'portal_admin_reset_teacher_password';const arg=kind==='student'?{p_token:adminToken,p_student_id:id,p_new_password:null}:{p_token:adminToken,p_teacher_id:id,p_new_password:null};const d=await rpc(fn,arg);const x=d?.[0];const pass=x?.temporary_password;if(!pass)throw new Error('تعذر استرجاع الحساب. تحقق من الجلسة وصلاحيات المشرف.');const user=x.username;const text=`اسم المستخدم: ${user}\nكلمة المرور المؤقتة: ${pass}`;$('popupRoot').innerHTML=`<div class="popup"><div class="card"><h2>تم إنشاء كلمة مرور مؤقتة</h2><p>أرسلها لصاحب الحساب عبر قناة آمنة. لن تظهر كلمة المرور القديمة.</p><div class="lesson-detail"><b>اسم المستخدم</b><div dir="ltr">${esc(user)}</div></div><div class="lesson-detail"><b>كلمة المرور المؤقتة</b><div dir="ltr" style="font-size:20px;font-weight:900">${esc(pass)}</div></div><div class="lesson-actions"><button id="adminCopyPass" class="btn primary">نسخ البيانات</button><button id="adminClosePass" class="btn secondary">إغلاق</button></div></div></div>`;$('adminCopyPass').onclick=async()=>{try{await navigator.clipboard.writeText(text);alert('تم نسخ البيانات')}catch(_e){prompt('انسخ البيانات:',text)}};$('adminClosePass').onclick=()=>{$('popupRoot').innerHTML=''};if(kind==='student')await loadAdminStudents();else await loadAdminTeachers()}catch(e){alert(e.message||'تعذر استرجاع الحساب')}}
-$('adminRefreshBtn')?.addEventListener('click',()=>{const active=document.querySelector('#adminView .section.active')?.id; if(active==='a-students'){adminAllStudentRows=null;adminAllStudentRowsPromise=null;return loadAdminStudents()} if(active==='a-teachers')return loadAdminTeachers();if(active==='a-behavior')return loadAdminBehavior(true);if(active==='a-grades'){adminAllStudentRows=null;adminAllStudentRowsPromise=null;return loadAdminGrades()}return loadAdminOverview()});
-$('adminStudentSearch')?.addEventListener('input',()=>{clearTimeout(window.__adminStudentSearchTimer);window.__adminStudentSearchTimer=setTimeout(()=>{adminStudentRenderLimit=60;loadAdminStudents()},250)});
-$('adminStudentClassFilter')?.addEventListener('change',()=>{adminStudentRenderLimit=60;loadAdminStudents()});
-$('adminNav')?.querySelectorAll('button[data-sec]').forEach(b=>b.addEventListener('click',()=>{if(!adminToken)return;switch(b.dataset.sec){case 'a-overview':loadAdminOverview();break;case 'a-students':loadAdminStudents();break;case 'a-teachers':loadAdminTeachers();break;case 'a-behavior':loadAdminBehavior(true);break;case 'a-grades':loadAdminGrades();break;}}));
+$('adminRefreshBtn')?.addEventListener('click',()=>{adminAllStudentRows=null;return loadAdminOverview()});
+$('adminNav')?.addEventListener('click',e=>{const b=e.target.closest('button[data-sec]');if(!b)return;setTimeout(()=>{const sec=$(b.dataset.sec);if(!sec)return;if(sec.contains($('adminStudentsTable')))loadAdminStudents();if(sec.contains($('adminTeachersTable')))loadAdminTeachers();if(sec.contains($('adminBehaviorTable')))loadAdminBehavior(true);if(sec.contains($('adminGradesTable')))loadAdminGrades();},0)});
+$('adminStudentSearch')?.addEventListener('input',()=>{clearTimeout(window.__adminStudentSearchTimer);window.__adminStudentSearchTimer=setTimeout(loadAdminStudents,250)});
+$('adminStudentClassFilter')?.addEventListener('change',loadAdminStudents);
 $('adminTeacherSearch')?.addEventListener('input',()=>{clearTimeout(window.__adminTeacherSearchTimer);window.__adminTeacherSearchTimer=setTimeout(loadAdminTeachers,250)});
 $('adminBehaviorSearch')?.addEventListener('input',()=>{clearTimeout(window.__adminBehaviorSearchTimer);window.__adminBehaviorSearchTimer=setTimeout(()=>loadAdminBehavior(true),250)});
 $('adminPassBtn')?.addEventListener('click',async()=>{const p=$('adminNewPass').value;if(p.length<12){msg('adminPassMsg','كلمة المرور يجب أن تكون 12 حرفًا على الأقل.',false);return}try{const ok=await rpc('portal_admin_change_password',{p_token:adminToken,p_new_password:p});if(!ok)throw new Error('تعذر تغيير كلمة المرور');$('adminNewPass').value='';msg('adminPassMsg','تم تغيير كلمة المرور بنجاح.')}catch(e){msg('adminPassMsg',e.message||'تعذر تغيير كلمة المرور',false)}});
@@ -956,7 +959,7 @@ async function refreshBehaviorStudents(){
 async function loadBehaviorRecords(){
   try{
     const cls=$('behaviorFilterClass').value||'ALL',q=($('behaviorSearch').value||'').trim();
-    const d=await rpc('portal_teacher_behavior_records',{p_token:teacherToken,p_class:cls,p_query:q||null});
+    const d=adminDedupeBehaviorRows(await rpc('portal_teacher_behavior_records',{p_token:teacherToken,p_class:cls,p_query:q||null})||[]);
     const open=(d||[]).filter(x=>!x.is_resolved).length,resolved=(d||[]).filter(x=>x.is_resolved).length;
     $('behaviorStats').innerHTML=`<div class="visit-box"><b>${d?.length||0}</b><br>إجمالي الملاحظات</div><div class="visit-box"><b>${open}</b><br>تحتاج متابعة</div><div class="visit-box"><b>${resolved}</b><br>تمت معالجتها</div>`;
     const level=x=>x==='simple'?'🟢 تنبيه بسيط':x==='note'?'🟠 ملاحظة':'🔴 مخالفة متكررة';
@@ -976,7 +979,7 @@ async function reloadTeacherSubjectPanels(){
   await initLessonPlanEditor();
   ensureTeacherTopicManager();ensureTeacherSubjectVideoUI();
   await loadManagedTeacherTopics().catch(()=>{managedTopics=[];renderTeacherTopicManager()});
-  const tasks=[loadOverview,loadProgressCards,loadTeacherAnnouncements,loadTeacherContent,loadTeacherQuestions,()=>loadStudents('ALL'),loadTeacherExperiments,loadTeacherBank,loadTeacherEssaySubmissions,loadTeacherStudyMaterials,refreshStudentSelects];
+  const tasks=[loadOverview,loadProgressCards,loadTeacherAnnouncements,loadTeacherContent,loadTeacherQuestions,loadTeacherExperiments,loadTeacherBank,loadTeacherEssaySubmissions,loadTeacherStudyMaterials];
   await Promise.allSettled(tasks.map(fn=>Promise.resolve().then(fn)));
   await loadTeacherSubjectVideos().catch(()=>{});
   if($('behaviorClass'))await Promise.resolve().then(refreshBehaviorStudents).then(loadBehaviorRecords).catch(e=>console.warn('Behavior panel unavailable',e));
@@ -1028,9 +1031,10 @@ $('loginClass')&&($('loginClass').onchange=loadStudentLogins);
 $('loginSearch')&&($('loginSearch').oninput=renderStudentLogins);
 const loginNavBtn=$('teacherNav')?.querySelector('[data-sec="t-logins"]');
 loginNavBtn&&loginNavBtn.addEventListener('click',()=>{if(!studentLoginRows.length)loadStudentLogins()});
+$('teacherNav')?.addEventListener('click',e=>{const b=e.target.closest('button[data-sec]');if(!b)return;setTimeout(()=>{const sec=$(b.dataset.sec);if(!sec)return;if(sec.contains($('studentsTable'))){const cls=$('studentFilter')?.value||'ALL';if(teacherStudentsLoadedFor!==cls)loadStudents(cls).catch(err=>console.warn('Students list unavailable',err));}if(sec.contains($('gradeStudent'))||sec.contains($('pointsStudent')))refreshStudentSelects().catch(err=>console.warn('Student selectors unavailable',err));},0)});
 function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));$('studentsTable').innerHTML=list.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points}</td><td><button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button> <button class="btn danger" data-action="delete-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">🗑️ حذف الطالب</button></td></tr>`).join('');if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;}
-async function loadStudents(c='ALL'){allStudents=await rpc('portal_teacher_students_v2',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:c});renderStudentsTable()}
-$('studentFilter').onchange=()=>loadStudents($('studentFilter').value);$('studentSearch').oninput=renderStudentsTable;
+async function loadStudents(c='ALL'){if(teacherStudentsLoading)return teacherStudentsLoading;teacherStudentsPage=1;teacherStudentsLoading=(async()=>{try{const rows=await rpc('portal_teacher_students_v2',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:c});allStudents=Array.isArray(rows)?rows:[];teacherStudentsLoadedFor=c;renderStudentsTable()}finally{teacherStudentsLoading=null}})();return teacherStudentsLoading}
+$('studentFilter').onchange=()=>loadStudents($('studentFilter').value);$('studentSearch').oninput=()=>{teacherStudentsPage=1;renderStudentsTable()};
 async function refreshStudentSelects(){const c=$('gradeClass').value||'9/1';const d=await rpc('portal_teacher_students_v2',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:c});$('gradeStudent').innerHTML=d.map(s=>`<option value="${s.id}">${studentName(s.full_name)}</option>`).join('');const pc=$('pointsClass').value||'9/1';const p=await rpc('portal_teacher_points_overview',{p_token:teacherToken,p_class:pc});$('pointsStudent').innerHTML=p.map(s=>`<option value="${s.student_id}">${studentName(s.full_name)} — ${fmtPoints(s.total_points)} نقطة</option>`).join('');if($('pointsRanking')){const sorted=[...p].sort((a,b)=>Number(b.total_points||0)-Number(a.total_points||0));$('pointsRanking').innerHTML=sorted.length?`<div style="overflow:auto"><table><thead><tr><th>#</th><th>الطالب</th><th>الشعبة</th><th>نقاط المعلم</th><th>نقاط الأسئلة</th><th>المجموع</th></tr></thead><tbody>${sorted.map((s,i)=>`<tr><td>${i+1}</td><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${fmtPoints(s.base_points)}</td><td>+${fmtPoints(s.quiz_points)}</td><td><b>⭐ ${fmtPoints(s.total_points)}</b></td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">لا يوجد طلاب.</div>'}}
 $('gradeClass').onchange=refreshStudentSelects;$('pointsClass').onchange=refreshStudentSelects;
 $('gradeAddBtn').onclick=async()=>{try{const id=await rpc('portal_teacher_add_grade',{p_token:teacherToken,p_student_id:Number($('gradeStudent').value),p_title:$('gradeTitle').value,p_score:Number($('gradeScore').value),p_max_score:Number($('gradeMax').value),p_note:$('gradeNote').value});if(!id)throw new Error('تحقق من البيانات');msg('gradeMsg','تم حفظ الدرجة ✅');$('gradeScore').value='';$('gradeNote').value=''}catch(e){msg('gradeMsg',e.message,false)}};
@@ -1115,7 +1119,9 @@ async function loadTeacherQuestions(){const all=await rpc('portal_teacher_questi
 window.replyQ=async id=>{const ok=await rpc('portal_teacher_reply_question',{p_token:teacherToken,p_question_id:id,p_reply:$('reply-'+id).value});if(ok){await loadTeacherQuestions();await loadOverview()}};
 async function applyPoints(delta=null){try{const d=delta===null?Number($('pointsDelta').value):delta;const sid=Number($('pointsStudent').value);const p=await rpc('portal_teacher_adjust_points',{p_token:teacherToken,p_student_id:sid,p_delta:d});if(p===null)throw new Error('تعذر التعديل');await refreshStudentSelects();const pc=$('pointsClass').value||'9/1';const rows=await rpc('portal_teacher_points_overview',{p_token:teacherToken,p_class:pc});const row=(rows||[]).find(x=>Number(x.student_id)===sid);const total=row?fmtPoints(row.total_points):fmtPoints(p);msg('pointsMsg',(d<0?'تم خصم '+Math.abs(d)+' نقطة. ':'تمت إضافة '+d+' نقطة. ')+'إجمالي رصيد الطالب الآن: '+total+' ⭐')}catch(e){msg('pointsMsg',e.message,false)}}$('pointsBtn').onclick=()=>applyPoints();$('pointsPlusBtn')&&($('pointsPlusBtn').onclick=()=>applyPoints(1));$('pointsMinusBtn')&&($('pointsMinusBtn').onclick=()=>applyPoints(-1));
 if($('newStudentClass'))$('newStudentClass').innerHTML=classes.map(c=>`<option value="${c}">${c}</option>`).join('');
-function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));const actions=s=>isPrimaryTeacher()?`<button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button> <button class="btn danger" data-action="delete-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">🗑️ حذف الطالب</button>`:'<span class="muted">حساب الطالب مشترك بين المواد</span>';$('studentsTable').innerHTML=list.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points??'—'}</td><td>${actions(s)}</td></tr>`).join('');if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;}
+let teacherStudentsPage=1,teacherStudentsLoading=null,teacherStudentsLoadedFor=null;
+function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));const pages=Math.max(1,Math.ceil(list.length/UI_PAGE_SIZE));teacherStudentsPage=Math.min(Math.max(1,teacherStudentsPage),pages);const pageRows=list.slice((teacherStudentsPage-1)*UI_PAGE_SIZE,teacherStudentsPage*UI_PAGE_SIZE);const actions=s=>isPrimaryTeacher()?`<button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button> <button class="btn danger" data-action="delete-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">🗑️ حذف الطالب</button>`:'<span class="muted">حساب الطالب مشترك بين المواد</span>';$('studentsTable').innerHTML=pageRows.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points??'—'}</td><td>${actions(s)}</td></tr>`).join('')||'<tr><td colspan="5">لا توجد نتائج.</td></tr>';if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;renderTablePager('teacherStudentsPager',$('studentsTable'),teacherStudentsPage,list.length,UI_PAGE_SIZE,p=>{teacherStudentsPage=p;renderStudentsTable()});}
+
 window.editStudentName=async(id,nameEnc)=>{const old=decodeURIComponent(nameEnc),name=prompt('اكتب الاسم الصحيح للطالب:',old);if(name===null||!name.trim()||name.trim()===old)return;try{const ok=await rpc('portal_teacher_update_student_name',{p_token:teacherToken,p_student_id:id,p_full_name:name.trim()});if(!ok)throw new Error('تعذر تعديل الاسم');await loadStudents($('studentFilter').value||'ALL');await refreshStudentSelects();alert('تم تعديل اسم الطالب ✅')}catch(e){alert(e.message)}};
 window.moveStudent=async(id,nameEnc,classEnc)=>{const name=decodeURIComponent(nameEnc),oldClass=decodeURIComponent(classEnc);const choices=classes.filter(c=>c!==oldClass);const next=prompt(`نقل ${name} من ${oldClass}.\nاكتب الشعبة الجديدة: ${choices.join('، ')}`,choices[0]||'');if(next===null)return;const cls=next.trim();if(!classes.includes(cls)){alert('الشعبة غير صحيحة. استخدم: '+classes.join('، '));return}if(cls===oldClass)return;if(!confirm(`تأكيد نقل ${name} من ${oldClass} إلى ${cls}؟\nلن يتم حذف درجاته أو نقاطه أو سجلاته.`))return;try{const ok=await rpc('portal_teacher_move_student',{p_token:teacherToken,p_student_id:id,p_new_class:cls});if(!ok)throw new Error('تعذر نقل الطالب');await loadStudents($('studentFilter').value||'ALL');await refreshStudentSelects();alert('تم نقل الطالب إلى '+cls+' ✅')}catch(e){alert(e.message||'تعذر نقل الطالب')}};
 window.deleteStudent=async(id,nameEnc)=>{const name=decodeURIComponent(nameEnc);if(!confirm(`هل أنت متأكد من حذف الطالب:\n${name}\n\nسيتم حذف حسابه وبياناته المرتبطة نهائيًا.`))return;const check=prompt(`تأكيد نهائي لحذف ${name}\nاكتب كلمة: حذف`,'');if(check!=='حذف'){if(check!==null)alert('تم إلغاء الحذف لأن كلمة التأكيد غير صحيحة.');return}try{const ok=await rpc('portal_teacher_delete_student',{p_token:teacherToken,p_student_id:id});if(!ok)throw new Error('تعذر حذف الطالب');await loadStudents($('studentFilter').value||'ALL');await refreshStudentSelects();await loadOverview();alert('تم حذف الطالب نهائيًا ✅')}catch(e){alert(e.message||'تعذر حذف الطالب')}};
@@ -1160,7 +1166,7 @@ document.addEventListener('click',e=>{
 applyInputSecurity();
 
 (async()=>{const st=sessionRead('student'),tt=sessionRead('teacher'),at=sessionRead('admin');try{if(st){const d=await rpc('portal_student_me',{p_token:st});if(d?.length){studentToken=st;currentStudent=d[0];await enterStudent(d[0]);return}else sessionClear()}if(tt){teacherToken=tt;const me=await rpc('portal_teacher_me',{p_token:tt});if(me?.length){currentTeacher=me[0];if(me[0].must_change_password)await forceTeacherPasswordChange();await enterTeacher();return}else sessionClear()}if(at){const me=await rpc('portal_admin_me',{p_token:at});if(me?.length){adminToken=at;currentAdmin=me[0];await enterAdmin();return}else sessionClear()}}catch(e){sessionClear()}show('loginView')})();
-setInterval(()=>{if(adminToken&&!sessionRead('admin'))secureLogout('انتهت جلسة المشرف لأسباب أمنية. سجّل الدخول من جديد.');else if(teacherToken&&!sessionRead('teacher'))secureLogout('انتهت جلسة المعلم لأسباب أمنية. سجّل الدخول من جديد.');else if(studentToken&&!sessionRead('student'))secureLogout('انتهت الجلسة. سجّل الدخول من جديد.');if(adminToken&&document.visibilityState==='visible'&&!$('adminView')?.classList.contains('hide')){const active=document.querySelector('#adminView .section.active')?.id;if(active==='a-overview')loadAdminOverview();else if(active==='a-behavior')loadAdminBehavior(false)}},120000);
+setInterval(()=>{if(adminToken&&!sessionRead('admin'))secureLogout('انتهت جلسة المشرف لأسباب أمنية. سجّل الدخول من جديد.');else if(teacherToken&&!sessionRead('teacher'))secureLogout('انتهت جلسة المعلم لأسباب أمنية. سجّل الدخول من جديد.');else if(studentToken&&!sessionRead('student'))secureLogout('انتهت الجلسة. سجّل الدخول من جديد.');if(adminToken&&document.visibilityState==='visible'){loadAdminOverview();const active=document.querySelector('#adminView .section.active');if(active?.contains($('adminBehaviorTable')))loadAdminBehavior(false)}},60000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(teacherToken&&!sessionRead('teacher'))secureLogout('انتهت جلسة المعلم لأسباب أمنية. سجّل الدخول من جديد.');else if(studentToken&&!sessionRead('student'))secureLogout('انتهت الجلسة. سجّل الدخول من جديد.')}});
 // ===== Rawafid Al-Uloom platform branding =====
 (function applyRawafidBranding(){
