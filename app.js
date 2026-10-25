@@ -401,7 +401,7 @@ async function loadAdminGrades(){
     // Request each class separately so grade-heavy classes never hide later classes.
     const chunks=[];
     for(let i=0;i<targetClasses.length;i+=5){
-      const batch=await Promise.all(targetClasses.slice(i,i+5).map(cls=>rpc('portal_admin_grades_filtered',{p_token:adminToken,p_query:'',p_class:cls})));
+      const batch=await Promise.all(targetClasses.slice(i,i+5).map(cls=>rpc('portal_admin_grades_filtered',{p_token:adminToken,p_query:'',p_class:`CLASS:${cls}`})));
       chunks.push(...batch.flat());
     }
     const ids=new Set(matched.map(s=>String(s.student_id)));
@@ -414,6 +414,32 @@ async function loadAdminGrades(){
       if(r.assessment_title!=null || r.score!=null || r.max_score!=null)byStudent.get(id).grades.push(r);
     }
     const studentsList=[...byStudent.values()].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar',{numeric:true}));
+    // Aggregate valid, distinct assessment records without changing stored grades.
+    // Two tables can mirror the same grade: keep one identical student/assessment/score record.
+    const summaryRows=[];
+    const summarySeen=new Set();
+    for(const st of studentsList){
+      for(const g of st.grades){
+        const score=Number(g.score),max=Number(g.max_score);
+        if(!Number.isFinite(score)||!Number.isFinite(max)||max<=0||score<0||score>max)continue;
+        const key=[st.student_id,String(g.assessment_title||'').trim(),score,max].join('|');
+        if(summarySeen.has(key))continue;
+        summarySeen.add(key);
+        summaryRows.push({class_name:st.class_name,score,max});
+      }
+    }
+    const statsHost=$('adminGradesStats');
+    if(statsHost){
+      let summaryHost=$('adminGradePercentSummary');
+      if(!summaryHost){summaryHost=document.createElement('div');summaryHost.id='adminGradePercentSummary';summaryHost.style='margin:12px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px';statsHost.insertAdjacentElement('afterend',summaryHost)}
+      const makePct=(label,arr)=>{const total=arr.reduce((n,x)=>n+x.max,0),earned=arr.reduce((n,x)=>n+x.score,0);return `<div class="visit-box"><b>${total?(100*earned/total).toFixed(1)+'%':'—'}</b><br>${esc(label)}<br><small>${arr.length} سجل تقييم</small></div>`};
+      const selectedGrade=selected.startsWith('GRADE:')?selected.slice(6):selected.startsWith('CLASS:')?selected.slice(6).split('/')[0]:null;
+      const gradeNums=selectedGrade?[selectedGrade]:['7','8','9'];
+      const cards=gradeNums.map(g=>makePct(adminGradeLabel(g),summaryRows.filter(x=>String(x.class_name||'').split('/')[0]===g)));
+      if(selected==='ALL'||selected.startsWith('GRADE:'))cards.push(...targetClasses.map(cls=>makePct('الشعبة '+cls,summaryRows.filter(x=>x.class_name===cls))));
+      if(selected.startsWith('CLASS:'))cards.push(makePct('الشعبة '+selected.slice(6),summaryRows));
+      summaryHost.innerHTML=cards.join('')+'<div class="muted" style="grid-column:1/-1">النسبة = مجموع الدرجات المحصّلة ÷ مجموع الدرجات النهائية المسجلة × 100. استُبعدت السجلات المتطابقة بين مصدري الدرجات عند حساب النسبة. لا تُحتسب التقييمات غير المرصودة.</div>';
+    }
     const gradeRecords=studentsList.reduce((n,s)=>n+s.grades.length,0);
     const withGrades=studentsList.filter(s=>s.grades.length>0).length;
     const assessments=new Set(studentsList.flatMap(s=>s.grades.map(g=>`${g.subject_label||'عام'}|${g.assessment_title||''}`)));
