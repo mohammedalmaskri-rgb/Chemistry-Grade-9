@@ -435,7 +435,7 @@ async function loadAdminGrades(){
     }
     const ids=new Set(matched.map(s=>String(s.student_id)));
     const unknown=new Set();const byStudent=new Map(matched.map(s=>[String(s.student_id),{...s,grades:[]}]));
-    const seen=new Map();
+    const seen=new Set();
     for(const r of chunks){
       const id=String(r.student_id);if(!ids.has(id)||r.assessment_title==null||r.score==null)continue;
       const key=adminSubjectKey(r);
