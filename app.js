@@ -1118,7 +1118,49 @@ function formatQuestionTime(v){if(!v)return '';try{return new Date(v).toLocaleSt
 async function loadTeacherQuestions(){const all=await rpc('portal_teacher_questions',{p_token:teacherToken,p_status:null});const d=(all||[]).filter(q=>!String(q.question_text||'').startsWith(BANK_ESSAY_PREFIX));$('teacherQuestionList').innerHTML=d.length?d.map(q=>`<div class="item"><span class="badge">${esc(q.class_name)} • ${q.status==='new'?'جديد':'تمت الإجابة'}</span><h3>${studentName(q.full_name)}</h3>${q.created_at?`<div class="muted" style="margin-top:-6px;margin-bottom:10px">🕒 أرسل السؤال: ${formatQuestionTime(q.created_at)}</div>`:''}<p>${esc(q.question_text)}</p>${q.attachment_url?renderSafeAttachment(q.attachment_url,'فتح المرفق'):''}<div class="field"><textarea id="reply-${q.id}" rows="3" placeholder="اكتب ردك...">${esc(q.teacher_reply||'')}</textarea></div><button class="btn primary" data-action="reply-question" data-id="${q.id}">إرسال الرد</button></div>`).join(''):'<div class="muted">لا توجد أسئلة.</div>'}
 window.replyQ=async id=>{const ok=await rpc('portal_teacher_reply_question',{p_token:teacherToken,p_question_id:id,p_reply:$('reply-'+id).value});if(ok){await loadTeacherQuestions();await loadOverview()}};
 async function applyPoints(delta=null){try{const d=delta===null?Number($('pointsDelta').value):delta;const sid=Number($('pointsStudent').value);const p=await rpc('portal_teacher_adjust_points',{p_token:teacherToken,p_student_id:sid,p_delta:d});if(p===null)throw new Error('تعذر التعديل');await refreshStudentSelects();const pc=$('pointsClass').value||'9/1';const rows=await rpc('portal_teacher_points_overview',{p_token:teacherToken,p_class:pc});const row=(rows||[]).find(x=>Number(x.student_id)===sid);const total=row?fmtPoints(row.total_points):fmtPoints(p);msg('pointsMsg',(d<0?'تم خصم '+Math.abs(d)+' نقطة. ':'تمت إضافة '+d+' نقطة. ')+'إجمالي رصيد الطالب الآن: '+total+' ⭐')}catch(e){msg('pointsMsg',e.message,false)}}$('pointsBtn').onclick=()=>applyPoints();$('pointsPlusBtn')&&($('pointsPlusBtn').onclick=()=>applyPoints(1));$('pointsMinusBtn')&&($('pointsMinusBtn').onclick=()=>applyPoints(-1));
-if($('newStudentClass'))$('newStudentClass').innerHTML=classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+if($('newStudentClass'))$('newStudentClass').innerHTML=classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+// Restore the missing Add Student form handler.
+if($('addStudentBtn'))$('addStudentBtn').onclick=async()=>{
+  const btn=$('addStudentBtn');
+  const fullName=($('newStudentName')?.value||'').trim();
+  const className=$('newStudentClass')?.value||'';
+  const username=($('newStudentUsername')?.value||'').trim();
+  const password=$('newStudentPassword')?.value||'';
+  if(!fullName||!className||!username||!password){msg('studentAdminMsg','أكمل اسم الطالب والشعبة واسم المستخدم وكلمة المرور.',false);return}
+  if(!classes.includes(className)){msg('studentAdminMsg','الشعبة المحددة غير صحيحة.',false);return}
+  if(username.length>80||/[\s]/.test(username)){msg('studentAdminMsg','اسم المستخدم يجب ألا يحتوي على مسافات وألا يتجاوز 80 حرفًا.',false);return}
+  if(password.length<6){msg('studentAdminMsg','كلمة المرور المؤقتة يجب أن تكون 6 أحرف أو أرقام على الأقل.',false);return}
+  if(password.length>200){msg('studentAdminMsg','كلمة المرور طويلة جدًا.',false);return}
+  const oldText=btn.textContent;
+  try{
+    btn.disabled=true;btn.textContent='جاري إضافة الطالب...';
+    if($('studentAdminMsg'))$('studentAdminMsg').innerHTML='';
+    const result=await rpc('portal_teacher_add_student',{
+      p_token:teacherToken,
+      p_full_name:fullName,
+      p_class:className,
+      p_username:username,
+      p_password:password
+    });
+    if(result===false||result==null||(Array.isArray(result)&&result.length===0)||(result&&result.success===false)){
+      throw new Error(result?.message||'لم يتم إنشاء الطالب. تحقق من البيانات وصلاحيات الحساب.');
+    }
+    $('newStudentName').value='';$('newStudentUsername').value='';$('newStudentPassword').value='';
+    teacherStudentsLoadedFor=null;
+    try{await loadStudents(className)}catch(refreshError){console.warn('Student created but list refresh failed',refreshError)}
+    try{await refreshStudentSelects()}catch(refreshError){console.warn('Student created but selectors refresh failed',refreshError)}
+    msg('studentAdminMsg',`تمت إضافة الطالب ${fullName} إلى الشعبة ${className} بنجاح ✅`);
+  }catch(e){
+    console.error('Add student failed:',e);
+    const raw=String(e?.message||e||'');
+    let message=raw;
+    if(/duplicate|unique|already exists/i.test(raw))message='اسم المستخدم مستخدم من قبل. اختر اسم مستخدم آخر.';
+    else if(/permission|not authorized|forbidden|صلاح/i.test(raw))message='هذا الحساب لا يملك صلاحية إضافة الطلاب.';
+    else if(/network|fetch|timeout|مهلة|Failed to/i.test(raw))message='تعذر الاتصال بقاعدة البيانات. تحقق من الاتصال ثم حاول مرة أخرى.';
+    else if(!message||message==='{}')message='تعذرت إضافة الطالب. تحقق من البيانات وحاول مرة أخرى.';
+    msg('studentAdminMsg',message,false);
+  }finally{btn.disabled=false;btn.textContent=oldText}
+};
 let teacherStudentsPage=1,teacherStudentsLoading=null,teacherStudentsLoadedFor=null;
 function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));const pages=Math.max(1,Math.ceil(list.length/UI_PAGE_SIZE));teacherStudentsPage=Math.min(Math.max(1,teacherStudentsPage),pages);const pageRows=list.slice((teacherStudentsPage-1)*UI_PAGE_SIZE,teacherStudentsPage*UI_PAGE_SIZE);const actions=s=>isPrimaryTeacher()?`<button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button> <button class="btn danger" data-action="delete-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">🗑️ حذف الطالب</button>`:'<span class="muted">حساب الطالب مشترك بين المواد</span>';$('studentsTable').innerHTML=pageRows.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points??'—'}</td><td>${actions(s)}</td></tr>`).join('')||'<tr><td colspan="5">لا توجد نتائج.</td></tr>';if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;renderTablePager('teacherStudentsPager',$('studentsTable'),teacherStudentsPage,list.length,UI_PAGE_SIZE,p=>{teacherStudentsPage=p;renderStudentsTable()});}
 
