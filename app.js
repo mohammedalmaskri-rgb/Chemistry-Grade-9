@@ -387,67 +387,73 @@ async function loadAdminStudents(){try{
   const rows=adminFilteredStudents(all,selected,q);
   $('adminStudentsTable').innerHTML=rows.length?rows.map(s=>`<tr><td><button class="link" style="border:0;background:none;cursor:pointer;font-weight:800" data-action="admin-student-profile" data-id="${s.student_id}" data-v1="${safeEnc(s.username)}">${studentName(s.full_name)}</button></td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.is_active?'نشط':'موقوف'}</td><td>${Number(s.login_count||0)}</td><td>${s.last_login?formatLoginTime(s.last_login):'لم يدخل'}</td><td>${Number(s.behavior_count||0)}</td><td><button class="btn secondary" data-action="admin-reset-student" data-id="${s.student_id}" data-v1="${safeEnc(s.full_name)}">استرجاع الحساب</button></td></tr>`).join(''):'<tr><td colspan="8">لا توجد نتائج.</td></tr>';
 }catch(e){$('adminStudentsTable').innerHTML=`<tr><td colspan="8">${esc(e.message||'تعذر التحميل')}</td></tr>`}}
-function adminFilterValue(id){const v=$(id)?.value||'ALL';return v==='ALL'?'ALL':v.startsWith('GRADE:')?v:v.slice(6)}
+// Admin grades: subject -> grade -> section, with independent achievement analysis.
+let adminGradesView='grades';
+const ADMIN_SUBJECTS={7:[['science','العلوم']],8:[['science','العلوم']],9:[['chemistry','الكيمياء'],['physics','الفيزياء'],['biology','الأحياء']]};
+function adminSubjectKey(row){
+  const raw=String(row.subject_code||row.subject_name||row.subject_label||'').trim().toLowerCase();
+  if(/chemistry|كيمياء/.test(raw))return 'chemistry';
+  if(/physics|فيزياء/.test(raw))return 'physics';
+  if(/biology|أحياء|احياء/.test(raw))return 'biology';
+  if(/science|علوم/.test(raw))return 'science';
+  // Legacy grades are chemistry for grade 9 only, when explicitly marked legacy.
+  if((row.source==='legacy'||row.source==='student_grades')&&String(row.class_name||'').startsWith('9/'))return 'chemistry';
+  return null;
+}
+function adminGradesControls(){
+  const host=$('adminGradesTable');if(!host)return;
+  let bar=$('adminGradesControls');
+  if(!bar){bar=document.createElement('div');bar.id='adminGradesControls';bar.style='padding:14px;margin:12px 0;border:1px solid #cbd5e1;border-radius:14px;background:#f8fafc';const sec=host.closest('.section');if(sec)sec.insertBefore(bar,sec.querySelector('#adminGradesStats')||host.closest('table')||host);}
+  const oldGrade=$('adminSubjectGrade')?.value||'9',oldSubject=$('adminSubjectChoice')?.value||'chemistry',oldClass=$('adminSubjectClass')?.value||'ALL';
+  const subjects=ADMIN_SUBJECTS[oldGrade]||ADMIN_SUBJECTS[9];
+  const chosen=subjects.some(x=>x[0]===oldSubject)?oldSubject:subjects[0][0];
+  const classNames=(adminAllStudentRows||[]).map(x=>String(x.class_name||'')).filter(x=>x.startsWith(oldGrade+'/'));
+  const names=[...new Set(classNames)].sort(adminClassSort);
+  bar.innerHTML=`<h3 style="margin:0 0 10px">📚 درجات الطلاب ونسب التحصيل</h3><div style="display:flex;flex-wrap:wrap;gap:10px"><label>الصف<br><select id="adminSubjectGrade"><option value="7" ${oldGrade==='7'?'selected':''}>السابع</option><option value="8" ${oldGrade==='8'?'selected':''}>الثامن</option><option value="9" ${oldGrade==='9'?'selected':''}>التاسع</option></select></label><label>المادة<br><select id="adminSubjectChoice">${subjects.map(([v,t])=>`<option value="${v}" ${v===chosen?'selected':''}>${t}</option>`).join('')}</select></label><label>الشعبة<br><select id="adminSubjectClass"><option value="ALL">كل شعب الصف</option>${names.map(n=>`<option value="${esc(n)}" ${oldClass===n?'selected':''}>${esc(n)}</option>`).join('')}</select></label></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button type="button" id="adminShowGrades" class="btn ${adminGradesView==='grades'?'primary':'secondary'}">درجات الطلاب</button><button type="button" id="adminShowRates" class="btn ${adminGradesView==='rates'?'primary':'secondary'}">نسب التحصيل</button></div><p class="muted" style="margin:8px 0 0">النسب للتقييمات المرصودة فقط، وليست النتيجة النهائية للفصل.</p>`;
+  $('adminSubjectGrade').onchange=()=>{const v=$('adminSubjectGrade').value;$('adminSubjectChoice').innerHTML=ADMIN_SUBJECTS[v].map(([k,n])=>`<option value="${k}">${n}</option>`).join('');const ns=[...new Set((adminAllStudentRows||[]).map(x=>String(x.class_name||'')).filter(x=>x.startsWith(v+'/')))].sort(adminClassSort);$('adminSubjectClass').innerHTML='<option value="ALL">كل شعب الصف</option>'+ns.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');loadAdminGrades()};
+  $('adminSubjectChoice').onchange=loadAdminGrades;
+  $('adminSubjectClass').onchange=loadAdminGrades;
+  $('adminShowGrades').onclick=()=>{adminGradesView='grades';loadAdminGrades()};
+  $('adminShowRates').onclick=()=>{adminGradesView='rates';loadAdminGrades()};
+}
 async function loadAdminGrades(){
   const host=$('adminGradesTable');if(!host)return;
-  const q=$('adminGradeSearch')?.value.trim()||'',selected=$('adminGradeClassFilter')?.value||'ALL';
   try{
     const students=await adminStudentsAll();
-    fillAdminClassFilter(students,'adminGradeClassFilter');
-    if($('adminGradeClassFilter'))$('adminGradeClassFilter').value=selected;
-    const scope=adminFilterValue('adminGradeClassFilter');
-    const matched=adminFilteredStudents(students,selected,q);
-    const targetClasses=[...new Set(matched.map(s=>s.class_name).filter(Boolean))].sort(adminClassSort);
-    // Request each class separately so grade-heavy classes never hide later classes.
+    adminGradesControls();
+    const grade=$('adminSubjectGrade')?.value||'9',subject=$('adminSubjectChoice')?.value||'chemistry',cls=$('adminSubjectClass')?.value||'ALL';
+    const q=String($('adminGradeSearch')?.value||'').trim().toLowerCase();
+    const matched=students.filter(s=>String(s.class_name||'').startsWith(grade+'/')&&(cls==='ALL'||s.class_name===cls)&&(!q||String(s.full_name||'').toLowerCase().includes(q)||String(s.username||'').toLowerCase().includes(q)));
+    const classesToRead=[...new Set(matched.map(s=>s.class_name))].sort(adminClassSort);
     const chunks=[];
-    for(let i=0;i<targetClasses.length;i+=5){
-      const batch=await Promise.all(targetClasses.slice(i,i+5).map(cls=>rpc('portal_admin_grades_filtered',{p_token:adminToken,p_query:'',p_class:`CLASS:${cls}`})));
+    for(let i=0;i<classesToRead.length;i+=5){
+      const batch=await Promise.all(classesToRead.slice(i,i+5).map(c=>rpc('portal_admin_grades_filtered',{p_token:adminToken,p_query:'',p_class:'CLASS:'+c})));
       chunks.push(...batch.flat());
     }
     const ids=new Set(matched.map(s=>String(s.student_id)));
-    const rows=chunks.filter(r=>ids.has(String(r.student_id)));
-    const ordered=[...rows].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar',{numeric:true})||new Date(b.created_at||0)-new Date(a.created_at||0));
-    const byStudent=new Map();
-    for(const r of ordered){
-      const id=String(r.student_id);
-      if(!byStudent.has(id))byStudent.set(id,{student_id:r.student_id,full_name:r.full_name,class_name:r.class_name,username:r.username,grades:[]});
-      if(r.assessment_title!=null || r.score!=null || r.max_score!=null)byStudent.get(id).grades.push(r);
+    const unknown=new Set();const byStudent=new Map(matched.map(s=>[String(s.student_id),{...s,grades:[]}]));
+    const seen=new Set();
+    for(const r of chunks){
+      const id=String(r.student_id);if(!ids.has(id)||r.assessment_title==null||r.score==null)continue;
+      const key=adminSubjectKey(r);
+      if(!key){unknown.add(String(r.subject_label||r.subject_code||'غير محددة'));continue}
+      if(key!==subject)continue;
+      const signature=[id,key,r.assessment_title,r.score,r.max_score,r.created_at||''].join('|');
+      if(seen.has(signature))continue;seen.add(signature);
+      byStudent.get(id).grades.push(r);
     }
-    const studentsList=[...byStudent.values()].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name||'').localeCompare(String(b.full_name||''),'ar',{numeric:true}));
-    // Aggregate valid, distinct assessment records without changing stored grades.
-    // Two tables can mirror the same grade: keep one identical student/assessment/score record.
-    const summaryRows=[];
-    const summarySeen=new Set();
-    for(const st of studentsList){
-      for(const g of st.grades){
-        const score=Number(g.score),max=Number(g.max_score);
-        if(!Number.isFinite(score)||!Number.isFinite(max)||max<=0||score<0||score>max)continue;
-        const key=[st.student_id,String(g.assessment_title||'').trim(),score,max].join('|');
-        if(summarySeen.has(key))continue;
-        summarySeen.add(key);
-        summaryRows.push({class_name:st.class_name,score,max});
-      }
+    const list=[...byStudent.values()].sort((a,b)=>adminClassSort(a.class_name,b.class_name)||String(a.full_name).localeCompare(String(b.full_name),'ar'));
+    const valid=list.flatMap(s=>s.grades.filter(g=>Number.isFinite(Number(g.score))&&Number(g.max_score)>0));
+    const sum=valid.reduce((a,g)=>a+Number(g.score),0),max=valid.reduce((a,g)=>a+Number(g.max_score),0);
+    const percent=max?100*sum/max:null;
+    const withGrades=list.filter(s=>s.grades.length).length;
+    if($('adminGradesStats'))$('adminGradesStats').innerHTML=`<div class="visit-box"><b>${list.length}</b><br>عدد الطلاب</div><div class="visit-box"><b>${withGrades}</b><br>لديهم درجات</div><div class="visit-box"><b>${list.length-withGrades}</b><br>لم ترصد لهم درجات</div><div class="visit-box"><b>${percent===null?'—':percent.toFixed(1)+'%'}</b><br>نسبة التحصيل المرصود</div>`+(unknown.size?`<div class="msg err">توجد درجات بمواد غير معرّفة (${[...unknown].map(esc).join('، ')}). لم تُنسب لأي مادة منعًا لحساب نسبة خاطئة. يلزم ربط معرفاتها بأسماء المواد.</div>`:'');
+    if(adminGradesView==='rates'){
+      const groups=new Map();for(const st of list){if(!groups.has(st.class_name))groups.set(st.class_name,[]);groups.get(st.class_name).push(st)}
+      host.innerHTML=[...groups].sort((a,b)=>adminClassSort(a[0],b[0])).map(([name,arr])=>{const g=arr.flatMap(s=>s.grades.filter(x=>Number(x.max_score)>0&&Number.isFinite(Number(x.score))));const total=g.reduce((n,x)=>n+Number(x.score),0),full=g.reduce((n,x)=>n+Number(x.max_score),0);return `<tr><td>${esc(name)}</td><td>${arr.length} طالب، ${arr.filter(x=>x.grades.length).length} لديهم درجات</td><td><b>${full?(total/full*100).toFixed(1)+'%':'—'}</b></td></tr>`}).join('')||'<tr><td colspan="3">لا توجد بيانات.</td></tr>';
+    }else{
+      host.innerHTML=list.map(st=>`<tr><td><button class="link" style="border:0;background:none;cursor:pointer;font-weight:800" data-action="admin-student-profile" data-id="${st.student_id}" data-v1="${safeEnc(st.username)}">${studentName(st.full_name)}</button></td><td>${esc(st.class_name)}</td><td>${st.grades.length?st.grades.map(g=>`<div>${esc(g.assessment_title)}: <b>${esc(g.score)} / ${esc(g.max_score)}</b></div>`).join(''):'<span class="muted">لم تُرصد درجات لهذه المادة</span>'}</td></tr>`).join('')||'<tr><td colspan="3">لا يوجد طلاب.</td></tr>';
     }
-    const statsHost=$('adminGradesStats');
-    if(statsHost){
-      let summaryHost=$('adminGradePercentSummary');
-      if(!summaryHost){summaryHost=document.createElement('div');summaryHost.id='adminGradePercentSummary';summaryHost.style='margin:12px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px';statsHost.insertAdjacentElement('afterend',summaryHost)}
-      const makePct=(label,arr)=>{const total=arr.reduce((n,x)=>n+x.max,0),earned=arr.reduce((n,x)=>n+x.score,0);return `<div class="visit-box"><b>${total?(100*earned/total).toFixed(1)+'%':'—'}</b><br>${esc(label)}<br><small>${arr.length} سجل تقييم</small></div>`};
-      const selectedGrade=selected.startsWith('GRADE:')?selected.slice(6):selected.startsWith('CLASS:')?selected.slice(6).split('/')[0]:null;
-      const gradeNums=selectedGrade?[selectedGrade]:['7','8','9'];
-      const cards=gradeNums.map(g=>makePct(adminGradeLabel(g),summaryRows.filter(x=>String(x.class_name||'').split('/')[0]===g)));
-      if(selected==='ALL'||selected.startsWith('GRADE:'))cards.push(...targetClasses.map(cls=>makePct('الشعبة '+cls,summaryRows.filter(x=>x.class_name===cls))));
-      if(selected.startsWith('CLASS:'))cards.push(makePct('الشعبة '+selected.slice(6),summaryRows));
-      summaryHost.innerHTML=cards.join('')+'<div class="muted" style="grid-column:1/-1">النسبة = مجموع الدرجات المحصّلة ÷ مجموع الدرجات النهائية المسجلة × 100. استُبعدت السجلات المتطابقة بين مصدري الدرجات عند حساب النسبة. لا تُحتسب التقييمات غير المرصودة.</div>';
-    }
-    const gradeRecords=studentsList.reduce((n,s)=>n+s.grades.length,0);
-    const withGrades=studentsList.filter(s=>s.grades.length>0).length;
-    const assessments=new Set(studentsList.flatMap(s=>s.grades.map(g=>`${g.subject_label||'عام'}|${g.assessment_title||''}`)));
-    if($('adminGradesStats'))$('adminGradesStats').innerHTML=`<div class="visit-box"><b>${studentsList.length}</b><br>طلاب في النطاق المحدد</div><div class="visit-box"><b>${withGrades}</b><br>طلاب لديهم درجات</div><div class="visit-box"><b>${gradeRecords}</b><br>سجلات الدرجات</div><div class="visit-box"><b>${assessments.size}</b><br>تقييمات مختلفة</div>`;
-    host.innerHTML=studentsList.length?studentsList.map(st=>{
-      const gradeHtml=st.grades.length?st.grades.map(g=>`<div style="padding:5px 0;border-bottom:1px solid var(--line,#ddd)"><b>${esc(g.subject_label||'عام')}</b> — ${esc(g.assessment_title||'تقييم')} : <b>${esc(g.score??'—')} / ${esc(g.max_score??'—')}</b>${g.note?`<div class="muted">${esc(g.note)}</div>`:''}<div class="muted">${g.created_at?formatLoginTime(g.created_at):''}</div></div>`).join(''):'<span class="muted">لا توجد درجات مسجلة بعد</span>';
-      return `<tr><td><button class="link" style="border:0;background:none;cursor:pointer;font-weight:800" data-action="admin-student-profile" data-id="${st.student_id}" data-v1="${safeEnc(st.username)}">${studentName(st.full_name)}</button></td><td>${esc(st.class_name||'—')}</td><td>${gradeHtml}</td></tr>`;
-    }).join(''):'<tr><td colspan="3">لا يوجد طلاب مطابقون للتصفية.</td></tr>';
   }catch(e){host.innerHTML=`<tr><td colspan="3"><div class="msg err">تعذر تحميل الدرجات: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
 }
 async function openAdminStudentProfile(studentId,usernameEnc){
