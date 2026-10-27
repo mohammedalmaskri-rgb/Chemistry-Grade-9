@@ -158,29 +158,35 @@ body.login-screen #loginView::after{content:"نسأل الله أن يوفقك �
 @media (prefers-reduced-motion:reduce){body.login-screen *{animation:none!important}}
 
 .gradebook-table th{white-space:nowrap;text-align:center;vertical-align:middle}.gradebook-table td{text-align:center;white-space:nowrap}.gradebook-table td:nth-child(2){text-align:right;white-space:normal;min-width:220px}.gradebook-total{font-weight:900;background:#f2f8f7}.gradebook-grand{font-weight:900;background:#f9eef1}.gradebook-empty{color:#9aa8a6}.gradebook-table thead tr:first-child th{background:#eef7f5}.gradebook-table thead tr:nth-child(2) th{background:#f8fbfb}
+
+/* Rawafid unified science artwork — decorative only; no change to app behavior. */
+body:not(.login-screen){background:linear-gradient(140deg,#f8fcfb 0%,#eff9f7 47%,#f0f6fc 100%)}
+.science-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;isolation:isolate}
+body.login-screen .science-bg{display:none}
+.top,.wrap,#popupRoot{position:relative;z-index:1}
+.top{position:sticky;z-index:20}
+#popupRoot{z-index:50}
+.science-mark{position:absolute;display:block;line-height:1;font-family:Arial,sans-serif;font-weight:400;user-select:none;opacity:.12;filter:saturate(.65);}
+.science-physics{top:10%;left:2%;font-size:clamp(90px,13vw,175px);color:#0f766e;opacity:.16}
+.science-biology{bottom:10%;right:2%;font-size:clamp(85px,12vw,155px);opacity:.14}
+.science-chemistry{top:42%;right:1%;font-size:clamp(75px,10vw,125px);color:#2563eb;opacity:.12}
+.science-general{bottom:15%;left:9%;font-size:clamp(70px,9vw,115px);color:#0f766e;opacity:.14}
+.science-orbit{position:absolute;border:1px solid rgba(15,118,110,.10);border-radius:50%;transform:rotate(-28deg)}
+.science-orbit-one{width:250px;height:115px;left:-80px;top:28%}
+.science-orbit-two{width:310px;height:145px;right:-130px;bottom:18%;transform:rotate(33deg)}
+/* Keep cards readable on small screens. */
+@media(max-width:700px){.science-mark{opacity:.07}.science-physics{left:-30px}.science-biology{right:-25px}.science-orbit{opacity:.45}}
 </style>
 <link rel="stylesheet" href="question-bank-addon.css">
 </head>
 <body>
-<div class="chem-bg" aria-hidden="true">
-  <div class="atom" style="top:8%;left:3%">
-    <span class="nucleus"></span>
-    <span class="orbit o1"><span class="electron"></span></span>
-    <span class="orbit o2"><span class="electron"></span></span>
-    <span class="orbit o3"><span class="electron"></span></span>
-  </div>
-  <div class="atom large" style="bottom:7%;right:3%">
-    <span class="nucleus"></span>
-    <span class="orbit o1"><span class="electron"></span></span>
-    <span class="orbit o2"><span class="electron"></span></span>
-    <span class="orbit o3"><span class="electron"></span></span>
-  </div>
-  <div class="atom" style="top:42%;right:7%;width:110px;height:110px;opacity:.45">
-    <span class="nucleus"></span>
-    <span class="orbit o1"><span class="electron"></span></span>
-    <span class="orbit o2"><span class="electron"></span></span>
-    <span class="orbit o3"><span class="electron"></span></span>
-  </div>
+<div class="science-bg" aria-hidden="true">
+  <span class="science-mark science-physics">⚛</span>
+  <span class="science-mark science-biology">🧬</span>
+  <span class="science-mark science-chemistry">⚗</span>
+  <span class="science-mark science-general">✦</span>
+  <span class="science-orbit science-orbit-one"></span>
+  <span class="science-orbit science-orbit-two"></span>
 </div>
 <header class="top"><div><div class="brand">🔬 منصة روافد العلوم | الصف التاسع</div><div class="sub" id="topSub">9/1 - 9/7</div></div><button id="logoutBtn" class="btn secondary hide">خروج</button></header>
 <main class="wrap">
