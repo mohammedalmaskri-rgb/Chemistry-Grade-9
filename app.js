@@ -575,11 +575,22 @@ async function prepareStudyFile(file){
   throw new Error('ارفع صورة أو ملف PDF فقط');
 }
 function materialAttachment(m){
-  if(!m.attachment_data)return '';
-  if((m.attachment_mime||'').startsWith('image/')){const img=safeImageData(m.attachment_data);return img?`<img class="media-img" src="${img}" alt="${esc(m.attachment_name||m.title)}">`:''}
-  if(!safePdfData(m.attachment_data))return '';
-  return `<button class="btn secondary" data-action="open-study-file" data-v1="${safeEnc(m.attachment_data)}" data-v2="${safeEnc(m.title)}">📄 فتح ${esc(m.attachment_name||'الملف')}</button>`;
+  // A published material may have a title even when its attachment was not returned by the API.
+  const raw=String(m.attachment_data||'').trim();
+  const name=String(m.attachment_name||m.title||'الملف');
+  const mime=String(m.attachment_mime||'').toLowerCase();
+  if(!raw){
+    return `<div class="muted" role="status" style="margin-top:8px">⚠️ مرفق هذا المحتوى غير متاح حاليًا. يرجى إبلاغ المعلم لإعادة ربط الملف.</div>`;
+  }
+  const img=safeImageData(raw);
+  if(img)return `<img class="media-img" src="${img}" alt="${esc(name)}">`;
+  const pdf=safePdfData(raw);
+  if(pdf)return `<button type="button" class="btn secondary" data-action="open-study-file" data-v1="${safeEnc(pdf)}" data-v2="${safeEnc(name)}">📄 فتح ${esc(name)}</button>`;
+  const url=safeWebUrl(raw);
+  if(url)return `<a class="btn secondary" target="_blank" rel="noopener noreferrer" href="${esc(url)}">📄 فتح ${esc(name)}</a>`;
+  return `<div class="msg err" role="status">تعذر فتح المرفق: البيانات غير صالحة أو تتجاوز الحجم المسموح. يرجى إبلاغ المعلم.</div>`;
 }
+
 window.openStudyFile=async(dataEnc,titleEnc)=>{
   const raw=decodeURIComponent(dataEnc),title=decodeURIComponent(titleEnc);
   const pdf=safePdfData(raw),img=safeImageData(raw),data=pdf||img;
