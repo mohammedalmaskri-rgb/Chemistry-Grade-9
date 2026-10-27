@@ -594,8 +594,11 @@ window.openStudyFile=async(dataEnc,titleEnc)=>{
     const b64=data.split(',')[1]||'',bin=atob(b64),bytes=new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
     viewUrl=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'}));
-    $('popupRoot').innerHTML=`<div class="popup"><div class="iframe-wrap"><div class="iframe-bar"><b style="flex:1">📄 ${esc(title)}</b><span id="pdfPageCount" class="muted">جاري تجهيز الصفحات...</span><button id="openStudyExternal" class="btn secondary">فتح الملف الأصلي</button><button id="closeStudyFile" class="btn danger">إغلاق</button></div><div id="pdfPages" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:#dfe7ea;padding:10px"></div></div></div>`;
-    $('openStudyExternal').onclick=()=>{const w=window.open(viewUrl,'_blank','noopener,noreferrer');if(w)try{w.opener=null}catch(_e){}};
+    $('popupRoot').innerHTML=`<div class="popup"><div class="iframe-wrap"><div class="iframe-bar"><b style="flex:1">📄 ${esc(title)}</b><span id="pdfPageCount" class="muted">جاري تجهيز الصفحات...</span><a id="openStudyExternal" class="btn secondary" target="_blank" rel="noopener noreferrer">فتح الملف الأصلي</a><a id="downloadStudyPdf" class="btn secondary" download="document.pdf">تنزيل PDF كاملًا</a><button id="closeStudyFile" class="btn danger">إغلاق</button></div><div id="pdfPages" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:#dfe7ea;padding:10px"></div></div></div>`;
+    // Native anchor navigation keeps the user gesture intact on iPad Safari.
+    $('openStudyExternal').href=viewUrl;
+    $('downloadStudyPdf').href=viewUrl;
+    $('downloadStudyPdf').download=(String(title||'document').replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,90)||'document')+'.pdf';
     let closed=false, pageUrls=[];
     $('closeStudyFile').onclick=()=>{closed=true;pageUrls.forEach(u=>URL.revokeObjectURL(u));if(viewUrl)URL.revokeObjectURL(viewUrl);$('popupRoot').innerHTML=''};
     async function ensurePdfJs(){
@@ -635,9 +638,9 @@ window.openStudyFile=async(dataEnc,titleEnc)=>{
     }
     if(!closed)$('pdfPageCount').textContent=`${pdf.numPages} صفحة — مرّر للأسفل`;
   }catch(e){
-    if(viewUrl)URL.revokeObjectURL(viewUrl);
-    $('popupRoot').innerHTML=`<div class="popup"><div class="card" style="max-width:620px"><div class="msg err">تعذر عرض ملف PDF: ${esc(e.message||'خطأ غير معروف')}</div><button id="openPdfFallback" class="btn secondary">فتح الملف الأصلي</button><button id="closeStudyFile" class="btn danger">إغلاق</button></div></div>`;
-    $('openPdfFallback').onclick=()=>{if(safePdfData(data)){const w=window.open(data,'_blank','noopener,noreferrer');if(w)try{w.opener=null}catch(_e){}}};$('closeStudyFile').onclick=()=>$('popupRoot').innerHTML='';
+    $('popupRoot').innerHTML=`<div class="popup"><div class="card" style="max-width:620px"><div class="msg err">تعذر عرض ملف PDF: ${esc(e.message||'خطأ غير معروف')}</div><a id="openPdfFallback" class="btn secondary" target="_blank" rel="noopener noreferrer">فتح الملف الأصلي</a> <a id="downloadPdfFallback" class="btn secondary" download="document.pdf">تنزيل PDF كاملًا</a> <button id="closeStudyFile" class="btn danger">إغلاق</button></div></div>`;
+    if(viewUrl){$('openPdfFallback').href=viewUrl;$('downloadPdfFallback').href=viewUrl;}
+    $('closeStudyFile').onclick=()=>{if(viewUrl)URL.revokeObjectURL(viewUrl);$('popupRoot').innerHTML=''};
   }
 };
 
