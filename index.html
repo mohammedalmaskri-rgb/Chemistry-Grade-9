@@ -159,23 +159,35 @@ body.login-screen #loginView::after{content:"نسأل الله أن يوفقك �
 
 .gradebook-table th{white-space:nowrap;text-align:center;vertical-align:middle}.gradebook-table td{text-align:center;white-space:nowrap}.gradebook-table td:nth-child(2){text-align:right;white-space:normal;min-width:220px}.gradebook-total{font-weight:900;background:#f2f8f7}.gradebook-grand{font-weight:900;background:#f9eef1}.gradebook-empty{color:#9aa8a6}.gradebook-table thead tr:first-child th{background:#eef7f5}.gradebook-table thead tr:nth-child(2) th{background:#f8fbfb}
 
-/* Rawafid unified science artwork — decorative only; no change to app behavior. */
-body:not(.login-screen){background:linear-gradient(140deg,#f8fcfb 0%,#eff9f7 47%,#f0f6fc 100%)}
-.science-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;isolation:isolate}
+/* Rawafid integrated science world background — decorative only; no change to app behavior. */
+body:not(.login-screen){background:#eef7f5}
+.science-bg{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  overflow:hidden;
+  background-image:
+    linear-gradient(rgba(247,252,252,.78),rgba(244,250,250,.86)),
+    url("science-world-bg.jpg?v=20261027-1");
+  background-size:cover;
+  background-position:center center;
+  background-repeat:no-repeat;
+}
 body.login-screen .science-bg{display:none}
+.science-bg > *{display:none!important}
 .top,.wrap,#popupRoot{position:relative;z-index:1}
 .top{position:sticky;z-index:20}
 #popupRoot{z-index:50}
-.science-mark{position:absolute;display:block;line-height:1;font-family:Arial,sans-serif;font-weight:400;user-select:none;opacity:.12;filter:saturate(.65);}
-.science-physics{top:10%;left:2%;font-size:clamp(90px,13vw,175px);color:#0f766e;opacity:.16}
-.science-biology{bottom:10%;right:2%;font-size:clamp(85px,12vw,155px);opacity:.14}
-.science-chemistry{top:42%;right:1%;font-size:clamp(75px,10vw,125px);color:#2563eb;opacity:.12}
-.science-general{bottom:15%;left:9%;font-size:clamp(70px,9vw,115px);color:#0f766e;opacity:.14}
-.science-orbit{position:absolute;border:1px solid rgba(15,118,110,.10);border-radius:50%;transform:rotate(-28deg)}
-.science-orbit-one{width:250px;height:115px;left:-80px;top:28%}
-.science-orbit-two{width:310px;height:145px;right:-130px;bottom:18%;transform:rotate(33deg)}
-/* Keep cards readable on small screens. */
-@media(max-width:700px){.science-mark{opacity:.07}.science-physics{left:-30px}.science-biology{right:-25px}.science-orbit{opacity:.45}}
+/* Slightly stronger wash on small screens so text remains clear. */
+@media(max-width:700px){
+  .science-bg{
+    background-image:
+      linear-gradient(rgba(248,252,252,.84),rgba(246,251,251,.91)),
+      url("science-world-bg.jpg?v=20261027-1");
+    background-position:center center;
+  }
+}
 </style>
 <link rel="stylesheet" href="question-bank-addon.css">
 </head>
