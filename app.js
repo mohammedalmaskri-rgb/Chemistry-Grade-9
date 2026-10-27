@@ -139,6 +139,30 @@ function safeWebUrl(raw){
 function dataUrlByteLength(s){const i=String(s||'').indexOf(',');if(i<0)return Infinity;const b64=String(s).slice(i+1).replace(/\s/g,'');return Math.floor(b64.length*3/4)}
 function safeImageData(raw){const s=String(raw??'');return /^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(s)&&dataUrlByteLength(s)<=4*1024*1024?s:''}
 function safePdfData(raw){const s=String(raw??'');return /^data:application\/pdf;base64,[a-z0-9+/=\s]+$/i.test(s)&&dataUrlByteLength(s)<=SEC.maxPdfBytes?s:''}
+// Office files use the same attachment_data text column as existing PDFs.
+const OFFICE_TYPES={
+  doc:'application/msword',
+  docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ppt:'application/vnd.ms-powerpoint',
+  pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+};
+const OFFICE_MAX_BYTES=6*1024*1024;
+function officeDataInfo(raw,name=''){
+  const s=String(raw||'');
+  const m=/^data:([^;,]+);base64,([a-z0-9+/=\s]+)$/i.exec(s);
+  if(!m||dataUrlByteLength(s)>OFFICE_MAX_BYTES)return null;
+  const ext=String(name||'').split('.').pop().toLowerCase();
+  if(!Object.hasOwn(OFFICE_TYPES,ext)||m[1].toLowerCase()!==OFFICE_TYPES[ext])return null;
+  return {data:s,mime:m[1],ext};
+}
+function safeFilename(name,fallback='document'){
+  return (String(name||fallback).replace(/[\\/:*?"<>|\x00-\x1f]/g,'_').slice(0,120)||fallback);
+}
+function fileDataToBlob(data,mime){
+  const b64=data.slice(data.indexOf(',')+1),binary=atob(b64),parts=[];
+  for(let i=0;i<binary.length;i+=32768){const chunk=binary.slice(i,i+32768);const bytes=new Uint8Array(chunk.length);for(let j=0;j<chunk.length;j++)bytes[j]=chunk.charCodeAt(j);parts.push(bytes)}
+  return new Blob(parts,{type:mime});
+}
 function safeAttachment(raw){return safeImageData(raw)||safeWebUrl(raw)}
 function safeContentUrl(raw){return safePdfData(raw)||safeWebUrl(raw)}
 function safeOpen(raw){const u=safeWebUrl(raw)||safePdfData(raw);if(!u)return false;const w=window.open(u,'_blank','noopener,noreferrer');if(w)try{w.opener=null}catch(_e){}return !!w}
@@ -565,15 +589,23 @@ async function compressImage(file,maxWidth=1500,quality=.78){
 }
 async function prepareStudyFile(file){
   if(!file)return {data:null,name:null,mime:null};
-  if(file.type.startsWith('image/')){const data=await compressImage(file,1600,.78);return {data,name:file.name||'image.jpg',mime:'image/jpeg'}}
-  if(file.type==='application/pdf'){
-    if(file.size>SEC.maxPdfBytes)throw new Error('ملف PDF أكبر من 6 MB. قسّمه إلى ملف أصغر أو اضغطه أولًا.');
-    if(!await isRealPdf(file))throw new Error('الملف لا يبدو PDF صالحًا.');
-    const data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)});
-    return {data,name:file.name||'document.pdf',mime:'application/pdf'};
-  }
-  throw new Error('ارفع صورة أو ملف PDF فقط');
+  const ext=String(file.name||'').split('.').pop().toLowerCase();
+  if(ext==='pdf'){
+    if(file.size>SEC.maxPdfBytes)throw new Error('ملف PDF أكبر من 6 MB. اضغطه أولًا.');
+    if(!await isRealPdf(file))throw new Error('ملف PDF غير صالح.');
+  }else if(Object.hasOwn(OFFICE_TYPES,ext)){
+    if(file.size>OFFICE_MAX_BYTES)throw new Error('ملف Word أو PowerPoint أكبر من 6 MB.');
+    const b=new Uint8Array(await file.slice(0,8).arrayBuffer());
+    const zip=b[0]===0x50&&b[1]===0x4b&&(b[2]===3||b[2]===5||b[2]===7);
+    const ole=[0xd0,0xcf,0x11,0xe0,0xa1,0xb1,0x1a,0xe1].every((v,i)=>b[i]===v);
+    if((ext==='docx'||ext==='pptx')?!zip:!ole)throw new Error('صيغة ملف Office غير مطابقة لمحتواه.');
+  }else throw new Error('الأنواع المسموحة: PDF أو Word أو PowerPoint فقط.');
+  const mime=ext==='pdf'?'application/pdf':OFFICE_TYPES[ext];
+  const data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(new Error('تعذر قراءة الملف'));r.readAsDataURL(new Blob([file],{type:mime}))});
+  if(!data||dataUrlByteLength(data)>OFFICE_MAX_BYTES)throw new Error('الملف كبير جدًا.');
+  return {data,name:safeFilename(file.name),mime};
 }
+
 function materialAttachment(m){
   // A published material may have a title even when its attachment was not returned by the API.
   const raw=String(m.attachment_data||'').trim();
@@ -584,6 +616,8 @@ function materialAttachment(m){
   }
   const img=safeImageData(raw);
   if(img)return `<img class="media-img" src="${img}" alt="${esc(name)}">`;
+  const office=officeDataInfo(raw,name);
+  if(office)return `<button type="button" class="btn secondary" data-action="open-study-file" data-v1="${safeEnc(office.data)}" data-v2="${safeEnc(name)}">📂 فتح ${esc(name)}</button>`;
   const pdf=safePdfData(raw);
   if(pdf)return `<button type="button" class="btn secondary" data-action="open-study-file" data-v1="${safeEnc(pdf)}" data-v2="${safeEnc(name)}">📄 فتح ${esc(name)}</button>`;
   const url=safeWebUrl(raw);
@@ -593,6 +627,15 @@ function materialAttachment(m){
 
 window.openStudyFile=async(dataEnc,titleEnc)=>{
   const raw=decodeURIComponent(dataEnc),title=decodeURIComponent(titleEnc);
+  const office=officeDataInfo(raw,title);
+  if(office){
+    const root=$('popupRoot');
+    root.innerHTML=`<div class="popup"><div class="card" style="max-width:620px;max-height:88vh;overflow:auto"><h2>📂 ${esc(title)}</h2><p>ملف ${office.ext.toUpperCase()} جاهز. هذا النوع لا يمكن عرضه بشكل مضمون داخل Safari؛ افتحه بتطبيق Word أو PowerPoint بعد تنزيله.</p><p class="muted">اضغط تحميل الملف لحفظ النسخة الأصلية على جهازك.</p><div class="inline-actions"><a id="downloadOfficeFile" class="btn primary">⬇️ تحميل الملف</a><button id="closeOfficeFile" class="btn secondary">إغلاق</button></div></div></div>`;
+    const blobUrl=URL.createObjectURL(fileDataToBlob(office.data,office.mime));
+    const link=$('downloadOfficeFile');link.href=blobUrl;link.download=safeFilename(title);
+    $('closeOfficeFile').onclick=()=>{URL.revokeObjectURL(blobUrl);root.innerHTML=''};
+    return;
+  }
   const pdf=safePdfData(raw),img=safeImageData(raw),data=pdf||img;
   if(!data)return;
   const isPdf=!!pdf;
@@ -997,7 +1040,12 @@ async function loadTeacherStudyMaterials(){
   const d=await rpc('portal_teacher_lesson_materials',{p_token:teacherToken,p_topic_id:null});
   $('teacherStudyList').innerHTML=d?.length?d.map(m=>`<div class="item"><span class="badge">${m.material_type==='summary'?'📖 ملخص':'📝 أسئلة'}</span> <span class="badge">${m.target_class==='ALL'?'كل الصفوف':esc(m.target_class)}</span> <span class="badge ${m.is_visible?'state-on':'state-off'}">${m.is_visible?'ظاهر':'مخفي'}</span><h3>${esc(m.topic_title)} — ${esc(m.title)}</h3>${m.attachment_name?`<div class="muted">📎 ${esc(m.attachment_name)}</div>`:''}<div class="material-actions"><button class="btn ${m.is_visible?'secondary':'primary'}" data-action="toggle-study-material" data-id="${m.id}" data-bool="${!m.is_visible}">${m.is_visible?'🙈 إخفاء':'👁️ إظهار للطلاب'}</button><button class="btn danger" data-action="delete-study-material" data-id="${m.id}">حذف</button></div></div>`).join(''):'<div class="muted">لم تضف ملخصات أو أسئلة بعد.</div>';
 }
-$('studyAddBtn').onclick=async()=>{try{$('studyAddBtn').disabled=true;msg('studyMsg','جاري تجهيز الملف...');const f=await prepareStudyFile($('studyFile').files?.[0]);const type=$('studyType').value;const topic=topics.find(t=>t.id===Number($('studyTopic').value));const typeLabels={summary:'ملخص',questions:'أسئلة',activity_solution:'حل كتاب النشاط وأوراق العمل',studentbook_solution:'حل كتاب الطالب'};const defaultTitle=`${typeLabels[type]||'محتوى'} ${topic?.title||'الدرس'}`;const id=await rpc('portal_teacher_add_lesson_material',{p_token:teacherToken,p_topic_id:Number($('studyTopic').value),p_material_type:type,p_title:$('studyTitle').value.trim()||defaultTitle,p_note:$('studyNote').value,p_attachment_data:f.data,p_attachment_name:f.name,p_attachment_mime:f.mime,p_target_class:$('studyClass').value,p_is_visible:$('studyVisible').checked});if(!id)throw new Error('تعذر حفظ المحتوى');$('studyTitle').value='';$('studyNote').value='';$('studyFile').value='';$('studyVisible').checked=false;msg('studyMsg','تم حفظ المحتوى ✅');await loadTeacherStudyMaterials()}catch(e){msg('studyMsg',e.message,false)}finally{$('studyAddBtn').disabled=false}};
+if($('studyFile'))$('studyFile').setAttribute('accept','.pdf,.doc,.docx,.ppt,.pptx');
+$('studyAddBtn').onclick=async()=>{try{$('studyAddBtn').disabled=true;msg('studyMsg','جاري تجهيز الملف...');const f=await prepareStudyFile($('studyFile').files?.[0]);if(!f.data)throw new Error('اختر ملف PDF أو Word أو PowerPoint أولًا.');const type=$('studyType').value;const topic=topics.find(t=>t.id===Number($('studyTopic').value));const typeLabels={summary:'ملخص',questions:'أسئلة',activity_solution:'حل كتاب النشاط وأوراق العمل',studentbook_solution:'حل كتاب الطالب'};const defaultTitle=`${typeLabels[type]||'محتوى'} ${topic?.title||'الدرس'}`;const id=await rpc('portal_teacher_add_lesson_material',{p_token:teacherToken,p_topic_id:Number($('studyTopic').value),p_material_type:type,p_title:$('studyTitle').value.trim()||defaultTitle,p_note:$('studyNote').value,p_attachment_data:f.data,p_attachment_name:f.name,p_attachment_mime:f.mime,p_target_class:$('studyClass').value,p_is_visible:$('studyVisible').checked});if(!id)throw new Error('تعذر حفظ المحتوى');
+  const saved=await rpc('portal_teacher_lesson_materials',{p_token:teacherToken,p_topic_id:Number($('studyTopic').value)});
+  const verified=(saved||[]).find(m=>Number(m.id)===Number(id));
+  if(!verified||!verified.attachment_data||!verified.attachment_name)throw new Error('تم إنشاء السجل لكن لم نستطع تأكيد حفظ الملف. لا ترفع الملف مرة ثانية قبل مراجعة المعلم أو المشرف.');
+  $('studyTitle').value='';$('studyNote').value='';$('studyFile').value='';$('studyVisible').checked=false;msg('studyMsg','تم حفظ المحتوى ✅');await loadTeacherStudyMaterials()}catch(e){msg('studyMsg',e.message,false)}finally{$('studyAddBtn').disabled=false}};
 window.toggleStudyMaterial=async(id,v)=>{const ok=await rpc('portal_teacher_set_lesson_material_visibility',{p_token:teacherToken,p_material_id:id,p_is_visible:v});if(ok)await loadTeacherStudyMaterials()};
 window.deleteStudyMaterial=async id=>{if(!confirm('حذف هذا المحتوى؟'))return;const ok=await rpc('portal_teacher_delete_lesson_material',{p_token:teacherToken,p_material_id:id});if(ok)await loadTeacherStudyMaterials()};
 $('engLoadBtn').onclick=async()=>{const topicId=Number($('engTopic').value),cls=$('engClass').value;if(!topicId){$('engResults').innerHTML='<div class="muted">أضف درسًا أولًا.</div>';return}$('engResults').innerHTML='<div class="muted">جاري تحميل الإحصائية...</div>';const [v,n]=await Promise.all([rpc('portal_teacher_lesson_visits',{p_token:teacherToken,p_topic_id:topicId,p_class:cls}),rpc('portal_teacher_lesson_nonvisitors',{p_token:teacherToken,p_topic_id:topicId,p_class:cls})]);const total=(v?.length||0)+(n?.length||0);$('engResults').innerHTML=`<div class="visit-summary"><div class="visit-box"><b>${v?.length||0}</b><br>دخلوا الدرس</div><div class="visit-box"><b>${n?.length||0}</b><br>لم يدخلوا</div><div class="visit-box"><b>${total?Math.round((v.length/total)*100):0}%</b><br>نسبة الدخول</div></div><h3>✅ الطلاب الذين دخلوا</h3>${v?.length?`<div style="overflow:auto"><table class="eng-table"><thead><tr><th>الطالب</th><th>الشعبة</th><th>أول دخول</th><th>آخر دخول</th><th>مرات الفتح</th></tr></thead><tbody>${v.map(x=>`<tr><td>${studentName(x.full_name)}</td><td>${esc(x.class_name)}</td><td>${new Date(x.first_opened_at).toLocaleString('ar')}</td><td>${new Date(x.last_opened_at).toLocaleString('ar')}</td><td>${x.open_count}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">لم يدخل أحد بعد.</div>'}<h3>⏳ لم يدخلوا بعد</h3>${n?.length?`<div class="grid">${n.map(x=>`<div class="item"><b>${studentName(x.full_name)}</b><div class="muted">${esc(x.class_name)} • ${esc(x.username)}</div></div>`).join('')}</div>`:'<div class="msg ok">كل الطلاب المستهدفين دخلوا الدرس ✅</div>'}`;};
