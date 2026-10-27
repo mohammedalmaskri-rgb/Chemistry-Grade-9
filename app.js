@@ -647,22 +647,59 @@ window.openStudyFile=async(dataEnc,titleEnc)=>{
 function showImagePreview(inputId,imgId){$(inputId).onchange=async()=>{const f=$(inputId).files?.[0];if(!f){$(imgId).style.display='none';return}try{const d=await compressImage(f,700,.7);$(imgId).src=d;$(imgId).style.display='block'}catch(e){alert(e.message);$(inputId).value=''}}}
 showImagePreview('bankQuestionImage','bankQuestionPreview');showImagePreview('bankSolutionImage','bankSolutionPreview');
 
+// Show only lessons with materials actually available to this student.
+let studentStudyRequestId=0;
 async function loadStudentLearningTopics(){
-  studentLearningTopics=await rpc('portal_student_learning_topics',{p_token:studentToken});
+  const requestId=++studentStudyRequestId;
+  studentLearningTopics=await rpc('portal_student_learning_topics',{p_token:studentToken})||[];
+  if(requestId!==studentStudyRequestId)return;
   const units=[...new Map(studentLearningTopics.map(t=>[t.unit_no,t.unit_title])).entries()];
   $('studentStudyUnit').innerHTML='<option value="">اختر الوحدة</option>'+units.map(([n,title])=>`<option value="${n}">الوحدة ${n} — ${esc(title)}</option>`).join('');
-  $('studentStudyTopic').innerHTML='<option value="">اختر الدرس</option>';
-  $('studentLessonMaterials').innerHTML='<div class="lesson-empty">اختر درسًا لعرض الملخص والأسئلة.</div>';
+  $('studentStudyTopic').innerHTML='<option value="">اختر الوحدة أولًا</option>';
+  $('studentLessonMaterials').innerHTML='<div class="lesson-empty">اختر وحدة لعرض الدروس التي أتاح المعلم محتواها.</div>';
 }
-$('studentStudyUnit').onchange=()=>{const u=Number($('studentStudyUnit').value);const arr=studentLearningTopics.filter(t=>t.unit_no===u);$('studentStudyTopic').innerHTML='<option value="">اختر الدرس</option>'+arr.map(t=>`<option value="${t.id}">${esc(t.title)}${t.page_no?' — ص '+t.page_no:''}${t.has_summary?' • ملخص':''}${t.has_questions?' • أسئلة':''}</option>`).join('');$('studentLessonMaterials').innerHTML='<div class="lesson-empty">اختر درسًا لعرض محتواه.</div>'};
+async function refreshAvailableStudentStudyTopics(unitNo,preferredTopicId=null){
+  const requestId=++studentStudyRequestId;
+  const select=$('studentStudyTopic');
+  select.disabled=true;
+  select.innerHTML='<option value="">جاري فحص الدروس المتاحة...</option>';
+  $('studentLessonMaterials').innerHTML='<div class="lesson-empty">جاري تحميل الدروس المتاحة...</div>';
+  const candidates=studentLearningTopics.filter(t=>Number(t.unit_no)===Number(unitNo));
+  if(!candidates.length){select.innerHTML='<option value="">لا توجد دروس متاحة</option>';select.disabled=false;$('studentLessonMaterials').innerHTML='<div class="lesson-empty">لا توجد دروس متاحة في هذه الوحدة.</div>';return}
+  try{
+    const available=[];
+    // Limit concurrent requests to avoid overwhelming the database.
+    for(let i=0;i<candidates.length;i+=4){
+      const batch=candidates.slice(i,i+4);
+      const results=await Promise.all(batch.map(t=>rpc('portal_student_lesson_materials',{p_token:studentToken,p_topic_id:Number(t.id)})));
+      if(requestId!==studentStudyRequestId)return;
+      batch.forEach((t,j)=>{if(Array.isArray(results[j])&&results[j].some(m=>['summary','questions','activity_solution','studentbook_solution'].includes(m.material_type)))available.push(t)});
+    }
+    if(requestId!==studentStudyRequestId)return;
+    select.innerHTML='<option value="">اختر الدرس</option>'+available.map(t=>`<option value="${Number(t.id)}">${esc(t.title)}${t.page_no?' — ص '+t.page_no:''}</option>`).join('');
+    select.disabled=false;
+    if(!available.length){select.innerHTML='<option value="">لا توجد دروس منشورة حاليًا</option>';$('studentLessonMaterials').innerHTML='<div class="lesson-empty">لم ينشر المعلم محتوى لهذه الوحدة بعد.</div>';return}
+    $('studentLessonMaterials').innerHTML='<div class="lesson-empty">اختر درسًا لعرض المحتوى الذي نشره المعلم.</div>';
+    if(preferredTopicId&&available.some(t=>Number(t.id)===Number(preferredTopicId))){select.value=String(preferredTopicId);await loadStudentLessonMaterials(Number(preferredTopicId))}
+  }catch(e){
+    if(requestId!==studentStudyRequestId)return;
+    select.innerHTML='<option value="">تعذر تحميل الدروس</option>';select.disabled=false;
+    $('studentLessonMaterials').innerHTML=`<div class="msg err">تعذر فحص الدروس المتاحة. حاول اختيار الوحدة مرة أخرى. ${esc(e.message||'')}</div>`;
+  }
+}
+$('studentStudyUnit').onchange=()=>{
+  const unitNo=Number($('studentStudyUnit').value);
+  if(!unitNo){++studentStudyRequestId;$('studentStudyTopic').innerHTML='<option value="">اختر الوحدة أولًا</option>';$('studentLessonMaterials').innerHTML='<div class="lesson-empty">اختر وحدة أولًا.</div>';return}
+  refreshAvailableStudentStudyTopics(unitNo);
+};
 $('studentStudyTopic').onchange=async()=>{const id=Number($('studentStudyTopic').value);if(!id){$('studentLessonMaterials').innerHTML='<div class="lesson-empty">اختر درسًا لعرض محتواه.</div>';return}await loadStudentLessonMaterials(id)};
 async function loadStudentLessonMaterials(topicId){
   $('studentLessonMaterials').innerHTML='<div class="lesson-empty">جاري تحميل محتوى الدرس...</div>';
   const d=await rpc('portal_student_lesson_materials',{p_token:studentToken,p_topic_id:topicId});
   if(!d?.length){$('studentLessonMaterials').innerHTML='<div class="lesson-empty">لا يوجد محتوى متاح لهذا الدرس حاليًا.</div>';return}
-  const summaries=d.filter(x=>x.material_type==='summary'),questions=d.filter(x=>x.material_type==='questions');
+  const summaries=d.filter(x=>x.material_type==='summary'),questions=d.filter(x=>x.material_type==='questions'),activity=d.filter(x=>x.material_type==='activity_solution'),studentbook=d.filter(x=>x.material_type==='studentbook_solution');
   const render=(arr,type,label)=>arr.length?`<h3>${label}</h3>`+arr.map(m=>`<div class="material-card ${type}"><span class="badge">${type==='summary'?'ملخص':'أسئلة'}</span><h3>${esc(m.title)}</h3>${m.note?`<p>${esc(m.note)}</p>`:''}${materialAttachment(m)}</div>`).join(''):'';
-  $('studentLessonMaterials').innerHTML=render(summaries,'summary','📖 ملخص الدرس')+render(questions,'questions','📝 أسئلة الدرس');
+  $('studentLessonMaterials').innerHTML=render(summaries,'summary','📖 ملخص الدرس')+render(questions,'questions','📝 أسئلة الدرس')+render(activity,'questions','📘 حل كتاب النشاط وأوراق العمل')+render(studentbook,'summary','📗 حل كتاب الطالب');
 }
 
 async function loadMyLessons(){
@@ -678,7 +715,7 @@ window.openLessonFromMyLessons=async(topicId,unitNo)=>{
   try{await rpc('portal_student_open_my_lesson',{p_token:studentToken,p_topic_id:topicId})}catch(e){}
   document.querySelectorAll('#studentView .section').forEach(x=>x.classList.remove('active'));$('s-study').classList.add('active');
   document.querySelectorAll('#studentNav button').forEach(x=>x.classList.toggle('active',x.dataset.sec==='s-study'));
-  $('studentStudyUnit').value=String(unitNo);$('studentStudyUnit').onchange();$('studentStudyTopic').value=String(topicId);await loadStudentLessonMaterials(topicId);
+  $('studentStudyUnit').value=String(unitNo);await refreshAvailableStudentStudyTopics(unitNo,topicId);
   $('s-study').scrollIntoView({behavior:'smooth',block:'start'});
 };
 
