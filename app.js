@@ -465,7 +465,13 @@ let adminGradesView='grades';
 let adminGradesPage=1;
 const ADMIN_SUBJECTS={7:[['science','العلوم']],8:[['science','العلوم']],9:[['chemistry','الكيمياء'],['physics','الفيزياء'],['biology','الأحياء']]};
 function adminSubjectKey(row){
+  // In the current database, subject_id 2 is Chemistry. Some admin grade rows
+  // arrive without subject_code/name and are labelled only as "مادة #2".
+  // Map only this confirmed identifier; leave unknown/general rows untouched
+  // to avoid assigning or double-counting grades from another source.
+  if(Number(row?.subject_id)===2)return 'chemistry';
   const raw=String(row.subject_code||row.subject_name||row.subject_label||'').trim().toLowerCase();
+  if(/^مادة\s*#\s*2$/.test(raw))return 'chemistry';
   if(/chemistry|كيمياء/.test(raw))return 'chemistry';
   if(/physics|فيزياء/.test(raw))return 'physics';
   if(/biology|أحياء|احياء/.test(raw))return 'biology';
