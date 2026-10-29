@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>تجربة الألعاب التعليمية - روافد العلوم</title>
+<style>
+:root{--bg:#071a2d;--card:#0d2741;--card2:#0a2036;--text:#eef7ff;--muted:#a9bfd3;--accent:#17c9d4;--accent2:#2e8cff;--ok:#2ecb75;--bad:#ff5b64;--line:#1e4566}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:linear-gradient(160deg,#06182a,#0a3153);color:var(--text);min-height:100vh}
+.wrap{max-width:980px;margin:auto;padding:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.brand h1{font-size:24px;margin:0}.brand p{margin:6px 0 0;color:var(--muted)}
+.tabs{display:flex;gap:8px}.tab{border:1px solid var(--line);background:var(--card2);color:#fff;padding:11px 16px;border-radius:14px;cursor:pointer}.tab.active{background:linear-gradient(90deg,var(--accent2),var(--accent));border-color:transparent}
+.card{background:rgba(13,39,65,.94);border:1px solid var(--line);border-radius:20px;padding:18px;margin-top:16px;box-shadow:0 18px 40px rgba(0,0,0,.18)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.full{grid-column:1/-1}label{display:block;font-size:14px;margin-bottom:6px;color:#d9e8f6}input,select,textarea{width:100%;border:1px solid var(--line);background:#071c30;color:#fff;border-radius:12px;padding:12px;font-size:15px;outline:none}textarea{min-height:90px;resize:vertical}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-size:15px;cursor:pointer;font-weight:700}.primary{background:linear-gradient(90deg,var(--accent2),var(--accent));color:#fff}.secondary{background:#163957;color:#fff;border:1px solid var(--line)}.danger{background:#562735;color:#fff}.ok{background:#164b34;color:#dff7e9;border:1px solid #2b7d56;padding:10px;border-radius:12px}.msg{margin-top:10px}.muted{color:var(--muted)}
+.qbox{background:#081f34;border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px}.opts{display:grid;gap:8px;margin-top:10px}.optrow{display:grid;grid-template-columns:1fr 120px 42px;gap:8px}.qhead{display:flex;justify-content:space-between;align-items:center;gap:8px}.pill{font-size:12px;background:#143752;border:1px solid var(--line);padding:5px 8px;border-radius:999px;color:#cfe4f5}
+.game-card{background:linear-gradient(160deg,#0c2741,#0a2035);border:1px solid var(--line);border-radius:18px;padding:18px}.question-title{font-size:21px;font-weight:700;margin-bottom:14px}.choice{display:flex;gap:10px;align-items:center;border:1px solid var(--line);padding:12px;border-radius:13px;margin:8px 0;cursor:pointer;background:#0a2238}.choice:hover{border-color:#2aaed0}.choice input{width:auto}.result{font-size:18px;font-weight:700;margin-top:12px;padding:12px;border-radius:12px}.right{background:#123f2c;color:#c9f5dc}.wrong{background:#4a2027;color:#ffd8dc}.score{font-size:24px;font-weight:800}.hidden{display:none!important}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.small{font-size:12px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.stat{background:#0a2238;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:22px;margin-top:4px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.optrow{grid-template-columns:1fr 100px 42px}.stats{grid-template-columns:1fr}.brand h1{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><h1>🎮 تجربة الألعاب التعليمية — روافد العلوم</h1><p>نسخة تجريبية مستقلة لا تغيّر أي شيء في المنصة الحالية.</p></div>
+    <div class="tabs"><button class="tab active" id="teacherTab">👨‍🏫 المعلم</button><button class="tab" id="studentTab">🧑‍🎓 الطالب</button></div>
+  </div>
+
+  <section id="teacherView">
+    <div class="card">
+      <h2 style="margin-top:0">➕ تصميم لعبة جديدة</h2>
+      <div class="grid">
+        <div><label>اسم اللعبة</label><input id="gameTitle" value="تحدي حالات المادة"></div>
+        <div><label>الصف</label><select id="gameClass"><option>9/1</option><option>9/2</option><option>9/3</option><option>كل الصفوف</option></select></div>
+        <div><label>الدرس</label><input id="gameLesson" value="حالات المادة"></div>
+        <div><label>نقاط التحفيز عند الإكمال</label><input id="rewardPoints" type="number" min="0" step="0.5" value="0.5"></div>
+      </div>
+      <div id="questions"></div>
+      <div class="toolbar">
+        <button class="btn secondary" id="addQuestion">➕ إضافة سؤال</button>
+        <button class="btn primary" id="publishGame">🚀 نشر اللعبة التجريبية</button>
+      </div>
+      <div id="teacherMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">📊 نتائج التجربة</h2>
+      <div class="stats">
+        <div class="stat">عدد مرات اللعب<b id="playsStat">0</b></div>
+        <div class="stat">أفضل نتيجة<b id="bestStat">0%</b></div>
+        <div class="stat">آخر نقاط مكتسبة<b id="pointsStat">0</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="studentView" class="hidden">
+    <div class="card">
+      <div id="studentEmpty" class="muted">المعلم لم ينشر لعبة بعد.</div>
+      <div id="gameArea" class="hidden">
+        <div class="qhead"><div><h2 id="studentGameTitle" style="margin:0"></h2><div class="muted small" id="studentMeta"></div></div><span class="pill" id="progressPill"></span></div>
+        <div class="game-card" style="margin-top:14px">
+          <div class="question-title" id="questionText"></div>
+          <div id="choices"></div>
+          <button class="btn primary" id="checkAnswer" style="margin-top:10px;width:100%">تحقق من الإجابة</button>
+          <div id="answerResult"></div>
+        </div>
+        <div id="finishBox" class="hidden"></div>
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let questions=[
+  {q:'أي وصف يعبّر عن المادة الصلبة؟',options:['لها شكل متغير وحجم متغير','لها شكل ثابت وحجم ثابت','حجمها ثابت وشكلها متغير','ليس لها شكل أو حجم ثابت'],correct:1},
+  {q:'أي حالة من حالات المادة تأخذ شكل الوعاء مع بقاء حجمها ثابتًا؟',options:['الصلبة','السائلة','الغازية','البلازما'],correct:1}
+];
+let game=null,current=0,score=0,locked=false;
+function renderBuilder(){
+  $('questions').innerHTML=questions.map((x,qi)=>`<div class="qbox"><div class="qhead"><b>السؤال ${qi+1}</b><button class="btn danger small" onclick="removeQ(${qi})">حذف</button></div><div style="margin-top:10px"><label>نص السؤال</label><input value="${escapeHtml(x.q)}" oninput="questions[${qi}].q=this.value"></div><div class="opts">${x.options.map((o,oi)=>`<div class="optrow"><input value="${escapeHtml(o)}" oninput="questions[${qi}].options[${oi}]=this.value"><label style="display:flex;align-items:center;gap:5px;margin:0"><input type="radio" name="correct${qi}" ${x.correct===oi?'checked':''} onchange="questions[${qi}].correct=${oi}"> صحيح</label><button class="btn secondary" onclick="removeOpt(${qi},${oi})">−</button></div>`).join('')}</div><button class="btn secondary small" style="margin-top:8px" onclick="addOpt(${qi})">+ خيار</button></div>`).join('');
+}
+function escapeHtml(s){return String(s??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]))}
+window.removeQ=i=>{if(questions.length<=1)return alert('لازم يبقى سؤال واحد على الأقل');questions.splice(i,1);renderBuilder()};
+window.addOpt=i=>{questions[i].options.push('خيار جديد');renderBuilder()};
+window.removeOpt=(qi,oi)=>{if(questions[qi].options.length<=2)return alert('لازم خيارين على الأقل');questions[qi].options.splice(oi,1);if(questions[qi].correct>=questions[qi].options.length)questions[qi].correct=0;renderBuilder()};
+$('addQuestion').onclick=()=>{questions.push({q:'اكتب السؤال هنا',options:['الخيار الأول','الخيار الثاني','الخيار الثالث','الخيار الرابع'],correct:0});renderBuilder()};
+$('publishGame').onclick=()=>{
+  game={title:$('gameTitle').value.trim()||'لعبة تعليمية',className:$('gameClass').value,lesson:$('gameLesson').value.trim(),reward:Number($('rewardPoints').value||0),questions:JSON.parse(JSON.stringify(questions))};
+  localStorage.setItem('rawafid_demo_game',JSON.stringify(game));
+  $('teacherMsg').innerHTML='<div class="ok">✅ تم نشر اللعبة التجريبية. انتقل إلى تبويب الطالب وجربها.</div>';
+  loadGame();
+};
+function loadGame(){try{game=JSON.parse(localStorage.getItem('rawafid_demo_game')||'null')}catch{};if(!game)return;$('studentEmpty').classList.add('hidden');$('gameArea').classList.remove('hidden');$('studentGameTitle').textContent=game.title;$('studentMeta').textContent=`الصف: ${game.className} • الدرس: ${game.lesson} • نقاط التحفيز: ${game.reward}`;startGame()}
+function startGame(){current=0;score=0;locked=false;$('finishBox').classList.add('hidden');renderQuestion()}
+function renderQuestion(){const q=game.questions[current];$('progressPill').textContent=`${current+1} / ${game.questions.length}`;$('questionText').textContent=q.q;$('choices').innerHTML=q.options.map((o,i)=>`<label class="choice"><input type="radio" name="studentChoice" value="${i}"><span>${String.fromCharCode(65+i)}. ${escapeHtml(o)}</span></label>`).join('');$('answerResult').innerHTML='';$('checkAnswer').disabled=false;locked=false}
+$('checkAnswer').onclick=()=>{if(locked)return;const x=document.querySelector('input[name="studentChoice"]:checked');if(!x){$('answerResult').innerHTML='<div class="result wrong">اختر إجابة أولًا.</div>';return}locked=true;$('checkAnswer').disabled=true;const picked=Number(x.value),q=game.questions[current],ok=picked===Number(q.correct);if(ok)score++;$('answerResult').innerHTML=`<div class="result ${ok?'right':'wrong'}">${ok?'✅ إجابة صحيحة':'❌ إجابة غير صحيحة'}${!ok?` — الصحيحة: ${escapeHtml(q.options[q.correct])}`:''}</div>`;setTimeout(()=>{current++;if(current<game.questions.length)renderQuestion();else finishGame()},650)};
+function finishGame(){const pct=Math.round((score/game.questions.length)*100),earned=game.reward;const plays=Number(localStorage.getItem('rawafid_demo_plays')||0)+1;const best=Math.max(Number(localStorage.getItem('rawafid_demo_best')||0),pct);localStorage.setItem('rawafid_demo_plays',plays);localStorage.setItem('rawafid_demo_best',best);localStorage.setItem('rawafid_demo_points',earned);updateStats();$('gameArea').querySelector('.game-card').classList.add('hidden');$('finishBox').classList.remove('hidden');$('finishBox').innerHTML=`<div class="game-card"><div class="score">🎉 نتيجتك ${score}/${game.questions.length} (${pct}%)</div><p>⭐ حصلت على <b>${earned}</b> نقطة تحفيزية في هذه التجربة.</p><button class="btn primary" onclick="restartStudent()">إعادة اللعب</button></div>`}
+window.restartStudent=()=>{$('gameArea').querySelector('.game-card').classList.remove('hidden');startGame()};
+function updateStats(){$('playsStat').textContent=localStorage.getItem('rawafid_demo_plays')||0;$('bestStat').textContent=(localStorage.getItem('rawafid_demo_best')||0)+'%';$('pointsStat').textContent=localStorage.getItem('rawafid_demo_points')||0}
+$('teacherTab').onclick=()=>{$('teacherTab').classList.add('active');$('studentTab').classList.remove('active');$('teacherView').classList.remove('hidden');$('studentView').classList.add('hidden');updateStats()};
+$('studentTab').onclick=()=>{$('studentTab').classList.add('active');$('teacherTab').classList.remove('active');$('studentView').classList.remove('hidden');$('teacherView').classList.add('hidden');loadGame()};
+renderBuilder();updateStats();loadGame();
+</script>
+</body>
+</html>
