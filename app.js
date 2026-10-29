@@ -176,7 +176,7 @@ function loginGuardKey(){return 'chemLoginGuard_'+loginMode}
 function loginGuard(){try{const x=JSON.parse(localStorage.getItem(loginGuardKey())||'{}');if(x.until&&Date.now()<x.until)return Math.ceil((x.until-Date.now())/1000)}catch(_e){}return 0}
 function loginFailed(){try{const k=loginGuardKey(),x=JSON.parse(localStorage.getItem(k)||'{}'),n=(Number(x.n)||0)+1;if(n>=SEC.maxLoginAttempts)localStorage.setItem(k,JSON.stringify({n:0,until:Date.now()+SEC.loginCooldownMs}));else localStorage.setItem(k,JSON.stringify({n}))}catch(_e){}}
 function loginSucceeded(){try{localStorage.removeItem(loginGuardKey())}catch(_e){}}
-function secureLogout(note=''){studentToken=teacherToken=adminToken=null;currentStudent=currentTeacher=currentAdmin=null;teacherAssignments=[];teacherSubjects=[];teacherSubjectCode=null;teacherSubjectName='';studentSubjects=[];studentSubjectCode=null;studentSubjectName='';studentTeacherId=null;studentSubjectMode='mt';classes=[...defaultClasses];sessionClear();show('loginView');if(document.querySelector('.brand'))document.querySelector('.brand').textContent='🔬 منصة روافد العلوم | الصف التاسع';document.title='منصة روافد العلوم | التعليم الرقمي للعلوم';$('topSub').textContent='9/1 - 9/7';if(note)msg('loginMsg',note,false)}
+function secureLogout(note=''){studentToken=teacherToken=adminToken=null;currentStudent=currentTeacher=currentAdmin=null;teacherAssignments=[];teacherSubjects=[];teacherSubjectCode=null;teacherSubjectName='';studentSubjects=[];studentSubjectCode=null;studentSubjectName='';studentTeacherId=null;studentSubjectMode='mt';classes=[...defaultClasses];sessionClear();show('loginView');if(document.querySelector('.brand'))document.querySelector('.brand').textContent='🔬 منصة روافد العلوم';document.title='منصة روافد العلوم | التعليم الرقمي للعلوم | الصفوف 7 - 9';$('topSub').textContent='الصفوف 7 - 9';if(note)msg('loginMsg',note,false)}
 function validTeacherUrlField(id,label){const v=$(id)?.value.trim()||'';if(!v)return '';const u=safeWebUrl(v);if(!u)throw new Error(`${label}: استخدم رابط HTTPS صحيح فقط.`);return u}
 async function isRealPdf(file){if(!file||file.size<5)return false;const head=new Uint8Array(await file.slice(0,5).arrayBuffer());return String.fromCharCode(...head)==='%PDF-'}
 async function isRealImage(file){if(!file||file.size<12)return false;const b=new Uint8Array(await file.slice(0,16).arrayBuffer());const png=b[0]===0x89&&b[1]===0x50&&b[2]===0x4e&&b[3]===0x47;const jpg=b[0]===0xff&&b[1]===0xd8&&b[2]===0xff;const gif=String.fromCharCode(...b.slice(0,6))==='GIF87a'||String.fromCharCode(...b.slice(0,6))==='GIF89a';const webp=String.fromCharCode(...b.slice(0,4))==='RIFF'&&String.fromCharCode(...b.slice(8,12))==='WEBP';return png||jpg||gif||webp}
@@ -1350,7 +1350,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   const login = document.getElementById('loginView');
   if(!login) return;
 
-  document.title = 'منصة روافد العلوم';
+  document.title = 'منصة روافد العلوم | التعليم الرقمي للعلوم | الصفوف 7 - 9';
 
   const heading = login.querySelector('h1');
   if(heading) heading.textContent = '🔬 منصة روافد العلوم';
