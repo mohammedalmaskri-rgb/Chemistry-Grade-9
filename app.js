@@ -1365,3 +1365,14 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   const motto = allTextEls.find(el => /نسأل الله أن يوفقك في رحلتك العلمية/.test((el.textContent || '').trim()));
   if(motto) motto.textContent = 'نتعلم • نكتشف • نجرّب • نبدع';
 })();
+
+// ===== Rawafid integrated educational games module =====
+(function loadRawafidGamesModule(){
+  if(document.getElementById('rawafidGamesModule'))return;
+  const s=document.createElement('script');
+  s.id='rawafidGamesModule';
+  s.src='./games.js?v='+Date.now();
+  s.async=false;
+  s.onerror=()=>console.error('تعذر تحميل نظام الألعاب التعليمية.');
+  document.head.appendChild(s);
+})();
