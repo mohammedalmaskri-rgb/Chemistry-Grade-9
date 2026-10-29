@@ -5,6 +5,9 @@
 'use strict';
 if(window.__rawafidGamesLoaded)return;
 window.__rawafidGamesLoaded=true;
+// مؤقتًا: الألعاب مخفية عن الطلاب حتى يُصلح منح مكافأة الإكمال (المعلم يستطيع الإنشاء والمعاينة).
+// لإعادة إظهارها للطلاب: اجعل القيمة true.
+const STUDENT_GAMES_ENABLED=false;
 
 const RG={
   teacherGames:[],
@@ -230,7 +233,7 @@ function normalizeSubjectForSamples(code){
 }
 async function teacherHome(){
  const root=ge('t-games');if(!root)return;
- root.innerHTML='<div class="rg-head"><h2>🎮 الألعاب التعليمية</h2><button id="rgNewGame" class="btn primary">➕ إنشاء لعبة</button></div><div class="rg-muted">أنشئ لعبة لطلاب المادة الحالية، وحدد الشعبة والدرس والمحاولات ونقاط التحفيز.</div><div id="rgTeacherList" class="rg-card">جاري التحميل...</div><div id="rgTeacherResults"></div>';
+ root.innerHTML='<div class="rg-head"><h2>🎮 الألعاب التعليمية</h2><button id="rgNewGame" class="btn primary">➕ إنشاء لعبة</button></div><div class="rg-muted">أنشئ لعبة لطلاب المادة الحالية، وحدد الشعبة والدرس والمحاولات ونقاط التحفيز.</div>'+(STUDENT_GAMES_ENABLED?'':'<div class="msg" style="background:#fffbeb;border:1px solid #fcd34d;color:#78350f">⏸️ الألعاب مخفية عن الطلاب مؤقتًا أثناء تحديث نظام النقاط. يمكنك إنشاء الألعاب ومعاينتها الآن، وستظهر للطلاب تلقائيًا عند إعادة تفعيلها.</div>')+'<div id="rgTeacherList" class="rg-card">جاري التحميل...</div><div id="rgTeacherResults"></div>';
  ge('rgNewGame').onclick=()=>{RG.draft={s:0,t:null,target:'ALL',lesson:'',h:[],rows:[[]],scoreUnit:10,maxAttempts:2,reward:0.5,visible:true};teacherWizard()};
  try{RG.teacherGames=await apiTeacherGames();renderTeacherList()}catch(e){ge('rgTeacherList').innerHTML=`<div class="msg err">${esc(e.message||'تعذر تحميل الألعاب. شغّل ملف SQL أولًا.')}</div>`}
 }
@@ -345,7 +348,7 @@ function launchGame(g,back,preview){
 function init(){
  addStyles();
  addSection('teacherNav','teacherView','t-games','🎮 الألعاب',teacherHome);
- addSection('studentNav','studentView','s-games','🎮 الألعاب',studentHome);
+ if(STUDENT_GAMES_ENABLED)addSection('studentNav','studentView','s-games','🎮 الألعاب',studentHome);
  document.addEventListener('click',e=>{
   if(e.target?.id==='teacherSwitchSubject')setTimeout(()=>{if(ge('t-games')?.classList.contains('active'))teacherHome()},900);
   if(e.target?.id==='studentSwitchSubject')setTimeout(()=>{if(ge('s-games')?.classList.contains('active'))studentHome()},900);
