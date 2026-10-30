@@ -1223,13 +1223,13 @@ $('gradeReportClass')&&($('gradeReportClass').onchange=()=>{gradeReportRows=[];i
 $('gradeReportAssessment')&&($('gradeReportAssessment').onchange=renderGradeReport);
 
 const GRADEBOOK_SLOTS={
-  hw1:['واجب 1','واجب1','الواجب الأول','الواجب الاول','واجب منزلي 1','الواجب المنزلي الأول','الواجب المنزلي الاول'],
-  hw2:['واجب 2','واجب2','الواجب الثاني','واجب منزلي 2','الواجب المنزلي الثاني'],
-  oral1:['حوار شفوي 1','الحوار الشفوي الأول','الحوار الشفوي الاول','شفوي 1','شفوي الأول','شفوي الاول'],
-  oral2:['حوار شفوي 2','الحوار الشفوي الثاني','شفوي 2','شفوي الثاني'],
+  hw1:['واجب 1','الواجب 1','الواجب المنزلي 1','واجب1','الواجب الأول','الواجب الاول','واجب منزلي 1','الواجب المنزلي الأول','الواجب المنزلي الاول'],
+  hw2:['واجب 2','الواجب 2','الواجب المنزلي 2','واجب2','الواجب الثاني','واجب منزلي 2','الواجب المنزلي الثاني'],
+  oral1:['حوار شفوي 1','الحوار الشفوي 1','الحوار الشفوي الأول','الحوار الشفوي الاول','شفوي 1','شفوي الأول','شفوي الاول'],
+  oral2:['حوار شفوي 2','الحوار الشفوي 2','الحوار الشفوي الثاني','شفوي 2','شفوي الثاني'],
   practical:['النشاط العملي','نشاط عملي','عملي'],
-  quiz1:['اختبار قصير 1','اختبار قصير الأول','اختبار قصير الاول','الاختبار القصير الأول','الاختبار القصير الاول','الاختبار الأول','الاختبار الاول'],
-  quiz2:['اختبار قصير 2','اختبار قصير الثاني','الاختبار القصير الثاني','الاختبار الثاني'],
+  quiz1:['اختبار قصير 1','الاختبار القصير 1','اختبار قصير الأول','اختبار قصير الاول','الاختبار القصير الأول','الاختبار القصير الاول','الاختبار الأول','الاختبار الاول'],
+  quiz2:['اختبار قصير 2','الاختبار القصير 2','اختبار قصير الثاني','الاختبار القصير الثاني','الاختبار الثاني'],
   final:['امتحان نهاية الفصل','اختبار نهاية الفصل','الامتحان النهائي','الاختبار النهائي','نهائي']
 };
 const GRADEBOOK_META={
@@ -1241,7 +1241,7 @@ const GRADEBOOK_META={
 };
 let gradebookDirty=new Map();
 let gradebookExisting=new Map();
-function gradebookNorm(v){return String(v||'').trim().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ')}
+function gradebookNorm(v){return String(v||'').trim().replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-1632)).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ')}
 function gradebookSlot(title){const n=gradebookNorm(title);for(const [k,names] of Object.entries(GRADEBOOK_SLOTS)){if(names.some(x=>gradebookNorm(x)===n))return k}return null}
 function gradebookLevel(p){if(p==null)return '—';if(p>=90)return 'ممتاز';if(p>=80)return 'جيد جدًا';if(p>=70)return 'جيد';if(p>=60)return 'مقبول';return 'يحتاج متابعة'}
 function gradebookInput(studentId,slot,value){const m=GRADEBOOK_META[slot];return `<input class="gradebook-input" type="number" inputmode="decimal" min="0" max="${m.max}" step="0.5" data-gb-student="${studentId}" data-gb-slot="${slot}" value="${value==null?'':esc(value)}" placeholder="—" style="width:68px;padding:7px 5px;text-align:center;border:1px solid #cfe2df;border-radius:9px;background:#fff">`}
@@ -1262,7 +1262,7 @@ async function loadGradebook(){
     $('gradebookSaveBtn')?.addEventListener('click',saveGradebookChanges);
   }catch(e){$('gradebookTable').innerHTML=`<tr><td colspan="17"><div class="msg err">تعذر تحميل السجل: ${esc(e.message||'خطأ غير معروف')}</div></td></tr>`}
 }
-async function saveGradebookChanges(){const btn=$('gradebookSaveBtn');if(!gradebookDirty.size){alert('ما عدلت أي درجة بعد.');return}try{btn.disabled=true;btn.textContent='جاري الحفظ...';for(const x of gradebookDirty.values()){const m=GRADEBOOK_META[x.slot],key=x.studentId+':'+x.slot,existing=gradebookExisting.get(key);if(x.value<0||x.value>m.max)throw new Error(`${m.title}: الدرجة يجب أن تكون من 0 إلى ${m.max}`);if(existing?.gradeId){const ok=await rpc('portal_teacher_update_grade_value',{p_token:teacherToken,p_grade_id:existing.gradeId,p_score:x.value});if(!ok)throw new Error('تعذر تحديث الدرجة الموجودة')}else{const id=await rpc('portal_teacher_add_grade',{p_token:teacherToken,p_student_id:x.studentId,p_title:m.title,p_score:x.value,p_max_score:m.max,p_note:''});if(!id)throw new Error('تعذر إضافة الدرجة')}}gradebookDirty.clear();await loadGradebook();alert('تم تحديث الدرجات مباشرة بدون إنشاء نسخ مكررة ✅')}catch(e){alert(e.message||'تعذر حفظ الدرجات')}finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ الدرجات'}}}
+async function saveGradebookChanges(){const btn=$('gradebookSaveBtn');if(!gradebookDirty.size){alert('ما عدلت أي درجة بعد.');return}try{btn.disabled=true;btn.textContent='جاري الحفظ...';const items=[...gradebookDirty.values()];for(const x of items){const m=GRADEBOOK_META[x.slot];if(x.value<0||x.value>m.max)throw new Error(`${m.title}: الدرجة يجب أن تكون من 0 إلى ${m.max}`)}/* parallel in small batches (same RPCs and checks) */let done=0;const saveOne=async x=>{const m=GRADEBOOK_META[x.slot],key=x.studentId+':'+x.slot,existing=gradebookExisting.get(key);if(existing?.gradeId){const ok=await rpc('portal_teacher_update_grade_value',{p_token:teacherToken,p_grade_id:existing.gradeId,p_score:x.value});if(!ok)throw new Error('تعذر تحديث الدرجة الموجودة')}else{const id=await rpc('portal_teacher_add_grade',{p_token:teacherToken,p_student_id:x.studentId,p_title:m.title,p_score:x.value,p_max_score:m.max,p_note:''});if(!id)throw new Error('تعذر إضافة الدرجة');gradebookExisting.set(key,{gradeId:Number(id),title:m.title})}gradebookDirty.delete(key);done++;btn.textContent=`جاري الحفظ ${done}/${items.length}...`};for(let i=0;i<items.length;i+=5)await Promise.all(items.slice(i,i+5).map(saveOne));gradebookDirty.clear();await loadGradebook();alert('تم تحديث الدرجات مباشرة بدون إنشاء نسخ مكررة ✅')}catch(e){alert(e.message||'تعذر حفظ الدرجات')}finally{if(btn){btn.disabled=false;btn.textContent='💾 حفظ الدرجات'}}}
 if($('gradebookClass'))$('gradebookClass').innerHTML=classes.map(c=>`<option value="${c}">${c}</option>`).join('');
 $('gradebookLoadBtn')&&($('gradebookLoadBtn').onclick=loadGradebook);
 $('gradebookClass')&&($('gradebookClass').onchange=loadGradebook);
