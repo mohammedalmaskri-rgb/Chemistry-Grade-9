@@ -48,6 +48,8 @@
     var bare = norm(stripParens(label));
     if (/مجموع|نسبه|مستوي|تقدير|معدل|اتقان|ملاحظ|الحاله|المحصله/.test(bare)) return 'skip';
     if (bare === 'م' || bare === 'ر' || bare === 'رقم' || bare === 'التسلسل' || bare === 'تسلسل' || bare === 'no' || bare === '#') return 'skip';
+    if (bare === 'الصف' || bare === 'الصف الدراسي' || bare === 'grade') return 'grade';
+    if (bare === 'الشعبه' || bare === 'الفصل' || bare === 'الصف والشعبه' || bare === 'section' || bare === 'class') return 'section';
     if (/مستخدم|username|مدني|الرقم الوطني|رقم الطالب|رقم القيد|الرقم الاكاديمي|رقم الهويه|\bid\b/.test(bare)) return 'id';
     if (tokens(bare).some(function (t) { return t === 'اسم' || t === 'الاسم' || t === 'name'; })) return 'name';
     var o = ordinal(label);
@@ -99,7 +101,7 @@
     // أي تكرار لنفس الخانة: الأول يبقى، والباقي يُترك للمعلم
     var seen = {};
     columns.forEach(function (x) {
-      if (SLOTS.indexOf(x.kind) >= 0 || x.kind === 'name' || x.kind === 'id') {
+      if (SLOTS.indexOf(x.kind) >= 0 || x.kind === 'name' || x.kind === 'id' || x.kind === 'grade' || x.kind === 'section') {
         if (seen[x.kind]) x.kind = null; else seen[x.kind] = true;
       }
       if (x.kind && /\?$/.test(x.kind)) x.kind = null;
@@ -120,8 +122,14 @@
 
   // ---------- مطابقة الطلاب ----------
   var STOP = { 'بن': 1, 'بنت': 1, 'ابن': 1 };
+  // أسماء المنصة المخزّنة فقدت الألف بعد اللام («هلال»→«هلل»، «الأزهر»→«الزهر») ورمز «ﷲ» («عبدالله»→«عبدا»).
+  // نوحّد الطرفين بالطريقة نفسها قبل المقارنة.
+  function squash(s) {
+    return norm(String(s == null ? '' : s).replace(/\uFDF2/g, 'الله'))
+      .replace(/(^| )عبد ?الل?ه(?= |$)/g, '$1عبدا').replace(/ل+ا/g, 'ل').replace(/لل+/g, 'ل');
+  }
   function nameKeys(s) {
-    var t = tokens(s).filter(function (x) { return !STOP[x]; });
+    var t = squash(s).replace(/[()[\]{}]/g, ' ').split(' ').filter(function (x) { return x && !STOP[x]; });
     // مواضع ثابتة: [الاسم كاملًا، أول ثلاثة، أول اثنين + الأخير، الأول + الأخير]
     return [t.join(' '),
       t.length >= 3 ? t.slice(0, 3).join(' ') : null,
@@ -153,6 +161,40 @@
     });
   }
 
+  // ---------- تصفية صفوف الملف حسب الشعبة المختارة (ملفات نور تضم كل الشعب في ورقة واحدة) ----------
+  var GRADE_WORDS = { 'الاول': 1, 'الثاني': 2, 'الثالث': 3, 'الرابع': 4, 'الخامس': 5, 'السادس': 6, 'السابع': 7, 'الثامن': 8,
+    'التاسع': 9, 'العاشر': 10, 'الحادي عشر': 11, 'الثاني عشر': 12 };
+  function gradeNum(v) {
+    var raw = digits(String(v == null ? '' : v)).trim();
+    var m = raw.match(/^(\d+)\s*[/\-]\s*\d+$/); if (m) return Number(m[1]);
+    var n = norm(raw).replace(/^الصف /, '').trim();
+    if (/^\d+$/.test(n)) return Number(n);
+    return GRADE_WORDS[n] || null;
+  }
+  function rowClass(cells, gradeC, sectionC) {
+    var sec = sectionC == null ? '' : digits(String(cells[sectionC] == null ? '' : cells[sectionC])).replace(/\s+/g, '').replace(/\.0+$/, '');
+    var m = sec.match(/^(\d+)[/\-](\d+)$/);
+    if (m) return Number(m[1]) + '/' + Number(m[2]);
+    var g = gradeC == null ? null : gradeNum(cells[gradeC]);
+    if (g && /^\d+$/.test(sec)) return g + '/' + Number(sec);
+    if (!g && /^\d+$/.test(sec)) return '?/' + Number(sec);
+    return null;
+  }
+  function filterByClass(analysis, mapping, cls) {
+    var col = function (kind) { for (var k in mapping) if (mapping[k] === kind) return Number(k); return null; };
+    var gC = col('grade'), sC = col('section');
+    if (gC == null && sC == null) return { rows: analysis.rows, excluded: 0, classes: [], filtered: false };
+    var want = String(cls || '').replace(/\s+/g, ''), wantSec = want.split('/')[1];
+    var keep = [], classes = {}, excluded = 0;
+    analysis.rows.forEach(function (r) {
+      var c = rowClass(r.cells, gC, sC);
+      if (c) classes[c] = (classes[c] || 0) + 1;
+      var ok = !c || c === want || (c.indexOf('?/') === 0 && c.slice(2) === wantSec);
+      if (ok) keep.push(r); else excluded++;
+    });
+    return { rows: keep, excluded: excluded, classes: Object.keys(classes).sort(function (a, b) { return a.localeCompare(b, 'en', { numeric: true }); }), filtered: true };
+  }
+
   // ---------- خطة التعبئة ----------
   function plan(matches, mapping, current, maxes) {
     maxes = maxes || SLOT_MAX;
@@ -176,7 +218,7 @@
   }
 
   var api = { SLOTS: SLOTS, SLOT_LABEL: SLOT_LABEL, SLOT_MAX: SLOT_MAX, norm: norm, toNum: toNum, classify: classify,
-    analyze: analyze, match: match, plan: plan, nameKeys: nameKeys };
+    analyze: analyze, match: match, plan: plan, nameKeys: nameKeys, squash: squash, filterByClass: filterByClass, rowClass: rowClass };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   root.RGImport = api;
 
@@ -214,6 +256,8 @@
   }
 
   var S = null;   // حالة نافذة الاستيراد
+  var LAST = null; // آخر ملف قُرئ (لاستيراد الشعب الأخرى من الملف نفسه دون رفعه مجددًا)
+  function showName(n) { try { return typeof fixStudentName === 'function' ? fixStudentName(n) : n; } catch (e) { return n; } }   // eslint-disable-line no-undef
 
   function closeModal() { var m = el('rgImportModal'); if (m) m.remove(); S = null; }
   function modal(inner) {
@@ -228,14 +272,15 @@
   }
 
   function optionList(selected) {
-    var opts = [['', '— تجاهل —'], ['name', 'اسم الطالب'], ['id', 'رقم الطالب / اسم المستخدم']]
+    var opts = [['', '— تجاهل —'], ['name', 'اسم الطالب'], ['id', 'رقم الطالب / اسم المستخدم'], ['grade', 'الصف'], ['section', 'الشعبة']]
       .concat(SLOTS.map(function (s) { return [s, SLOT_LABEL[s] + ' (من ' + SLOT_MAX[s] + ')']; }));
     return opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === (selected || '') ? ' selected' : '') + '>' + h(o[1]) + '</option>'; }).join('');
   }
 
   function render() {
     var a = S.analysis, mapping = S.mapping;
-    var matches = match(a, S.students, mapping);
+    var fc = a.error ? { rows: [], excluded: 0, classes: [], filtered: false } : filterByClass(a, mapping, S.cls);
+    var matches = match({ rows: fc.rows }, S.students, mapping);
     Object.keys(S.manual).forEach(function (row) {
       var m = matches.filter(function (x) { return String(x.row) === row; })[0];
       var st = S.students.filter(function (x) { return String(x.id) === String(S.manual[row]); })[0];
@@ -255,7 +300,7 @@
     }).join('');
     var un = unmatched.slice(0, 60).map(function (m) {
       var choices = S.students.filter(function (s) { return !takenIds[s.id]; })
-        .map(function (s) { return '<option value="' + s.id + '">' + h(s.full_name) + '</option>'; }).join('');
+        .map(function (s) { return '<option value="' + s.id + '">' + h(showName(s.full_name)) + '</option>'; }).join('');
       return '<tr><td>' + m.row + '</td><td>' + h(m.name || '—') + (m.duplicate ? ' <span class="badge">مكرر</span>' : '') +
         '</td><td><select data-rg-row="' + m.row + '"><option value="">— لا يُستورد —</option>' + choices + '</select></td></tr>';
     }).join('');
@@ -271,6 +316,8 @@
       (a.error ? '<div class="msg err">' + h(a.error) + '</div>' :
       '<div class="rg-stats"><div><b>' + matches.length + '</b><span>صف في الملف</span></div><div><b>' + matched + '</b><span>طالب مطابق</span></div>' +
       '<div><b>' + p.fills.length + '</b><span>درجة ستُعبّأ</span></div><div><b>' + p.same + '</b><span>مطابقة للمسجّل</span></div></div>' +
+      (fc.filtered ? (fc.rows.length ? '<p class="muted">الملف يضم الشعب: ' + h(fc.classes.join('، ')) + ' — تم أخذ صفوف ' + h(S.cls) + ' فقط، واستُبعد ' + fc.excluded + ' صفًا من الشعب الأخرى.</p>'
+        : '<div class="msg err">لا توجد صفوف للشعبة ' + h(S.cls) + ' في هذا الملف. الشعب الموجودة فيه: ' + h(fc.classes.join('، ') || '—') + '. اختر الشعبة الصحيحة من «سجل الدرجات» ثم استورد مرة أخرى.</div>') : '') +
       (lowMatch ? '<div class="msg err">أغلب أسماء الملف غير موجودة في الشعبة ' + h(S.cls) + '. تأكد أنك اخترت الشعبة الصحيحة قبل الاستيراد.</div>' : '') +
       (!hasName ? '<div class="msg err">حدّد عمود «اسم الطالب» من القائمة أدناه.</div>' : '') +
       (!mappedSlots ? '<div class="msg err">لم أتعرف على أعمدة الدرجات. اختر لكل عمود الخانة المناسبة.</div>' : '') +
@@ -308,7 +355,7 @@
     var msg = el('gradebookMsg');
     if (msg) {
       var box = doc.createElement('div'); box.className = 'msg ok';
-      box.textContent = 'تمت تعبئة ' + n + ' درجة من «' + fileName + '» (باللون الأصفر). راجعها ثم اضغط «💾 حفظ الدرجات» لحفظها في المنصة.';
+      box.textContent = 'تمت تعبئة ' + n + ' درجة من «' + fileName + '» (باللون الأصفر). راجعها ثم اضغط «💾 حفظ الدرجات» لحفظها في المنصة. لاستيراد شعبة أخرى من الملف نفسه: احفظ، ثم اختر الشعبة واضغط «📥 استيراد» مرة أخرى.';
       msg.insertBefore(box, msg.firstChild);
     }
     var first = doc.querySelector('#gradebookTable .gradebook-input[style*="254, 249, 195"],#gradebookTable .gradebook-input[style*="fef9c3"]');
@@ -328,14 +375,35 @@
       var res = await runWorker({ cmd: 'read', buf: buf }, [buf]);
       var sheets = (res.sheets || []).filter(function (s) { return s.rows && s.rows.length; });
       if (!sheets.length) throw new Error('الملف فارغ.');
-      S = { fileName: file.name, sheets: sheets, cls: info.cls, students: info.students, state: st, manual: {} };
+      LAST = { fileName: file.name, sheets: sheets };
+      openWith(LAST, info, st);
+    } catch (e) {
+      modal('<h2>📥 استيراد الدرجات</h2><div class="msg err">' + h(e.message || 'تعذر قراءة الملف') + '</div><div class="rg-actions"><button class="btn secondary" data-rg="close">إغلاق</button></div>');
+    }
+  }
+
+  async function reuseLast() {
+    if (!LAST) return;
+    modal('<h2>📥 استيراد الدرجات</h2><p class="muted">جاري التجهيز…</p>');
+    try {
+      var st = gradebookState();
+      if (!st.loaded && typeof loadGradebook === 'function') { await loadGradebook(); st = gradebookState(); }   // eslint-disable-line no-undef
+      var info = await classStudents();
+      openWith(LAST, info, st);
+    } catch (e) {
+      modal('<h2>📥 استيراد الدرجات</h2><div class="msg err">' + h(e.message || 'تعذر التجهيز') + '</div><div class="rg-actions"><button class="btn secondary" data-rg="close">إغلاق</button></div>');
+    }
+  }
+
+  function openWith(last, info, st) {
+    var sheets = last.sheets;
+    {
+      S = { fileName: last.fileName, sheets: sheets, cls: info.cls, students: info.students, state: st, manual: {} };
       // اختر الورقة التي يُعثر فيها على عناوين الدرجات
       var best = 0;
       for (var i = 0; i < sheets.length; i++) { var a = analyze(sheets[i].rows); if (!a.error && a.rows.length) { best = i; break; } }
       setSheet(best);
       render();
-    } catch (e) {
-      modal('<h2>📥 استيراد الدرجات</h2><div class="msg err">' + h(e.message || 'تعذر قراءة الملف') + '</div><div class="rg-actions"><button class="btn secondary" data-rg="close">إغلاق</button></div>');
     }
   }
 
@@ -365,11 +433,22 @@
   doc.addEventListener('click', function (e) {
     var t = e.target.closest && e.target.closest('[data-rg],#gradeImportBtn,#gradeTemplateBtn');
     if (!t) return;
-    if (t.id === 'gradeImportBtn') { el('gradeImportFile') && el('gradeImportFile').click(); return; }
+    if (t.id === 'gradeImportBtn') {
+      if (LAST) {
+        var cls = el('gradebookClass') ? el('gradebookClass').value : '';
+        modal('<div class="rg-head"><h2>📥 استيراد الدرجات</h2><button class="btn secondary" data-rg="close" aria-label="إغلاق">✕</button></div>' +
+          '<p class="muted">آخر ملف استخدمته: <b>' + h(LAST.fileName) + '</b></p><div class="rg-actions">' +
+          '<button class="btn primary" data-rg="reuse">استيراد هذا الملف للشعبة ' + h(cls) + '</button>' +
+          '<button class="btn secondary" data-rg="pick">اختيار ملف آخر</button></div>');
+      } else if (el('gradeImportFile')) el('gradeImportFile').click();
+      return;
+    }
     if (t.id === 'gradeTemplateBtn') { downloadTemplate(); return; }
     var act = t.getAttribute('data-rg');
     if (act === 'close') closeModal();
     else if (act === 'apply' && S && S.plan) apply();
+    else if (act === 'reuse') reuseLast();
+    else if (act === 'pick') { closeModal(); if (el('gradeImportFile')) el('gradeImportFile').click(); }
   });
   doc.addEventListener('change', function (e) {
     var t = e.target;
