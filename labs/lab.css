@@ -1,0 +1,52 @@
+/* Rawafid virtual chemistry lab: shared styles */
+:root{--bg:#061827;--panel:#0b2a40;--line:#2a5874;--teal:#2dd4bf;--blue:#38bdf8;--txt:#eef7fb;--muted:#b6cbd6;--ok:#22c55e;--bad:#f87171;--warn:#fbbf24}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,#051421,#09283b);color:var(--txt);font-family:Tahoma,"Segoe UI",Arial,sans-serif;line-height:1.65;touch-action:manipulation}
+header{padding:14px 16px 12px;text-align:center;background:#071827;border-bottom:1px solid #1d4459}
+header .brand{font-size:12px;color:var(--teal);font-weight:700;letter-spacing:.2px}
+header h1{margin:4px 0 2px;font-size:clamp(20px,3.6vw,30px);line-height:1.35}
+header p{margin:0;color:var(--muted);font-size:14px}
+.app{max-width:1160px;margin:auto;padding:14px;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.85fr);gap:14px;align-items:start}
+.stage,.panel,.quiz{background:linear-gradient(180deg,#0d3049,#092237);border:1px solid #28556d;border-radius:20px;box-shadow:0 16px 40px #0006}
+.stage{position:relative;overflow:hidden;padding:0}
+.stage svg{display:block;width:100%;height:auto}
+.stage .tag{position:absolute;top:10px;right:12px;background:#0009;border:1px solid #2f6078;border-radius:999px;padding:3px 12px;font-size:13px;color:var(--muted)}
+.panel{padding:16px}
+.panel h2{margin:0 0 10px;font-size:18px}
+.steps{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:7px;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:30px 1fr;gap:9px;align-items:start;padding:9px 10px;border-radius:13px;background:#0a2234;border:1px solid #1d435a;color:var(--muted);font-size:14px;transition:.25s}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#123a54;color:#cfe;font-weight:800;font-size:14px}
+.steps li b{display:block;color:var(--txt);font-size:15px}
+.steps li.on{border-color:var(--teal);background:#0e3a4a;color:#dff}
+.steps li.on::before{background:var(--teal);color:#032}
+.steps li.done{opacity:.75}
+.steps li.done::before{content:"✓";background:var(--ok);color:#022}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.btn{appearance:none;border:1px solid #2f6078;border-radius:13px;padding:11px 15px;font:inherit;font-weight:800;font-size:15px;color:var(--txt);background:#123a54;cursor:pointer;min-height:46px}
+.btn:hover:not(:disabled){filter:brightness(1.15)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:linear-gradient(135deg,#0f9f94,#0e7490);border-color:#2dd4bf;flex:1;min-width:180px}
+.btn.pick{background:#0f2f45}
+.btn.pick.sel{border-color:var(--warn);background:#3b3413}
+.obs{min-height:64px;padding:12px;border-radius:14px;background:#04121d;border:1px dashed #2f6078;font-size:15px}
+.obs b{color:var(--teal)}
+.obs .eq{direction:ltr;text-align:center;display:block;margin-top:6px;font-weight:800;font-size:16px;color:#fde68a}
+.warn{margin-top:10px;padding:10px 12px;border-radius:13px;background:#3a2a0b;border:1px solid #8a6a18;color:#fde9b0;font-size:13px}
+.quiz{max-width:1160px;margin:0 auto 22px;padding:18px;width:calc(100% - 28px)}
+.quiz h2{margin:0 0 4px}
+.quiz .q{margin:14px 0;padding:12px;border-radius:14px;background:#0a2234;border:1px solid #1d435a}
+.quiz .q p{margin:0 0 8px;font-weight:700}
+.quiz .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:7px}
+.quiz .opts button{text-align:right;font-weight:600}
+.quiz .opts button.right{background:#14532d;border-color:var(--ok)}
+.quiz .opts button.wrong{background:#5b1d1d;border-color:var(--bad)}
+.quiz .why{margin-top:8px;font-size:14px;color:#cfe}
+.quiz .score{margin-top:10px;padding:12px;border-radius:14px;background:#0e3a4a;border:1px solid var(--teal);font-weight:800;text-align:center}
+.hide{display:none!important}
+.pulse{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{filter:brightness(1.5) drop-shadow(0 0 6px #fff8)}}
+.picks{display:flex;flex-wrap:wrap;gap:7px;margin:6px 0 10px}
+.picks .btn{padding:8px 11px;min-height:40px;font-size:14px}
+@media (max-width:820px){.app{grid-template-columns:1fr;padding:10px}.stage{position:sticky;top:0;z-index:5;border-radius:0 0 18px 18px}.steps li:not(.on) .d{display:none}.steps li{padding:7px 9px}.quiz{width:calc(100% - 20px)}.panel{padding:13px}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}

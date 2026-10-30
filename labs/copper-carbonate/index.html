@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>تفكّك كربونات النحاس (II) بالحرارة | مختبر روافد العلوم</title>
+<meta name="description" content="تجربة تفاعلية من منصة روافد العلوم: تسخين كربونات النحاس (II) الخضراء، والكشف عن غاز ثاني أكسيد الكربون بماء الجير، وقياس تغيّر الكتلة.">
+<link rel="icon" href="/favicon-192.png">
+<link rel="stylesheet" href="../lab.css">
+</head>
+<body>
+<header>
+  <div class="brand">منصة روافد العلوم · المختبر الافتراضي</div>
+  <h1>تفكّك كربونات النحاس (II) بالحرارة</h1>
+  <p>الكيمياء — الصف التاسع · درس الذرات والجزيئات</p>
+</header>
+<div class="app">
+  <main class="stage" aria-label="مشهد التجربة">
+    <svg id="scene" viewBox="0 0 640 420" role="img" aria-label="أنبوب اختبار فوق موقد متصل بكأس فيه ماء الجير">
+      <defs>
+        <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#174d6b"/><stop offset="1" stop-color="#0a2a40"/></linearGradient>
+        <linearGradient id="bench" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a5e4d"/><stop offset="1" stop-color="#43342c"/></linearGradient>
+        <linearGradient id="glass" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e6fbff" stop-opacity=".25"/><stop offset=".5" stop-color="#bfefff" stop-opacity=".08"/><stop offset="1" stop-color="#e6fbff" stop-opacity=".3"/></linearGradient>
+        <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6b7d88"/><stop offset=".5" stop-color="#dfe8ee"/><stop offset="1" stop-color="#66777f"/></linearGradient>
+        <clipPath id="tubeIn"><path d="M185 150 V273 a15 15 0 0 0 30 0 V150 Z"/></clipPath>
+        <clipPath id="beakIn"><rect x="383" y="222" width="114" height="111" rx="10"/></clipPath>
+      </defs>
+      <rect width="640" height="340" fill="url(#wall)"/>
+      <rect y="340" width="640" height="80" fill="url(#bench)"/>
+      <rect y="336" width="640" height="6" fill="#9b7b66"/>
+      <!-- stand -->
+      <rect x="70" y="330" width="80" height="12" rx="3" fill="#2b3a44"/>
+      <rect x="102" y="120" width="9" height="215" rx="4" fill="url(#steel)"/>
+      <rect x="106" y="190" width="84" height="8" rx="4" fill="url(#steel)"/>
+      <!-- burner -->
+      <rect x="176" y="330" width="48" height="10" rx="3" fill="#2b3a44"/>
+      <rect x="189" y="298" width="22" height="34" rx="3" fill="url(#steel)"/>
+      <g id="flame" opacity="0"><path d="M200 296 C182 276 192 258 200 240 C208 258 218 276 200 296Z" fill="#3b82f6" opacity=".85"/><path d="M200 294 C192 281 195 268 200 258 C205 268 208 281 200 294Z" fill="#a5f3fc"/></g>
+      <!-- heated tube -->
+      <g clip-path="url(#tubeIn)">
+        <rect id="green" x="185" y="290" width="30" height="0" fill="#3fa37a"/>
+        <rect id="black" x="185" y="290" width="30" height="0" fill="#1c1c1e"/>
+      </g>
+      <path d="M185 142 V273 a15 15 0 0 0 30 0 V142" fill="url(#glass)" stroke="#d6f6ff" stroke-opacity=".85" stroke-width="3"/>
+      <rect x="182" y="186" width="36" height="14" rx="3" fill="#8a9aa3"/>
+      <rect id="stopper" x="183" y="128" width="34" height="20" rx="4" fill="#7c4a2a" opacity="0"/>
+      <!-- delivery tube -->
+      <g id="delivery" opacity="0">
+        <path id="dpath" d="M200 132 V92 H440 V300" fill="none" stroke="#d6f6ff" stroke-opacity=".8" stroke-width="7" stroke-linejoin="round"/>
+      </g>
+      <!-- beaker -->
+      <g clip-path="url(#beakIn)">
+        <rect id="lime" x="383" y="250" width="114" height="83" fill="#cdeefa" opacity="0"/>
+        <g id="bubbles"></g>
+      </g>
+      <path d="M380 215 V325 a12 12 0 0 0 12 12 H488 a12 12 0 0 0 12 -12 V215" fill="url(#glass)" stroke="#d6f6ff" stroke-opacity=".85" stroke-width="3"/>
+      <!-- mass readout -->
+      <g transform="translate(526,250)">
+        <rect width="98" height="70" rx="10" fill="#0b1724" stroke="#2f6078"/>
+        <text x="49" y="22" font-size="12" fill="#9fc3d3" text-anchor="middle" font-family="Tahoma,Arial">كتلة المادة</text>
+        <rect x="10" y="30" width="78" height="30" rx="6" fill="#0f2b1c"/>
+        <text id="mass" x="49" y="52" font-size="19" fill="#4ade80" text-anchor="middle" font-family="Courier New,monospace" font-weight="700" direction="ltr">-.-- g</text>
+      </g>
+      <g font-size="15" fill="#cfe7f2" text-anchor="middle" font-family="Tahoma,Arial">
+        <text x="200" y="384">كربونات النحاس (II)</text>
+        <text x="440" y="384">ماء الجير</text>
+      </g>
+      <text id="caption" x="320" y="48" font-size="18" fill="#fde68a" text-anchor="middle" font-weight="700" font-family="Tahoma,Arial"></text>
+    </svg>
+  </main>
+  <aside class="panel">
+    <h2>خطوات التجربة</h2>
+    <ol class="steps" id="steps"></ol>
+    <div class="actions"><button class="btn primary" id="act"></button><button class="btn" id="reset">↻ إعادة</button></div>
+    <div class="obs" id="obs" aria-live="polite"></div>
+    <div class="warn">⚠️ في المختبر الحقيقي: البس النظارات الواقية، ووجّه فتحة الأنبوب بعيدًا عن الآخرين، واسحب أنبوب التوصيل من ماء الجير <b>قبل</b> إيقاف التسخين حتى لا يرتد الماء إلى الأنبوب الساخن فينكسر.</div>
+  </aside>
+</div>
+<section class="quiz hide" id="quiz"></section>
+<script src="../lab.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
