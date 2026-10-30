@@ -5,9 +5,9 @@
 'use strict';
 if(window.__rawafidGamesLoaded)return;
 window.__rawafidGamesLoaded=true;
-// مؤقتًا: الألعاب مخفية عن الطلاب حتى يُصلح منح مكافأة الإكمال (المعلم يستطيع الإنشاء والمعاينة).
-// لإعادة إظهارها للطلاب: اجعل القيمة true.
-const STUDENT_GAMES_ENABLED=false;
+// إظهار الألعاب للطلاب. التحقق والنتيجة والإكمال تُحسب في الخادم (portal_student_mt_game_*).
+// لإخفائها عن الطلاب مؤقتًا: اجعل القيمة false.
+const STUDENT_GAMES_ENABLED=true;
 
 const RG={
   teacherGames:[],
@@ -33,39 +33,50 @@ const upd=()=>{if(scoreHost){scoreHost.style.display='inline-flex';scoreHost.tex
 function seq(st,items,draw){let i=0;const go=()=>{st.innerHTML='';if(i>=items.length){st.append(H('div','rg-end','🎉 انتهت اللعبة! مجموع النقاط: '+sc));onEnd();return}
  st.append(H('div','rg-muted',(i+1)+' / '+items.length));
  draw(items[i],(ok,p)=>{sc+=p!==undefined?p:(ok?1:0);upd();st.append(B(i+1<items.length?'التالي ◀':'النتيجة','btn primary',()=>{i++;go()}))})};go()}
-function choose(st,q,opts,ans,done){st.append(H('div','rg-q',q));const w=H('div','rg-opts');
- opts.forEach(o=>{const b=B(o,'btn secondary rg-opt',()=>{[...w.children].forEach(c=>{c.disabled=true;if(c.textContent===ans)c.classList.add('rg-ok')});if(o!==ans)b.classList.add('rg-no');done(o===ans)});w.append(b)});st.append(w)}
-function ask(st,q,ans,done){st.append(H('div','rg-q',q));const i=H('input','rg-input');i.placeholder='اكتب الإجابة';
- const b=B('تحقق','btn primary',()=>{if(!i.value.trim())return;const ok=hit(i.value,ans);i.disabled=b.disabled=true;st.append(H('div',ok?'rg-ok-t':'rg-bad-t',ok?'✅ صحيحة':'❌ الصحيح: '+ans));done(ok)});
- i.onkeydown=e=>e.key==='Enter'&&b.click();st.append(i,b);i.focus()}
+// The checker (server for students, local for the teacher preview) decides; the answer is revealed only when the question locks.
+function choose(st,q,opts,check,done){st.append(H('div','rg-q',q));const w=H('div','rg-opts'),m=H('div','rg-msg');let busy=0;
+ opts.forEach(o=>{const b=B(o,'btn secondary rg-opt',async()=>{if(busy)return;busy=1;[...w.children].forEach(c=>c.disabled=true);
+  try{const r=await check(o);[...w.children].forEach(c=>{if(r.answer!=null&&c.textContent===r.answer)c.classList.add('rg-ok')});if(!r.ok)b.classList.add('rg-no');done(!!r.ok)}
+  catch(e){busy=0;[...w.children].forEach(c=>c.disabled=false);m.textContent='⚠️ '+(e.message||'تعذر التحقق، حاول مرة أخرى')}});w.append(b)});st.append(w,m)}
+function ask(st,q,check,done){st.append(H('div','rg-q',q));const i=H('input','rg-input'),m=H('div','rg-msg');i.placeholder='اكتب الإجابة';
+ const b=B('تحقق','btn primary',async()=>{if(!i.value.trim()||b.disabled)return;i.disabled=b.disabled=true;
+  try{const r=await check(i.value);st.append(H('div',r.ok?'rg-ok-t':'rg-bad-t',r.ok?'✅ صحيحة':'❌ الصحيح: '+(r.answer||'')));done(!!r.ok)}
+  catch(e){i.disabled=b.disabled=false;m.textContent='⚠️ '+(e.message||'تعذر التحقق، حاول مرة أخرى')}});
+ i.onkeydown=e=>e.key==='Enter'&&b.click();st.append(i,b,m);i.focus()}
 
 const T={
 esc:{n:'غرفة الهروب',i:'🚪',d:'أبواب مقفلة والوقت يمرّ',f:'السؤال | الإجابة | تلميح (اختياري)',
 s:'ما عاصمة سلطنة عُمان؟|مسقط|تبدأ بحرف الميم\nكم ناتج 12 × 3؟|36|ثلاثون وستة\nما ضد كلمة قريب؟|بعيد|تبدأ بحرف الباء\nما الكوكب الأحمر؟|المريخ|قريب من الأرض',
-run:(r,st)=>{r=r.filter(x=>x[1]);let i=0,l=3,t=r.length*40,over=0;const tm=H('b'),lv=H('b'),hud=H('div','rg-hud'),d=H('div','rg-doors'),c=H('div','rg-card');hud.append(tm,lv);st.append(hud,d,c);
- const dr=()=>{d.innerHTML='';r.forEach((_,k)=>d.append(H('span','door'+(k<i?' open':k===i?' cur':''),k<i?'🔓':'🔒')));tm.textContent='⏱ '+fmt(t);lv.textContent='❤️'.repeat(l)+'🖤'.repeat(3-l)};
+srv:1,run:(S,st)=>{const r=S.qs;let i=0,l=3,t=r.length*40,over=0;const tm=H('b'),lv=H('b'),hud=H('div','rg-hud'),d=H('div','rg-doors'),c=H('div','rg-card');hud.append(tm,lv);st.append(hud,d,c);
+ const dr=()=>{d.innerHTML='';r.forEach((_,k)=>d.append(H('span','door'+(k<i?' open':k===i?' cur':''),k<i?'🔓':'🔒')));tm.textContent='⏱ '+fmt(t);lv.textContent='❤️'.repeat(Math.max(l,0))+'🖤'.repeat(3-Math.max(l,0))};
  const fin=w=>{if(over)return;over=1;clearInterval(iv);if(w){sc+=r.length;upd()}onEnd();c.innerHTML='';dr();c.append(H('div','rg-big',w?'🎉':'😵'),H('div','rg-q',w?'هربت من الغرفة!':'فشل الهروب'))};
  const iv=tick(()=>{t--;dr();if(t<=0)fin(0)},1000);
  const show=()=>{c.innerHTML='';dr();const x=r[i],inp=H('input','rg-input'),m=H('div','rg-msg');inp.placeholder='كلمة السر...';
-  const go=()=>{if(over||!inp.value.trim())return;if(hit(inp.value,x[1])){i++;m.textContent='🔓 انفتح الباب!';inp.disabled=true;dr();i>=r.length?fin(1):setTimeout(show,700)}
-   else{l--;dr();m.textContent='❌ خطأ';c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake');if(l<=0)fin(0)}};
-  inp.onkeydown=e=>e.key==='Enter'&&go();c.append(H('div','rg-muted','الباب '+(i+1)),H('div','rg-q',x[0]),inp,B('افتح 🔑','btn primary',go));
-  if(x[2]){const hb=B('💡 تلميح (−20ث)','',()=>{t=Math.max(t-20,1);hb.replaceWith(H('div','rg-msg','💡 '+x[2]))});c.append(hb)}c.append(m);inp.focus()};show()}},
+  const go=async()=>{if(over||!inp.value.trim()||inp.disabled)return;inp.disabled=true;let res;
+   try{res=await S.check(x.i,inp.value)}catch(e){inp.disabled=false;m.textContent='⚠️ '+(e.message||'تعذر التحقق');return}
+   if(over)return;
+   if(res.ok){i++;m.textContent='🔓 انفتح الباب!';dr();i>=r.length?fin(1):setTimeout(show,700)}
+   else{inp.disabled=false;l--;dr();m.textContent='❌ خطأ';c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake');if(l<=0||res.locked)fin(0)}};
+  inp.onkeydown=e=>e.key==='Enter'&&go();c.append(H('div','rg-muted','الباب '+(i+1)),H('div','rg-q',x.q),inp,B('افتح 🔑','btn primary',go));
+  if(x.hint){const hb=B('💡 تلميح (−20ث)','',()=>{t=Math.max(t-20,1);hb.replaceWith(H('div','rg-msg','💡 '+x.hint))});c.append(hb)}c.append(m);inp.focus()};show()}},
 det:{n:'المحقق',i:'🕵️',d:'أدلة تنكشف واحداً واحداً',f:'الإجابة | دليل 1 | دليل 2 | دليل 3 (حتى 5 أدلة)',
 s:'مسقط|مدينة ساحلية|عاصمة بلد عربي|فيها قصر العلم|عاصمة سلطنة عُمان\nالقمر|يدور حول الأرض|يظهر في الليل|يتغير شكله خلال الشهر\nالنخلة|شجرة|تعطينا التمر|رمز للخير في الخليج',
-run:(r,st)=>seq(st,r.filter(x=>x.length>2),(x,d)=>{const cl=x.slice(1);let k=1;const L=H('div'),inp=H('input','rg-input'),m=H('div','rg-msg');
+srv:1,run:(S,st)=>seq(st,S.qs,(x,d)=>{const cl=x.clues||[];let k=1,done=0;const L=H('div'),inp=H('input','rg-input'),m=H('div','rg-msg');
  const dr=()=>{L.innerHTML='';cl.slice(0,k).forEach((z,j)=>L.append(H('div','clue','🔎 دليل '+(j+1)+': '+z)))};
- const fin=p=>{inp.disabled=g.disabled=mo.disabled=true;m.textContent=p?'🕵️ أحسنت! +'+p+' نقطة':'❌ الإجابة: '+x[0];d(p>0,p)};
- const g=B('خمّن','btn primary',()=>{if(!inp.value.trim())return;if(hit(inp.value,x[0]))fin(cl.length-k+1);else if(k<cl.length){k++;dr();m.textContent='❌ خطأ — ظهر دليل جديد'}else fin(0)});
- const mo=B('➕ دليل إضافي','',()=>{if(k<cl.length){k++;dr()}else fin(0)});
+ const fin=(p,ans)=>{if(done)return;done=1;inp.disabled=g.disabled=mo.disabled=true;m.textContent=p?'🕵️ أحسنت! +'+p+' نقطة':'❌ الإجابة: '+(ans||'');d(p>0,p)};
+ const giveUp=async()=>{try{const r=await S.check(x.i,'','skip');fin(0,r.answer)}catch(e){m.textContent='⚠️ '+(e.message||'تعذر التحقق')}};
+ const g=B('خمّن','btn primary',async()=>{if(!inp.value.trim()||g.disabled)return;g.disabled=true;let r;
+  try{r=await S.check(x.i,inp.value)}catch(e){g.disabled=false;m.textContent='⚠️ '+(e.message||'تعذر التحقق');return}
+  g.disabled=false;if(r.ok)fin(cl.length-k+1);else if(r.locked)fin(0,r.answer);else{if(k<cl.length){k++;dr()}inp.value='';m.textContent='❌ خطأ — ظهر دليل جديد'}});
+ const mo=B('➕ دليل إضافي','',()=>{if(k<cl.length){k++;dr()}else giveUp()});
  inp.placeholder='ما هذا؟';inp.onkeydown=e=>e.key==='Enter'&&g.click();
  st.append(H('div','rg-q','🕵️ اكشف اللغز — كلما قلّت الأدلة زادت نقاطك'),L,inp,g,mo,m);dr()})},
 water:{n:'ارتفاع الماء',i:'🌊',d:'تسلّق قبل أن يغرقك الماء',f:'السؤال | الصحيحة | خطأ 1 | خطأ 2',
 s:'كم عدد أيام الأسبوع؟|7|5|6\nما ناتج 9 × 9؟|81|72|91\nما عاصمة مصر؟|القاهرة|الإسكندرية|أسوان\nأكبر محيط في العالم؟|الهادئ|الأطلسي|الهندي\nما جمع كلمة كتاب؟|كتب|كتابات|كتّاب',
-run:(r,st)=>{r=r.filter(x=>x.length>2);const top=r.length+2;let i=0,p=2,w=0;const col=H('div','trk'),box=H('div');st.append(H('div','rg-muted','أجب صح لتتسلّق، وكل خطأ يرفع الماء!'),col,box);
+srv:1,run:(S,st)=>{const r=S.qs;const top=r.length+2;let i=0,p=2,w=0;const col=H('div','trk'),box=H('div');st.append(H('div','rg-muted','أجب صح لتتسلّق، وكل خطأ يرفع الماء!'),col,box);
  const dr=()=>{col.innerHTML='';for(let k=0;k<=top;k++)col.append(H('span','cl'+(k===p?' on':''),k<w?'🌊':k===p?'🧗':k===top?'🚁':'·'))};
- const nx=()=>{box.innerHTML='';dr();if(w>=p){box.append(H('div','rg-end','🌊 ابتلعك الماء!'));return}if(p>=top||i>=r.length){sc+=Math.max(0,r.length-w);upd();onEnd();box.append(H('div','rg-end','🚁 نجوت! وصلت لمروحية الإنقاذ'));return}
-  const x=r[i++];choose(box,x[0],sh(x.slice(1)),x[1],ok=>{ok?p++:w++;dr();if(w>=p||p>=top||i>=r.length)setTimeout(nx,900);else box.append(B('التالي ◀','btn primary',nx))})};nx()}},
+ const nx=()=>{box.innerHTML='';dr();if(w>=p){onEnd();box.append(H('div','rg-end','🌊 ابتلعك الماء!'));return}if(p>=top||i>=r.length){sc+=Math.max(0,r.length-w);upd();onEnd();box.append(H('div','rg-end','🚁 نجوت! وصلت لمروحية الإنقاذ'));return}
+  const x=r[i++];choose(box,x.q,x.opts,v=>S.check(x.i,v),ok=>{ok?p++:w++;dr();if(w>=p||p>=top||i>=r.length)setTimeout(nx,900);else box.append(B('التالي ◀','btn primary',nx))})};nx()}},
 bomb:{n:'القنبلة المتنقلة',i:'💣',d:'مرّر القنبلة قبل أن تنفجر',f:'السطر الأول: أسماء اللاعبين بينها فاصلة (،) — ثم كل سطر: السؤال | الجواب',
 s:'أحمد، سالم، خالد، يوسف\nما عاصمة اليابان؟|طوكيو\nكم ناتج 15 + 27؟|42\nما ضد كلمة طويل؟|قصير\nما لون السماء؟|أزرق\nكم عدد أيام السنة؟|365',
 run:(r,st)=>{const nm=r[0][0].split(/[،,]/).map(s=>s.trim()).filter(Boolean),qs=sh(r.slice(1).filter(x=>x[1]));let al=[...nm],t=0,qi=0,iv;const box=H('div','rg-card');st.append(box);
@@ -91,27 +102,33 @@ run:(r,st)=>{const qs=r.filter(x=>x[1]),pr=sh(qs.map((_,i)=>[10,20,10,50,30][i%5
  st.append(H('div','rg-muted','اختر صندوقاً — تظهر الجائزة بعد الإجابة الصحيحة'),g,pop)}},
 liar:{n:'اكشف الكاذب',i:'🤥',d:'عبارتان صادقتان وواحدة كاذبة',f:'عبارة صحيحة | عبارة صحيحة | العبارة الكاذبة (الأخيرة دائماً الكاذبة)',
 s:'الأرض تدور حول الشمس|الماء يتكون من هيدروجين وأكسجين|الشمس كوكب\nمسقط عاصمة عُمان|عدد أيام الأسبوع سبعة|القطة من الطيور\nالحوت من الثدييات|الذهب معدن|الخشب موصل جيد للكهرباء',
-run:(r,st)=>seq(st,r.filter(x=>x.length>2),(x,d)=>choose(st,'🤥 أي عبارة من هذه كاذبة؟',sh(x),x[x.length-1],d))},
+srv:1,run:(S,st)=>seq(st,S.qs,(x,d)=>choose(st,x.q,x.opts,v=>S.check(x.i,v),d))},
 bet:{n:'راهن على إجابتك',i:'🎰',d:'ابدأ بـ 100 نقطة وراهن',f:'السؤال | الصحيحة | خطأ 1 | خطأ 2',
 s:'ما ناتج 8 × 7؟|56|54|63\nما عاصمة السعودية؟|الرياض|جدة|مكة\nما ضد كلمة ظلام؟|نور|ليل|سواد\nكم عدد قارات العالم؟|7|5|9\nما أسرع حيوان بري؟|الفهد|الأسد|الحصان',
-run:(r,st)=>{sc=100;upd();seq(st,r.filter(x=>x.length>2),(x,d)=>{const bx=H('div'),q=H('div');bx.append(H('div','rg-q','🎰 رصيدك '+sc+' — كم تراهن على إجابتك؟'));
- [10,20,50].forEach(v=>bx.append(B(v,'btn primary',()=>{bx.remove();choose(q,x[0],sh(x.slice(1)),x[1],ok=>d(ok,ok?v:-v))})));st.append(bx,q)})}},
+srv:1,run:(S,st)=>{sc=100;upd();seq(st,S.qs,(x,d)=>{const bx=H('div'),q=H('div');bx.append(H('div','rg-q','🎰 رصيدك '+sc+' — كم تراهن على إجابتك؟'));
+ [10,20,50].forEach(v=>bx.append(B(v,'btn primary',()=>{bx.remove();choose(q,x.q,x.opts,a=>S.check(x.i,a),ok=>d(ok,ok?v:-v))})));st.append(bx,q)})}},
 pic:{n:'الصورة الغامضة',i:'🖼️',d:'كل إجابة تكشف جزءاً من الصورة',f:'السطر الأول: الرمز التعبيري | اسم الصورة — ثم كل سطر: السؤال | الجواب',
 s:'🦁|أسد\nما عاصمة عُمان؟|مسقط\nكم ناتج 5 × 5؟|25\nما ضد كلمة كبير؟|صغير\nما لون الموز؟|أصفر\nكم عدد أيام الأسبوع؟|7|\nما اسم أكبر محيط؟|الهادئ',
-run:(r,st)=>{const [e,nm]=r[0],qs=r.slice(1).filter(x=>x[1]),n=qs.length,cols=Math.ceil(Math.sqrt(n)),tl=[];let left=n;
+srv:1,run:(S,st)=>{const e=S.emoji||'🖼️',qs=S.qs,n=Math.max(qs.length,1),cols=Math.ceil(Math.sqrt(n)),tl=[];let left=qs.length;
  const box=H('div','pbox'),g=H('div','pgrid'),area=H('div'),gi=H('input','rg-input'),gm=H('div','rg-msg');
  g.style.gridTemplateColumns='repeat('+cols+',1fr)';g.style.gridTemplateRows='repeat('+Math.ceil(n/cols)+',1fr)';
  for(let k=0;k<n;k++){const c=H('div','tl');tl.push(c);g.append(c)}box.append(H('div','pemoji',e),g);gi.placeholder='هل عرفت الصورة؟ اكتبها هنا';
- const gb=B('🎯 خمّن الصورة','btn primary',()=>{if(!gi.value.trim())return;if(hit(gi.value,nm||'')){tl.forEach(c=>c.style.opacity=0);sc+=left+3;upd();gm.textContent='🎉 صحيح! +'+(left+3)+' نقطة';area.innerHTML='';gi.disabled=gb.disabled=true}else gm.textContent='❌ ليست هي'});
- st.append(box,gi,gb,gm,area);
- seq(area,qs,(x,d)=>ask(area,x[0],x[1],ok=>{if(ok){const c=tl.find(z=>z.style.opacity!=='0');if(c){c.style.opacity=0;left--}}d(ok)}))}},
+ const gb=B('🎯 خمّن الصورة','btn primary',async()=>{if(!gi.value.trim()||gb.disabled)return;gb.disabled=true;let r;
+  try{r=await S.check(-1,gi.value,'image')}catch(err){gb.disabled=false;gm.textContent='⚠️ '+(err.message||'تعذر التحقق');return}
+  if(r.ok){tl.forEach(c=>c.style.opacity=0);sc+=left+3;upd();gm.textContent='🎉 صحيح! +'+(left+3)+' نقطة';gi.disabled=true}
+  else if(r.locked){gi.disabled=true;gm.textContent='❌ انتهت محاولات التخمين — الصورة: '+(r.answer||'')}
+  else{gb.disabled=false;gm.textContent='❌ ليست هي'+(r.tries_left!=null?' — بقيت '+r.tries_left+' محاولات':'')}});
+ if(S.hasImage)st.append(box,gi,gb,gm,area);else st.append(box,area);
+ seq(area,qs,(x,d)=>ask(area,x.q,v=>S.check(x.i,v),ok=>{if(ok){const c=tl.find(z=>z.style.opacity!=='0');if(c){c.style.opacity=0;left--}}d(ok)}))}},
 fire:{n:'سلسلة النار',i:'🔥',d:'إجابات متتالية تضاعف نقاطك',f:'السؤال | الصحيحة | خطأ 1 | خطأ 2 (10 ثوانٍ لكل سؤال)',
 s:'ما ناتج 9 + 6؟|15|14|16\nما عاصمة الكويت؟|الكويت|الدوحة|المنامة\nما ضد كلمة سعيد؟|حزين|فرحان|مسرور\nكم ناتج 4 × 4؟|16|12|8\nما لون العشب؟|أخضر|أزرق|أحمر\nكم ساعة في اليوم؟|24|12|60',
-run:(r,st)=>{let sk=0;const stat=H('div','rg-hud'),area=H('div');st.append(stat,area);const up=()=>stat.textContent='🔥 سلسلة: '+sk+' — المضاعف ×'+(1+Math.floor(sk/2));up();
- seq(area,r.filter(x=>x.length>2),(x,d)=>{let t=10,fin=0;const tb=H('div','rg-muted','⏳ 10');area.append(tb);
-  const end=ok=>{if(fin)return;fin=1;clearInterval(v);const p=ok?10*(1+Math.floor(sk/2)):0;sk=ok?sk+1:0;up();[...area.querySelectorAll('.rg-opt')].forEach(c=>{c.disabled=true;if(c.textContent===x[1])c.classList.add('rg-ok')});d(ok,p)};
-  const v=tick(()=>{tb.textContent='⏳ '+(--t);if(t<=0)end(0)},1000);
-  choose(area,x[0],sh(x.slice(1)),x[1],end)})}}
+srv:1,run:(S,st)=>{let sk=0;const stat=H('div','rg-hud'),area=H('div');st.append(stat,area);const up=()=>stat.textContent='🔥 سلسلة: '+sk+' — المضاعف ×'+(1+Math.floor(sk/2));up();
+ seq(area,S.qs,(x,d)=>{let t=10,fin=0;const tb=H('div','rg-muted','⏳ 10');area.append(tb);
+  const end=ok=>{if(fin)return;fin=1;clearInterval(v);const p=ok?10*(1+Math.floor(sk/2)):0;sk=ok?sk+1:0;up();d(ok,p)};
+  const timeout=async()=>{if(fin)return;[...area.querySelectorAll('.rg-opt')].forEach(c=>c.disabled=true);
+   try{const r=await S.check(x.i,'','skip');[...area.querySelectorAll('.rg-opt')].forEach(c=>{if(r.answer!=null&&c.textContent===r.answer)c.classList.add('rg-ok')})}catch(_e){}end(0)};
+  const v=tick(()=>{tb.textContent='⏳ '+(--t);if(t<=0)timeout()},1000);
+  choose(area,x.q,x.opts,a=>S.check(x.i,a),end)})}}
 };
 
 const SUB={
@@ -188,7 +205,7 @@ const SC={
  water:{f:['السؤال','الإجابة الصحيحة','خطأ 1','خطأ 2']},
  bomb:{f:['السؤال','الجواب'],g:1,h:['أسماء اللاعبين بينها فاصلة (،)']},
  rocket:{f:['السؤال','الجواب'],g:1,h:['أسماء الفرق بينها فاصلة (،)']},
- treasure:{f:['السؤال','الجواب']},
+ treasure:{f:['السؤال','الجواب'],g:1},
  liar:{f:['عبارة صحيحة','عبارة صحيحة أخرى','العبارة الكاذبة']},
  bet:{f:['السؤال','الإجابة الصحيحة','خطأ 1','خطأ 2']},
  pic:{f:['السؤال','الجواب'],h:['الرمز التعبيري (مثل 🦁)','اسم الصورة']},
@@ -322,28 +339,60 @@ function renderStudentList(){
  </div>`}).join('');
  host.querySelectorAll('[data-rg-play]').forEach(b=>b.onclick=()=>{const g=RG.studentGames.find(x=>Number(x.id)===Number(b.dataset.rgPlay));if(g)launchGame(g,studentHome,false)})
 }
-function launchGame(g,back,preview){
+// Question source for the auto-checked games.
+// Teacher preview: built locally from the full rows (same rules as the server). Student: from the server, without answers.
+function localSource(g){
+ const rows=payloadRows(g).map(r=>(Array.isArray(r)?r:[]).map(c=>String(c??'').trim())),head=payloadHead(g).map(c=>String(c??'').trim()),t=g.template_code,qs=[];
+ rows.forEach((c,i)=>{
+  if(t==='esc'&&c[1])qs.push({i,q:c[0],hint:c[2]||'',max_tries:3,_a:c[1]});
+  else if(t==='det'&&c.length>2)qs.push({i,q:'',clues:c.slice(1),max_tries:Math.max(c.length-1,1),_a:c[0]});
+  else if(['water','bet','fire'].includes(t)&&c.length>2)qs.push({i,q:c[0],opts:sh(c.slice(1)),mc:1,max_tries:1,_a:c[1]});
+  else if(t==='liar'&&c.length>2)qs.push({i,q:'🤥 أي عبارة من هذه كاذبة؟',opts:sh(c),mc:1,max_tries:1,_a:c[c.length-1]});
+  else if(t==='pic'&&c[1])qs.push({i,q:c[0],max_tries:1,_a:c[1]});
+ });
+ const tries={};
+ const check=async(i,v,kind='q')=>{const q=kind==='image'?{_a:head[1]||'',max_tries:3}:qs.find(x=>x.i===i);if(!q)throw new Error('سؤال غير موجود');
+  const k=kind==='image'?'img':String(i),st=tries[k]||(tries[k]={t:0,l:0,ok:0});if(st.l)return {ok:!!st.ok,locked:true,answer:q._a,repeat:true};
+  if(kind==='skip'){st.l=1;return {ok:false,locked:true,answer:q._a}}
+  st.t++;const ok=q.mc?String(v).trim()===q._a:hit(v,q._a);st.ok=ok;st.l=ok||st.t>=q.max_tries;
+  return {ok,locked:!!st.l,tries_left:Math.max(q.max_tries-st.t,0),answer:st.l?q._a:null}};
+ return {qs,check,emoji:head[0]||'',hasImage:!!head[1],attempt:null};
+}
+async function serverSource(g){
+ const s=await rpc('portal_student_mt_game_start',{p_token:studentToken,p_subject_code:studentSubjectCode,p_game_id:Number(g.id)});
+ if(!s||!Array.isArray(s.questions))throw new Error('تعذر بدء اللعبة');
+ const check=(i,v,kind='q')=>rpc('portal_student_mt_game_answer',{p_token:studentToken,p_subject_code:studentSubjectCode,p_attempt_id:Number(s.attempt_id),p_index:Number(i),p_answer:String(v??''),p_kind:kind});
+ return {qs:s.questions,check,emoji:s.emoji||'',hasImage:!!s.has_image,attempt:Number(s.attempt_id),attemptNo:s.attempt_no};
+}
+async function launchGame(g,back,preview){
  clr();cur=g.template_code;sc=0;RG.activeGame=g;
  const root=preview?ge('t-games'):ge('s-games');if(!root)return;
  const rows=toRowsText(g).split('\n').map(l=>l.split('|').map(x=>x.trim())).filter(r=>r[0]);
+ const E=T[g.template_code];let src=null;
+ if(E?.srv){
+  if(preview)src=localSource(g);
+  else{root.innerHTML='<div class="rg-muted">جاري تجهيز اللعبة...</div>';
+   try{src=await serverSource(g)}catch(e){root.innerHTML='';root.append(H('div','msg err',e.message||'تعذر بدء اللعبة'),B('→ رجوع','btn secondary',back));return}}
+ }
  let saved=false;
  const save=async()=>{
-  if(saved||preview||SC[g.template_code]?.g)return;saved=true;
+  if(saved||preview||SC[g.template_code]?.g||!src?.attempt)return;saved=true;
   try{
-   const r=await rpc('portal_student_mt_save_game_result',{p_token:studentToken,p_subject_code:studentSubjectCode,p_game_id:Number(g.id),p_score:Number(sc)*Number(g.score_unit||1),p_completed:true});
+   // The server computes the score (correct answers × points) and completion; the browser only asks to finish.
+   const r=await rpc('portal_student_mt_game_finish',{p_token:studentToken,p_subject_code:studentSubjectCode,p_attempt_id:src.attempt});
    const x=r?.[0];if(x){
     if(typeof quizPoints!=='undefined'&&x.new_quiz_points!=null)quizPoints=Number(x.new_quiz_points||0);
     if(ge('studentPoints')&&x.total_points!=null)ge('studentPoints').textContent=typeof fmtPoints==='function'?fmtPoints(x.total_points):String(x.total_points);
-    const m=H('div','rg-ok-t',`✅ تم حفظ النتيجة: ${Number(sc)*Number(g.score_unit||1)}${Number(x.awarded_points||0)>0?' • ⭐ +'+Number(x.awarded_points)+' نقطة في رصيدك':''}`);
+    const m=H('div','rg-ok-t',`✅ تم حفظ النتيجة: ${Number(x.score||0)} — ${Number(x.correct||0)} من ${Number(x.total||0)} إجابات صحيحة${Number(x.awarded_points||0)>0?' • ⭐ +'+Number(x.awarded_points)+' نقطة في رصيدك':''}${x.completed?'':' • لم تُجب كل الأسئلة، فلا تُحتسب مكافأة الإكمال'}`);
     root.append(m);
    }
   }catch(e){saved=false;root.append(H('div','msg err',e.message||'تعذر حفظ النتيجة'))}
  };
  onEnd=save;
- root.innerHTML='';const bar=H('div','rg-toolbar');scoreHost=H('span','rg-score');bar.append(B('→ رجوع','btn secondary',()=>{onEnd=()=>{};clr();back()}),B('🔄 من جديد','btn secondary',()=>launchGame(g,back,preview)));
- if(!preview&&!SC[g.template_code]?.g)bar.append(B('💾 إنهاء وحفظ النتيجة الحالية','btn primary',save));bar.append(scoreHost);
- const st=H('div','rg-stage');root.append(bar,H('h2','',g.title),preview?H('div','rg-muted','👁 معاينة — لا تحفظ نتيجة'):H('div','rg-muted','⭐ مكافأة الإكمال تضاف مرة واحدة فقط'),st);
- try{T[g.template_code].run(rows,st)}catch(e){st.innerHTML=`<div class="msg err">${esc(e.message||'تعذر تشغيل اللعبة')}</div>`}
+ root.innerHTML='';const bar=H('div','rg-toolbar');scoreHost=H('span','rg-score');bar.append(B('→ رجوع','btn secondary',()=>{onEnd=()=>{};clr();back()}));if(preview)bar.append(B('🔄 من جديد','btn secondary',()=>launchGame(g,back,preview)));
+ if(!preview&&!SC[g.template_code]?.g)bar.append(B('💾 إنهاء المحاولة وحفظ النتيجة','btn primary',save));bar.append(scoreHost);
+ const st=H('div','rg-stage');root.append(bar,H('h2','',g.title),preview?H('div','rg-muted','👁 معاينة — لا تحفظ نتيجة'):H('div','rg-muted','⭐ مكافأة الإكمال تضاف مرة واحدة فقط، عند الإجابة عن كل الأسئلة'),st);
+ try{E.srv?E.run(src,st):E.run(rows,st)}catch(e){st.innerHTML=`<div class="msg err">${esc(e.message||'تعذر تشغيل اللعبة')}</div>`}
 }
 function init(){
  addStyles();

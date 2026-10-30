@@ -176,7 +176,7 @@ function loginGuardKey(){return 'chemLoginGuard_'+loginMode}
 function loginGuard(){try{const x=JSON.parse(localStorage.getItem(loginGuardKey())||'{}');if(x.until&&Date.now()<x.until)return Math.ceil((x.until-Date.now())/1000)}catch(_e){}return 0}
 function loginFailed(){try{const k=loginGuardKey(),x=JSON.parse(localStorage.getItem(k)||'{}'),n=(Number(x.n)||0)+1;if(n>=SEC.maxLoginAttempts)localStorage.setItem(k,JSON.stringify({n:0,until:Date.now()+SEC.loginCooldownMs}));else localStorage.setItem(k,JSON.stringify({n}))}catch(_e){}}
 function loginSucceeded(){try{localStorage.removeItem(loginGuardKey())}catch(_e){}}
-function secureLogout(note=''){studentToken=teacherToken=adminToken=null;currentStudent=currentTeacher=currentAdmin=null;teacherAssignments=[];teacherSubjects=[];teacherSubjectCode=null;teacherSubjectName='';studentSubjects=[];studentSubjectCode=null;studentSubjectName='';studentTeacherId=null;studentSubjectMode='mt';classes=[...defaultClasses];sessionClear();show('loginView');if(document.querySelector('.brand'))document.querySelector('.brand').textContent='🔬 منصة روافد العلوم';document.title='منصة روافد العلوم | التعليم الرقمي للعلوم | الصفوف 7 - 9';$('topSub').textContent='الصفوف 7 - 9';if(note)msg('loginMsg',note,false)}
+function secureLogout(note=''){if(adminToken){const t=adminToken;try{sb.rpc('portal_admin_logout',{p_token:t}).then(()=>{},()=>{})}catch(_e){}}/* end the admin session on the server too */studentToken=teacherToken=adminToken=null;currentStudent=currentTeacher=currentAdmin=null;teacherAssignments=[];teacherSubjects=[];teacherSubjectCode=null;teacherSubjectName='';studentSubjects=[];studentSubjectCode=null;studentSubjectName='';studentTeacherId=null;studentSubjectMode='mt';classes=[...defaultClasses];sessionClear();show('loginView');if(document.querySelector('.brand'))document.querySelector('.brand').textContent='🔬 منصة روافد العلوم';document.title='منصة روافد العلوم | التعليم الرقمي للعلوم | الصفوف 7 - 9';$('topSub').textContent='الصفوف 7 - 9';if(note)msg('loginMsg',note,false)}
 function validTeacherUrlField(id,label){const v=$(id)?.value.trim()||'';if(!v)return '';const u=safeWebUrl(v);if(!u)throw new Error(`${label}: استخدم رابط HTTPS صحيح فقط.`);return u}
 async function isRealPdf(file){if(!file||file.size<5)return false;const head=new Uint8Array(await file.slice(0,5).arrayBuffer());return String.fromCharCode(...head)==='%PDF-'}
 async function isRealImage(file){if(!file||file.size<12)return false;const b=new Uint8Array(await file.slice(0,16).arrayBuffer());const png=b[0]===0x89&&b[1]===0x50&&b[2]===0x4e&&b[3]===0x47;const jpg=b[0]===0xff&&b[1]===0xd8&&b[2]===0xff;const gif=String.fromCharCode(...b.slice(0,6))==='GIF87a'||String.fromCharCode(...b.slice(0,6))==='GIF89a';const webp=String.fromCharCode(...b.slice(0,4))==='RIFF'&&String.fromCharCode(...b.slice(8,12))==='WEBP';return png||jpg||gif||webp}
@@ -341,7 +341,8 @@ function activateDynamicSection(viewId,navId,secId){
 function ensureStudentSubjectVideoUI(){
   const nav=$('studentNav'),view=$('studentView');if(!nav||!view)return;
   const legacy=[...nav.querySelectorAll('button')].filter(b=>b.id!=='studentMtVideosNav'&&/فيديوهات الشرح/.test(b.textContent||''));
-  legacy.forEach(b=>b.style.display=studentSubjectCode==='chemistry'?'':'none');
+  // One video tab per subject: the old chemistry library is merged into «فيديوهات المادة» (see loadStudentSubjectVideos).
+  legacy.forEach(b=>b.style.display='none');
   let btn=$('studentMtVideosNav'),sec=$('s-mt-videos');
   if(!btn){btn=document.createElement('button');btn.id='studentMtVideosNav';btn.dataset.sec='s-mt-videos';btn.textContent='🎬 فيديوهات المادة';nav.appendChild(btn);btn.onclick=()=>{activateDynamicSection('studentView','studentNav','s-mt-videos');loadStudentSubjectVideos().catch(()=>{})}}
   btn.style.display='';
@@ -350,7 +351,12 @@ function ensureStudentSubjectVideoUI(){
 async function loadStudentSubjectVideos(){
   if(!$('studentMtVideoList'))return;
   const d=await rpc('portal_student_mt_videos',{p_token:studentToken,p_subject_code:studentSubjectCode})||[];
-  $('studentMtVideoList').innerHTML=d.length?d.map(v=>{const u=safeWebUrl(v.video_url);return `<div class="item"><span class="badge">${esc(v.target_class==='ALL'?'كل الشعب':v.target_class)}</span><h3>${esc(v.title)}</h3>${v.description?`<p>${esc(v.description)}</p>`:''}${u?`<a class="btn primary" target="_blank" rel="noopener noreferrer" href="${esc(u)}">▶️ فتح الفيديو</a>`:'<div class="msg err">الرابط غير صالح.</div>'}</div>`}).join(''):'<div class="muted">لا توجد فيديوهات لهذه المادة حاليًا.</div>';
+  if(studentSubjectCode==='chemistry'){
+    // Include the old chemistry video library so students keep seeing those videos in the single tab.
+    try{const old=await rpc('portal_student_videos',{p_token:studentToken})||[];const seen=new Set(d.map(v=>String(v.video_url||'').trim()));old.forEach(v=>{const u=String(v.video_url||'').trim();if(u&&!seen.has(u)){seen.add(u);d.push({...v,target_class:'ALL'})}})}catch(e){console.warn('Old chemistry videos unavailable',e)}
+    d.sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  }
+  $('studentMtVideoList').innerHTML=d.length?d.map(v=>{const u=safeWebUrl(v.video_url);return `<div class="item"><span class="badge">${esc(v.target_class==='ALL'?'كل الشعب':v.target_class)}</span><h3>${esc(v.title)}</h3>${v.description?`<p>${esc(v.description)}</p>`:''}${u?`<a class="btn primary" style="display:inline-block;margin-top:6px" target="_blank" rel="noopener noreferrer" href="${esc(u)}">▶️ فتح الفيديو</a>`:'<div class="msg err">الرابط غير صالح.</div>'}</div>`}).join(''):'<div class="muted">لا توجد فيديوهات لهذه المادة حاليًا.</div>';
 }
 function ensureTeacherSubjectVideoUI(){
   const nav=$('teacherNav'),view=$('teacherView');if(!nav||!view)return;
@@ -378,6 +384,7 @@ function ensureTeacherTopicManager(){
   renderTeacherTopicManager();
 }
 async function loadManagedTeacherTopics(){
+  // The DB returns only lessons the teacher added or actually used (curriculum lessons not yet used stay hidden).
   managedTopics=await rpc('portal_teacher_mt_managed_topics',{p_token:teacherToken,p_subject_code:teacherSubjectCode})||[];
   renderTeacherTopicManager();
 }
@@ -728,7 +735,16 @@ async function refreshAvailableStudentStudyTopics(unitNo,preferredTopicId=null){
   if(!candidates.length){select.innerHTML='<option value="">لا توجد دروس متاحة</option>';select.disabled=false;$('studentLessonMaterials').innerHTML='<div class="lesson-empty">لا توجد دروس متاحة في هذه الوحدة.</div>';return}
   try{
     const available=[];
-    // Limit concurrent requests to avoid overwhelming the database.
+    const studyTypes=['summary','questions','activity_solution','studentbook_solution'];
+    // One light call: which lessons have published content (no attachment data downloaded).
+    let lightTopics=null;
+    try{lightTopics=await rpc('portal_student_mt_material_topics',{p_token:studentToken,p_subject_code:studentSubjectCode})}catch(e){console.warn('Light topic check unavailable, using per-lesson check',e)}
+    if(requestId!==studentStudyRequestId)return;
+    if(Array.isArray(lightTopics)){
+      const withContent=new Set(lightTopics.filter(r=>studyTypes.includes(r.material_type)&&Number(r.items)>0).map(r=>Number(r.topic_id)));
+      candidates.forEach(t=>{if(withContent.has(Number(t.id)))available.push(t)});
+    }else
+    // Fallback: limit concurrent requests to avoid overwhelming the database.
     for(let i=0;i<candidates.length;i+=4){
       const batch=candidates.slice(i,i+4);
       const results=await Promise.all(batch.map(t=>rpc('portal_student_lesson_materials',{p_token:studentToken,p_topic_id:Number(t.id)})));
@@ -1042,15 +1058,20 @@ function fillStudyTopicSelects(){
   const html=topics.length?topics.map(t=>`<option value="${t.id}">الوحدة ${t.unit_no} — ${esc(t.title)}${t.page_no?' (ص '+t.page_no+')':''}</option>`).join(''):'<option value="">أضف درسًا أولًا</option>';
   if($('studyTopic'))$('studyTopic').innerHTML=html;if($('engTopic'))$('engTopic').innerHTML=html;
 }
+// Light list of the teacher's materials (names only, no attachment data). Falls back to the old full list if the new RPC is unavailable.
+async function teacherMaterialsList(topicId){
+  try{return await rpc('portal_teacher_mt_lesson_materials_list',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_topic_id:topicId})||[]}
+  catch(e){console.warn('Light materials list unavailable, using full list',e);return (await rpc('portal_teacher_lesson_materials',{p_token:teacherToken,p_topic_id:topicId})||[]).map(m=>({...m,has_attachment:!!m.attachment_data}))}
+}
 async function loadTeacherStudyMaterials(){
-  const d=await rpc('portal_teacher_lesson_materials',{p_token:teacherToken,p_topic_id:null});
+  const d=await teacherMaterialsList(null);
   $('teacherStudyList').innerHTML=d?.length?d.map(m=>`<div class="item"><span class="badge">${m.material_type==='summary'?'📖 ملخص':'📝 أسئلة'}</span> <span class="badge">${m.target_class==='ALL'?'كل الصفوف':esc(m.target_class)}</span> <span class="badge ${m.is_visible?'state-on':'state-off'}">${m.is_visible?'ظاهر':'مخفي'}</span><h3>${esc(m.topic_title)} — ${esc(m.title)}</h3>${m.attachment_name?`<div class="muted">📎 ${esc(m.attachment_name)}</div>`:''}<div class="material-actions"><button class="btn ${m.is_visible?'secondary':'primary'}" data-action="toggle-study-material" data-id="${m.id}" data-bool="${!m.is_visible}">${m.is_visible?'🙈 إخفاء':'👁️ إظهار للطلاب'}</button><button class="btn danger" data-action="delete-study-material" data-id="${m.id}">حذف</button></div></div>`).join(''):'<div class="muted">لم تضف ملخصات أو أسئلة بعد.</div>';
 }
 if($('studyFile'))$('studyFile').setAttribute('accept','.pdf,.doc,.docx,.ppt,.pptx');
 $('studyAddBtn').onclick=async()=>{try{$('studyAddBtn').disabled=true;msg('studyMsg','جاري تجهيز الملف...');const f=await prepareStudyFile($('studyFile').files?.[0]);if(!f.data)throw new Error('اختر ملف PDF أو Word أو PowerPoint أولًا.');const type=$('studyType').value;const topic=topics.find(t=>t.id===Number($('studyTopic').value));const typeLabels={summary:'ملخص',questions:'أسئلة',activity_solution:'حل كتاب النشاط وأوراق العمل',studentbook_solution:'حل كتاب الطالب'};const defaultTitle=`${typeLabels[type]||'محتوى'} ${topic?.title||'الدرس'}`;const id=await rpc('portal_teacher_add_lesson_material',{p_token:teacherToken,p_topic_id:Number($('studyTopic').value),p_material_type:type,p_title:$('studyTitle').value.trim()||defaultTitle,p_note:$('studyNote').value,p_attachment_data:f.data,p_attachment_name:f.name,p_attachment_mime:f.mime,p_target_class:$('studyClass').value,p_is_visible:$('studyVisible').checked});if(!id)throw new Error('تعذر حفظ المحتوى');
-  const saved=await rpc('portal_teacher_lesson_materials',{p_token:teacherToken,p_topic_id:Number($('studyTopic').value)});
+  const saved=await teacherMaterialsList(Number($('studyTopic').value));
   const verified=(saved||[]).find(m=>Number(m.id)===Number(id));
-  if(!verified||!verified.attachment_data||!verified.attachment_name)throw new Error('تم إنشاء السجل لكن لم نستطع تأكيد حفظ الملف. لا ترفع الملف مرة ثانية قبل مراجعة المعلم أو المشرف.');
+  if(!verified||!verified.has_attachment||!verified.attachment_name)throw new Error('تم إنشاء السجل لكن لم نستطع تأكيد حفظ الملف. لا ترفع الملف مرة ثانية قبل مراجعة المعلم أو المشرف.');
   $('studyTitle').value='';$('studyNote').value='';$('studyFile').value='';$('studyVisible').checked=false;msg('studyMsg','تم حفظ المحتوى ✅');await loadTeacherStudyMaterials()}catch(e){msg('studyMsg',e.message,false)}finally{$('studyAddBtn').disabled=false}};
 window.toggleStudyMaterial=async(id,v)=>{const ok=await rpc('portal_teacher_set_lesson_material_visibility',{p_token:teacherToken,p_material_id:id,p_is_visible:v});if(ok)await loadTeacherStudyMaterials()};
 window.deleteStudyMaterial=async id=>{if(!confirm('حذف هذا المحتوى؟'))return;const ok=await rpc('portal_teacher_delete_lesson_material',{p_token:teacherToken,p_material_id:id});if(ok)await loadTeacherStudyMaterials()};
@@ -1252,7 +1273,7 @@ document.addEventListener('input',e=>{const el=e.target.closest?.('.gradebook-in
 function formatQuestionTime(v){if(!v)return '';try{return new Date(v).toLocaleString('ar-OM',{dateStyle:'short',timeStyle:'short'})}catch(e){return new Date(v).toLocaleString('ar')}}
 async function loadTeacherQuestions(){const all=await rpc('portal_teacher_questions',{p_token:teacherToken,p_status:null});const d=(all||[]).filter(q=>!String(q.question_text||'').startsWith(BANK_ESSAY_PREFIX));$('teacherQuestionList').innerHTML=d.length?d.map(q=>`<div class="item"><span class="badge">${esc(q.class_name)} • ${q.status==='new'?'جديد':'تمت الإجابة'}</span><h3>${studentName(q.full_name)}</h3>${q.created_at?`<div class="muted" style="margin-top:-6px;margin-bottom:10px">🕒 أرسل السؤال: ${formatQuestionTime(q.created_at)}</div>`:''}<p>${esc(q.question_text)}</p>${q.attachment_url?renderSafeAttachment(q.attachment_url,'فتح المرفق'):''}<div class="field"><textarea id="reply-${q.id}" rows="3" placeholder="اكتب ردك...">${esc(q.teacher_reply||'')}</textarea></div><button class="btn primary" data-action="reply-question" data-id="${q.id}">إرسال الرد</button></div>`).join(''):'<div class="muted">لا توجد أسئلة.</div>'}
 window.replyQ=async id=>{const ok=await rpc('portal_teacher_reply_question',{p_token:teacherToken,p_question_id:id,p_reply:$('reply-'+id).value});if(ok){await loadTeacherQuestions();await loadOverview()}};
-async function applyPoints(delta=null){try{const d=delta===null?Number($('pointsDelta').value):delta;const sid=Number($('pointsStudent').value);const p=await rpc('portal_teacher_adjust_points',{p_token:teacherToken,p_student_id:sid,p_delta:d});if(p===null)throw new Error('تعذر التعديل');await refreshStudentSelects();const pc=$('pointsClass').value||'9/1';const rows=await rpc('portal_teacher_points_overview',{p_token:teacherToken,p_class:pc});const row=(rows||[]).find(x=>Number(x.student_id)===sid);const total=row?fmtPoints(row.total_points):fmtPoints(p);msg('pointsMsg',(d<0?'تم خصم '+Math.abs(d)+' نقطة. ':'تمت إضافة '+d+' نقطة. ')+'إجمالي رصيد الطالب الآن: '+total+' ⭐')}catch(e){msg('pointsMsg',e.message,false)}}$('pointsBtn').onclick=()=>applyPoints();$('pointsPlusBtn')&&($('pointsPlusBtn').onclick=()=>applyPoints(1));$('pointsMinusBtn')&&($('pointsMinusBtn').onclick=()=>applyPoints(-1));
+async function applyPoints(delta=null){try{const d=delta===null?Number($('pointsDelta').value):delta;if(!Number.isFinite(d)||Math.abs(d)>100)throw new Error('الحد الأقصى لتعديل النقاط في المرة الواحدة 100 نقطة');const sid=Number($('pointsStudent').value);const p=await rpc('portal_teacher_adjust_points',{p_token:teacherToken,p_student_id:sid,p_delta:d});if(p===null)throw new Error('تعذر التعديل');await refreshStudentSelects();const pc=$('pointsClass').value||'9/1';const rows=await rpc('portal_teacher_points_overview',{p_token:teacherToken,p_class:pc});const row=(rows||[]).find(x=>Number(x.student_id)===sid);const total=row?fmtPoints(row.total_points):fmtPoints(p);msg('pointsMsg',(d<0?'تم خصم '+Math.abs(d)+' نقطة. ':'تمت إضافة '+d+' نقطة. ')+'إجمالي رصيد الطالب الآن: '+total+' ⭐')}catch(e){msg('pointsMsg',e.message,false)}}$('pointsBtn').onclick=()=>applyPoints();$('pointsPlusBtn')&&($('pointsPlusBtn').onclick=()=>applyPoints(1));$('pointsMinusBtn')&&($('pointsMinusBtn').onclick=()=>applyPoints(-1));
 if($('newStudentClass'))$('newStudentClass').innerHTML=classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
 // Restore the missing Add Student form handler.
 if($('addStudentBtn'))$('addStudentBtn').onclick=async()=>{

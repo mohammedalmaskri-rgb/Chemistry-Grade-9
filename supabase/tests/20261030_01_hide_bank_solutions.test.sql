@@ -107,5 +107,5 @@ select 'rollback restores old output', not exists (
          (select * from public.portal_student_mt_question_bank((select token from t_ctx), 'chemistry') except select * from t_before)), '';
 
 \pset tuples_only off
-select case when ok then 'PASS' else 'FAIL' end as result, check_name, detail from t_results;
-select case when bool_and(ok) then 'ALL PASSED' else 'FAILURES' end as summary from t_results;
+select case when ok is true then 'PASS' else 'FAIL' end as result, check_name, detail from t_results;
+select case when bool_and(coalesce(ok, false)) then 'ALL PASSED' else 'FAILURES' end as summary from t_results;
