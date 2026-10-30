@@ -1,10 +1,24 @@
 {
-  "name": "بوابة الكيمياء للصف التاسع | الأستاذ محمد المسكري",
-  "short_name": "بوابة الكيمياء",
+  "name": "منصة روافد العلوم | التعليم الرقمي للعلوم للصفوف 7 - 9",
+  "short_name": "روافد العلوم",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f8fbfb",
-  "theme_color": "#0f766e"
+  "theme_color": "#0f766e",
+  "description": "منصة تعليمية للصفوف السابع والثامن والتاسع في سلطنة عمان: العلوم والكيمياء والفيزياء والأحياء.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
 }
