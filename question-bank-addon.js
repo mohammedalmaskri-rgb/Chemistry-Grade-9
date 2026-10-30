@@ -1,6 +1,7 @@
 /*
   بنك الأسئلة المتسلسل
   - الوحدة الأولى: حالات المادة / فصل وتنقية المواد
+  - الوحدة الثانية: الذرات والجزيئات / تركيب الذرة / ترتيب الإلكترونات في الذرات
   - سؤال واحد كل مرة، بلا رجوع للسؤال السابق
   - 10 نقاط داخل التحدي لكل إجابة صحيحة (النتيجة من 150 عند وجود 15 سؤالًا)
   - +0.5 نقطة في رصيد المنصة لأول إجابة صحيحة على السؤال، عبر RPC الحالي
@@ -11,9 +12,13 @@
   const ROOT_ID='qbChallengeRoot';
   const OBJECTIVE_TYPES=new Set(['mcq','tf','matching']);
   const LESSONS=[
-    {key:'states',name:'حالات المادة',icon:'🧊',aliases:['حالات المادة']},
-    {key:'separation',name:'فصل وتنقية المواد',icon:'🧪',aliases:['فصل وتنقية المواد','فصل المواد وتنقيتها','تنقية المواد وفصلها','فصل وتنقية المواد وتصفيتها','تنقية المواد']}
+    {key:'states',unit:1,name:'حالات المادة',icon:'🧊',aliases:['حالات المادة']},
+    {key:'separation',unit:1,name:'فصل وتنقية المواد',icon:'🧪',aliases:['فصل وتنقية المواد','فصل المواد وتنقيتها','تنقية المواد وفصلها','فصل وتنقية المواد وتصفيتها','تنقية المواد']},
+    {key:'atoms',unit:2,name:'الذرات والجزيئات',icon:'⚛️',aliases:['الذرات والجزيئات','الذرات والجزيئات والايونات']},
+    {key:'atomic',unit:2,name:'تركيب الذرة',icon:'🔬',aliases:['تركيب الذرة','التركيب الذري للذرة']},
+    {key:'electrons',unit:2,name:'ترتيب الإلكترونات في الذرات',icon:'🌀',aliases:['ترتيب الإلكترونات في الذرات','ترتيب الالكترونات','التركيب الالكتروني']}
   ];
+  const UNITS=[{no:1,title:'📘 الوحدة الأولى: طبيعة المادة'},{no:2,title:'📗 الوحدة الثانية: التركيب الذري'}];
   let rows=[];
   let active=null;
 
@@ -52,12 +57,12 @@
   function renderHome(){
     const root=el(ROOT_ID); if(!root)return;
     root.innerHTML=`<div class="qb-home">
-      <div class="qb-unit-card">
-        <div class="qb-unit-head"><div><div class="qb-unit-title">📘 الوحدة الأولى</div><div class="muted">اختر الدرس وابدأ الأسئلة مباشرة</div></div><span class="badge">سؤال بعد سؤال</span></div>
+      ${UNITS.map(u=>`<div class="qb-unit-card">
+        <div class="qb-unit-head"><div><div class="qb-unit-title">${u.title}</div><div class="muted">اختر الدرس وابدأ الأسئلة مباشرة</div></div><span class="badge">سؤال بعد سؤال</span></div>
         <div class="qb-lessons-grid">
-          ${LESSONS.map(l=>{const n=lessonRows(l).length;return `<button type="button" class="qb-lesson-card" data-qb-lesson="${l.key}" ${n?'':'disabled'}><span class="qb-lesson-icon">${l.icon}</span><span class="qb-lesson-name">${htmlEsc(l.name)}</span><span class="qb-lesson-meta">${n?`${Math.min(n,15)} سؤالًا جاهزًا للتحدي`:'لا توجد أسئلة منشورة لهذا الدرس بعد'}</span></button>`}).join('')}
+          ${LESSONS.filter(l=>l.unit===u.no).map(l=>{const n=lessonRows(l).length;return `<button type="button" class="qb-lesson-card" data-qb-lesson="${l.key}" ${n?'':'disabled'}><span class="qb-lesson-icon">${l.icon}</span><span class="qb-lesson-name">${htmlEsc(l.name)}</span><span class="qb-lesson-meta">${n?`${Math.min(n,15)} سؤالًا جاهزًا للتحدي`:'لا توجد أسئلة منشورة لهذا الدرس بعد'}</span></button>`}).join('')}
         </div>
-      </div>
+      </div>`).join('')}
     </div>`;
     root.querySelectorAll('[data-qb-lesson]').forEach(b=>b.addEventListener('click',()=>startLesson(b.dataset.qbLesson)));
   }
