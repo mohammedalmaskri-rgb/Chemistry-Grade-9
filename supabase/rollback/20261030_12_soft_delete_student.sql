@@ -41,4 +41,7 @@ grant execute on function public.portal_teacher_delete_student(p_token uuid, p_s
 grant execute on function public.portal_teacher_delete_student(p_token uuid, p_student_id bigint) to anon;
 grant execute on function public.portal_teacher_delete_student(p_token uuid, p_student_id bigint) to service_role;
 
+drop function if exists public.portal_admin_set_student_active(uuid, bigint, boolean);
+drop function if exists public.portal_admin_move_student(uuid, bigint, text);
+
 commit;
