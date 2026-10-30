@@ -1,0 +1,46 @@
+/* صفحات المنصة العامة (للتعريف وظهور المنصة في محركات البحث) */
+:root{--teal:#0f766e;--teal-d:#0b5d57;--navy:#0b2447;--ink:#173233;--muted:#56707a;--line:#d9ece8;--bg:#f6fbfa;--card:#ffffff;--accent:#078af5}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:Tahoma,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.85;font-size:16px}
+a{color:var(--teal-d)}
+a:focus-visible,button:focus-visible{outline:3px solid #65c5ff;outline-offset:2px}
+.site-head{background:linear-gradient(110deg,var(--navy),#0e3f6e 60%,var(--teal));color:#fff}
+.site-head .in{max-width:1080px;margin:auto;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:800;font-size:19px}
+.brand img{width:40px;height:40px}
+.nav{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px}
+.nav a{color:#d9eaff;text-decoration:none;padding:4px 0;border-bottom:2px solid transparent}
+.nav a:hover,.nav a[aria-current=page]{color:#fff;border-bottom-color:#5eead4}
+.hero{background:linear-gradient(110deg,var(--navy),#0e3f6e 60%,var(--teal));color:#fff;padding:8px 16px 40px}
+.hero .in{max-width:1080px;margin:auto}
+.crumbs{font-size:13px;color:#b9d3ef;margin:0 0 14px}
+.crumbs a{color:#d9eaff}
+.hero h1{margin:0 0 10px;font-size:clamp(26px,4.5vw,40px);line-height:1.35}
+.hero p{margin:0;max-width:720px;color:#dbeafe;font-size:17px}
+.cta{display:inline-block;margin-top:20px;background:var(--accent);color:#fff;text-decoration:none;font-weight:800;padding:12px 22px;border-radius:12px}
+.cta:hover{background:#0a78d6}
+main{max-width:1080px;margin:auto;padding:28px 16px 40px}
+section{margin:0 0 30px}
+h2{font-size:clamp(20px,3vw,26px);margin:0 0 12px;color:var(--teal-d)}
+h3{font-size:18px;margin:0 0 6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.card .ic{font-size:26px;line-height:1;margin-bottom:8px;display:block}
+a.card{text-decoration:none;color:inherit;display:block;transition:border-color .15s,transform .15s}
+a.card:hover{border-color:var(--teal);transform:translateY(-2px)}
+.units{counter-reset:u;list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.units li{counter-increment:u;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px 12px 16px;display:flex;gap:12px;align-items:baseline}
+.units li::before{content:"الوحدة " counter(u);flex:none;font-size:13px;font-weight:800;color:#fff;background:var(--teal);border-radius:8px;padding:2px 9px}
+.lead{font-size:17px;max-width:780px}
+ul.plain{padding-inline-start:20px;margin:0}
+ul.plain li{margin:4px 0}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:0 0 10px}
+summary{cursor:pointer;font-weight:800;color:var(--ink)}
+details p{margin:8px 0 0;color:var(--muted)}
+.site-foot{background:var(--navy);color:#c7d7ea;font-size:14px}
+.site-foot .in{max-width:1080px;margin:auto;padding:22px 16px;display:flex;flex-wrap:wrap;gap:10px 22px;justify-content:space-between}
+.site-foot a{color:#e3eefc}
+.site-foot nav{display:flex;flex-wrap:wrap;gap:6px 16px}
+@media (max-width:600px){body{font-size:15px}.hero{padding-bottom:30px}.hero p{font-size:16px}.nav{font-size:13px;gap:2px 12px}}
