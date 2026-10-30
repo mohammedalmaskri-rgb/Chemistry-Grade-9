@@ -123,5 +123,5 @@ insert into t_r select 'rollback removes the helpers',
 insert into t_r select 'after rollback the hole is back (proves the test is meaningful)',
   pg_temp.err(format('select * from public.portal_teacher_reset_student_password(%L,%s,%L)', pg_temp.tok(5), pg_temp.stu('9/7'), 'Test123456')) = '';
 
-select case when ok then 'PASS' else 'FAIL' end as result, check_name, detail from t_r;
-select case when bool_and(ok) then 'ALL PASSED' else 'FAILURES' end as summary, count(*) as checks from t_r;
+select case when ok is true then 'PASS' else 'FAIL' end as result, check_name, detail from t_r;
+select case when bool_and(coalesce(ok, false)) then 'ALL PASSED' else 'FAILURES' end as summary, count(*) as checks from t_r;
