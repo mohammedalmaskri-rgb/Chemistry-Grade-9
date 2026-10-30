@@ -1,0 +1,17 @@
+{
+  "name": "rawafid-science-platform",
+  "private": true,
+  "description": "منصة روافد العلوم — أدوات التطوير فقط (الموقع نفسه ملفات ثابتة على GitHub Pages ولا يحتاج بناء)",
+  "scripts": {
+    "format": "prettier --write \"*.js\" \"labs/**/*.js\" \"tests/**/*.js\"",
+    "format:check": "prettier --check \"*.js\" \"labs/**/*.js\" \"tests/**/*.js\"",
+    "lint": "eslint .",
+    "test": "node tests/grade-import.test.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.12.0",
+    "eslint": "9.12.0",
+    "globals": "15.11.0",
+    "prettier": "3.3.3"
+  }
+}
