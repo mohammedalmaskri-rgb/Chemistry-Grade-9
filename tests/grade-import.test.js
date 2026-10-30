@@ -83,4 +83,31 @@ const twins = [{ id: 10, full_name: 'علي محمد سالم', username: 'a' },
 const t = G.analyze([['اسم الطالب', 'نهائي'], ['علي محمد سالم', 20]]);
 ok('ambiguous name not auto-matched', !G.match(t, twins, mapOf(t))[0].student);
 
+
+// 7) ملف نور: كل الشعب في ورقة واحدة + عمودا الصف والشعبة + «(max: n)» + «—» للخانات الفارغة
+const noor = [
+  ['المدرسة', 'مدرسة تجريبية'], ['المادة', 'الكيمياء'], ['مجموع الطلبة', 3], [],
+  ['الرقم المدني', 'اسم الطالب', 'الصف', 'الشعبة', 'الواجب المنزلي 1 (max: 5)', 'الواجب المنزلي 2 (max: 5)', 'الحوار 1 (max: 5)', 'الحوار 2 (max: 5)', 'النشاط العملي (max: 10)', 'الإختبار القصير 1 (max: 15)', 'الإختبار القصير 2 (max: 15)', 'مجموع درجات التقويم المستمر (max: 60)', 'الإختبار النهائي (max: 40)', 'المجموع (max: 100)'],
+  [12345678, 'هلال بن سالم بن محمد الأزهري', 'التاسع', 1, '—', '—', 5, '—', '—', 14, '—', 19, '—', 19],
+  [12345679, 'عبدالله بن طلال بن علي الإسماعيلي', 'التاسع', 1, 4, '—', 4, '—', '—', 11, '—', 15, '—', 15],
+  [12345680, 'طالب من شعبة ثانية', 'التاسع', 2, 5, 5, 5, 5, 10, 15, 15, 60, 40, 100],
+];
+const platform = [  // كما هي مخزنة في المنصة: الألف بعد اللام مفقودة و«عبدالله» → «عبدا»
+  { id: 21, full_name: 'هلل بن سالم بن محمد الزهري', username: '546001', class_name: '9/1' },
+  { id: 22, full_name: 'عبدا بن طلل بن علي السماعيلي', username: '546002', class_name: '9/1' },
+];
+const n = G.analyze(noor), mn = mapOf(n);
+ok('noor: header row found below the info block', n.headerRow === 5 && n.rows.length === 3, n.headerRow);
+ok('noor: grade + section + 8 slots + id + name', ['grade','section','id','name','hw1','hw2','oral1','oral2','practical','quiz1','quiz2','final'].every(k => Object.values(mn).includes(k)), Object.values(mn));
+const fc = G.filterByClass(n, mn, '9/1');
+ok('noor: class filter keeps 9/1 only', fc.filtered && fc.rows.length === 2 && fc.excluded === 1 && fc.classes.join(',') === '9/1,9/2', fc);
+const mnm = G.match({ rows: fc.rows }, platform, mn);
+ok('noor: lost-alef names match (هلال/هلل, الأزهري/الزهري)', mnm[0].student?.id === 21, mnm[0].by);
+ok('noor: عبدالله/عبدا, طلال/طلل, الإسماعيلي/السماعيلي', mnm[1].student?.id === 22, mnm[1].by);
+const pn = G.plan(mnm, mn, {});
+ok('noor: «—» skipped, values filled', pn.fills.length === 5 && pn.issues.length === 0, pn);
+ok('rowClass: «9/3» in one column', G.rowClass(['9/3'], null, 0) === '9/3' && G.rowClass(['التاسع', 3], 0, 1) === '9/3' && G.rowClass(['الصف الثامن', '2'], 0, 1) === '8/2');
+ok('no class columns → no filtering', G.filterByClass(b, mb, '9/1').filtered === false);
+ok('squash is symmetric & strict', G.squash('هلال') === G.squash('هلل') && G.squash('سالم') !== G.squash('سلمى'));
+
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
