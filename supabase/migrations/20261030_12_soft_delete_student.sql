@@ -86,29 +86,54 @@ grant execute on function public.portal_admin_move_student(p_token uuid, p_stude
 grant execute on function public.portal_admin_move_student(p_token uuid, p_student_id bigint, p_new_class text) to authenticated;
 grant execute on function public.portal_admin_move_student(p_token uuid, p_student_id bigint, p_new_class text) to service_role;
 
--- [C1] استبعاد المعطّلين من القوائم والتقارير والإحصاء
-CREATE OR REPLACE FUNCTION public.portal_teacher_students_v2(p_token uuid, p_subject_code text, p_class text)
+-- [C1] استبعاد المعطّلين من القوائم والتقارير والإحصاء (تعريفات الإنتاج حرفيًا + شرط is_active فقط)
+CREATE OR REPLACE FUNCTION public.portal_teacher_students_v2(p_token uuid, p_subject_code text, p_class text DEFAULT NULL::text)
  RETURNS TABLE(id bigint, full_name text, class_name text, username text, is_active boolean)
  LANGUAGE sql
- STABLE SECURITY DEFINER
+ SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public'
 AS $function$
-    SELECT DISTINCT st.id, st.full_name, st.class_name, st.username, st.is_active
+
+    SELECT DISTINCT
+        st.id,
+        st.full_name,
+        st.class_name,
+        st.username,
+        st.is_active
+
     FROM public.students st
-    JOIN public.teacher_class_subjects tcs ON tcs.class_name = st.class_name AND tcs.is_active = true
-    JOIN public.subjects s ON s.id = tcs.subject_id AND s.is_active = true
+
+    JOIN public.teacher_class_subjects tcs
+        ON tcs.class_name = st.class_name
+       AND tcs.is_active = true
+
+    JOIN public.subjects s
+        ON s.id = tcs.subject_id
+       AND s.is_active = true
+
     WHERE tcs.teacher_id = public._portal_teacher_id(p_token)
+
       AND s.code = p_subject_code
+
       AND st.is_active = true  -- [C1] المعطّلون لا يظهرون
-      AND (p_class IS NULL OR p_class = 'ALL' OR st.class_name = p_class)
-    ORDER BY st.class_name, st.full_name;
+
+      AND (
+          p_class IS NULL
+          OR p_class = 'ALL'
+          OR st.class_name = p_class
+      )
+
+    ORDER BY
+        st.class_name,
+        st.full_name;
+
 $function$;
 
 CREATE OR REPLACE FUNCTION public.portal_teacher_mt_grade_report(p_token uuid, p_subject_code text, p_class text, p_assessment text)
  RETURNS TABLE(grade_id bigint, student_id bigint, full_name text, class_name text, assessment_title text, score numeric, max_score numeric, note text, created_at timestamp with time zone)
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'pg_catalog', 'public'
+ SET search_path TO 'public'
 AS $function$
  select g.id,g.student_id,st.full_name,st.class_name,g.assessment_title,g.score,g.max_score,g.note,g.created_at
  from public.portal_mt_grades g join public.students st on st.id=g.student_id
@@ -123,7 +148,7 @@ CREATE OR REPLACE FUNCTION public.portal_teacher_mt_overview(p_token uuid, p_sub
  RETURNS TABLE(total_students bigint, new_questions bigint, announcements bigint, content_items bigint)
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'pg_catalog', 'public'
+ SET search_path TO 'public'
 AS $function$
   select
     (select count(*) from public.students st where st.is_active and exists(

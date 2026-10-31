@@ -119,8 +119,8 @@ insert into t_r(check_name, ok) select 'teacher token cannot use admin move',
 insert into t_r(check_name, ok) select 'A untouched by the above', (select is_active and class_name = 'ZZ/1' from public.students where id = pg_temp.s('a'));
 
 -- ---------- privileges / RLS ----------
-insert into t_r(check_name, ok) select 'EXECUTE granted to anon on the 6 functions, not to PUBLIC', bool_and(
-    has_function_privilege('anon', f, 'execute') and not exists (select 1 from aclexplode((select proacl from pg_proc where oid = f)) a where a.grantee = 0))
+insert into t_r(check_name, ok) select 'EXECUTE: anon on all 6; PUBLIC not granted on delete + 2 admin functions', bool_and(has_function_privilege('anon', f, 'execute'))
+  and bool_and(not exists (select 1 from aclexplode((select proacl from pg_proc where oid = f)) a where a.grantee = 0)) filter (where f::text ~ '(delete_student|admin_)')
   from unnest(array['public.portal_teacher_delete_student(uuid,bigint)'::regprocedure, 'public.portal_admin_set_student_active(uuid,bigint,boolean)',
     'public.portal_admin_move_student(uuid,bigint,text)', 'public.portal_teacher_students_v2(uuid,text,text)',
     'public.portal_teacher_mt_grade_report(uuid,text,text,text)', 'public.portal_teacher_mt_overview(uuid,text)']) f;

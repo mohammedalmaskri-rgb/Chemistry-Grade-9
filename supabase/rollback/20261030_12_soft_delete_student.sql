@@ -1,7 +1,8 @@
--- التراجع عن 20261030_12_soft_delete_student: يعيد الدالة الأصلية (حذف فعلي) حرفيًا من ملف 02.
+-- التراجع عن 20261030_12_soft_delete_student
+-- يعيد الدوال الأربع بتعريفاتها في الإنتاج حرفيًا (مأخوذة بـ pg_get_functiondef يوم 2026-10-31)
+-- ويحذف دالتي المشرف. صلاحيات الدوال الثلاث الأخرى لا تتغير بـ CREATE OR REPLACE.
 begin;
 
--- portal_teacher_delete_student
 CREATE OR REPLACE FUNCTION public.portal_teacher_delete_student(p_token uuid, p_student_id bigint)
  RETURNS boolean
  LANGUAGE plpgsql
@@ -37,35 +38,55 @@ BEGIN
 END;
 $function$;
 revoke all on function public.portal_teacher_delete_student(p_token uuid, p_student_id bigint) from public, anon, authenticated;
+grant execute on function public.portal_teacher_delete_student(p_token uuid, p_student_id bigint) to service_role;
 grant execute on function public.portal_teacher_delete_student(p_token uuid, p_student_id bigint) to authenticated;
 grant execute on function public.portal_teacher_delete_student(p_token uuid, p_student_id bigint) to anon;
-grant execute on function public.portal_teacher_delete_student(p_token uuid, p_student_id bigint) to service_role;
 
-drop function if exists public.portal_admin_set_student_active(uuid, bigint, boolean);
-drop function if exists public.portal_admin_move_student(uuid, bigint, text);
-
--- إعادة الدوال الثلاث بلا شرط is_active (نصوصها الحالية في الإنتاج)
-CREATE OR REPLACE FUNCTION public.portal_teacher_students_v2(p_token uuid, p_subject_code text, p_class text)
+CREATE OR REPLACE FUNCTION public.portal_teacher_students_v2(p_token uuid, p_subject_code text, p_class text DEFAULT NULL::text)
  RETURNS TABLE(id bigint, full_name text, class_name text, username text, is_active boolean)
  LANGUAGE sql
- STABLE SECURITY DEFINER
+ SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public'
 AS $function$
-    SELECT DISTINCT st.id, st.full_name, st.class_name, st.username, st.is_active
+
+    SELECT DISTINCT
+        st.id,
+        st.full_name,
+        st.class_name,
+        st.username,
+        st.is_active
+
     FROM public.students st
-    JOIN public.teacher_class_subjects tcs ON tcs.class_name = st.class_name AND tcs.is_active = true
-    JOIN public.subjects s ON s.id = tcs.subject_id AND s.is_active = true
+
+    JOIN public.teacher_class_subjects tcs
+        ON tcs.class_name = st.class_name
+       AND tcs.is_active = true
+
+    JOIN public.subjects s
+        ON s.id = tcs.subject_id
+       AND s.is_active = true
+
     WHERE tcs.teacher_id = public._portal_teacher_id(p_token)
+
       AND s.code = p_subject_code
-      AND (p_class IS NULL OR p_class = 'ALL' OR st.class_name = p_class)
-    ORDER BY st.class_name, st.full_name;
+
+      AND (
+          p_class IS NULL
+          OR p_class = 'ALL'
+          OR st.class_name = p_class
+      )
+
+    ORDER BY
+        st.class_name,
+        st.full_name;
+
 $function$;
 
 CREATE OR REPLACE FUNCTION public.portal_teacher_mt_grade_report(p_token uuid, p_subject_code text, p_class text, p_assessment text)
  RETURNS TABLE(grade_id bigint, student_id bigint, full_name text, class_name text, assessment_title text, score numeric, max_score numeric, note text, created_at timestamp with time zone)
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'pg_catalog', 'public'
+ SET search_path TO 'public'
 AS $function$
  select g.id,g.student_id,st.full_name,st.class_name,g.assessment_title,g.score,g.max_score,g.note,g.created_at
  from public.portal_mt_grades g join public.students st on st.id=g.student_id
@@ -79,7 +100,7 @@ CREATE OR REPLACE FUNCTION public.portal_teacher_mt_overview(p_token uuid, p_sub
  RETURNS TABLE(total_students bigint, new_questions bigint, announcements bigint, content_items bigint)
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'pg_catalog', 'public'
+ SET search_path TO 'public'
 AS $function$
   select
     (select count(*) from public.students st where exists(
@@ -90,5 +111,8 @@ AS $function$
     (select count(*) from public.portal_mt_content c where c.teacher_id=public._portal_teacher_id(p_token) and c.subject_id=public._portal_mt_subject_id(p_subject_code))
   where public._portal_mt_has_subject(p_token,p_subject_code)
 $function$;
+
+drop function if exists public.portal_admin_set_student_active(uuid, bigint, boolean);
+drop function if exists public.portal_admin_move_student(uuid, bigint, text);
 
 commit;
