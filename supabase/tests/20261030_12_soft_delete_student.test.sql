@@ -77,21 +77,32 @@ insert into t_r(check_name, ok) select 'overview counts active students only (t1
 insert into t_r(check_name, ok) select 'points overview hides C', not pg_temp.in_points('t1', 'zz_c1a', pg_temp.s('c'));
 insert into t_r(check_name, ok) select 'admin list still shows inactive C', pg_temp.in_admin(pg_temp.s('c'));
 
--- ---------- teacher "delete" = deactivate (B) ----------
-create temp table t_before as select pg_temp.data(pg_temp.s('b')) d, (select count(*) from public.students) n;
-create temp table t_call as select public.portal_teacher_delete_student(pg_temp.tok('t1'), pg_temp.s('b')) r;
-insert into t_r(check_name, ok) select 'teacher delete returns true', (select r from t_call);
+-- ---------- teacher can NOT delete or deactivate ----------
+create temp table t_before as select pg_temp.data(pg_temp.s('b')) d, (select count(*) from public.students) n,
+  (select count(*) from public.student_sessions where student_id = pg_temp.s('b')) ss;
+insert into t_r(check_name, ok) select 'teacher delete refused with admin-only message (own student B)',
+  pg_temp.err(format('select public.portal_teacher_delete_student(%L, %s)', pg_temp.tok('t1'), pg_temp.s('b'))) like '%صلاحية المشرف%';
+insert into t_r(check_name, ok) select 'teacher delete refused for other teacher and outside student (t2->B, t2->E)',
+  pg_temp.err(format('select public.portal_teacher_delete_student(%L, %s)', pg_temp.tok('t2'), pg_temp.s('b'))) like '%صلاحية المشرف%'
+  and pg_temp.err(format('select public.portal_teacher_delete_student(%L, %s)', pg_temp.tok('t2'), pg_temp.s('e'))) like '%صلاحية المشرف%';
+insert into t_r(check_name, ok) select 'after refusals: B and E active, B data + sessions intact, no row removed',
+  (select is_active from public.students where id = pg_temp.s('b')) and (select is_active from public.students where id = pg_temp.s('e'))
+  and pg_temp.data(pg_temp.s('b')) = (select d from t_before) and (select count(*) from public.students) = (select n from t_before)
+  and (select count(*) from public.student_sessions where student_id = pg_temp.s('b')) = (select ss from t_before);
+insert into t_r(check_name, ok) select 'teacher token cannot deactivate through the admin function',
+  not public.portal_admin_set_student_active(pg_temp.tok('t1'), pg_temp.s('b'), false) and (select is_active from public.students where id = pg_temp.s('b'));
+
+-- ---------- admin deactivates B ----------
+create temp table t_call as select public.portal_admin_set_student_active(pg_temp.tok('adm'), pg_temp.s('b'), false) r;
+insert into t_r(check_name, ok) select 'admin deactivate returns true', (select r from t_call);
 insert into t_r(check_name, ok) select 'B row kept and inactive; no row removed',
   exists (select 1 from public.students where id = pg_temp.s('b') and not is_active) and (select count(*) from public.students) = (select n from t_before);
-insert into t_r(check_name, ok) select 'B grades/points/questions kept in BOTH subjects', pg_temp.data(pg_temp.s('b')) = (select d from t_before) and pg_temp.data(pg_temp.s('b')) = '2/2/2';
+insert into t_r(check_name, ok) select 'B grades/points/questions kept in BOTH subjects', pg_temp.data(pg_temp.s('b')) = '2/2/2';
 insert into t_r(check_name, ok) select 'B sessions ended, A sessions untouched',
   not exists (select 1 from public.student_sessions where student_id = pg_temp.s('b')) and exists (select 1 from public.student_sessions where student_id = pg_temp.s('a'));
 insert into t_r(check_name, ok) select 'B hidden for BOTH teachers (list, report, points), overview t1 = 2',
   not pg_temp.in_list('t1', 'zz_c1a', pg_temp.s('b')) and not pg_temp.in_list('t2', 'zz_c1b', pg_temp.s('b'))
   and not pg_temp.in_report('t2', 'zz_c1b', pg_temp.s('b')) and not pg_temp.in_points('t2', 'zz_c1b', pg_temp.s('b')) and pg_temp.total('t1', 'zz_c1a') = 2;
-insert into t_r(check_name, ok) select 'teacher cannot deactivate a student outside his classes (E)',
-  pg_temp.err(format('select public.portal_teacher_delete_student(%L, %s)', pg_temp.tok('t2'), pg_temp.s('e'))) like '%ليس ضمن%'
-  and (select is_active from public.students where id = pg_temp.s('e'));
 
 -- ---------- admin: sees, reactivates, moves ----------
 insert into t_r(check_name, ok) select 'admin list shows B as inactive', pg_temp.in_admin(pg_temp.s('b'));
@@ -103,9 +114,8 @@ insert into t_r(check_name, ok) select 'admin moves D ZZ/2 -> ZZ/1; now visible 
   (select r from t_call3) and (select class_name from public.students where id = pg_temp.s('d')) = 'ZZ/1' and pg_temp.in_list('t2', 'zz_c1b', pg_temp.s('d'));
 insert into t_r(check_name, ok) select 'admin move to unknown class rejected',
   pg_temp.err(format('select public.portal_admin_move_student(%L, %s, %L)', pg_temp.tok('adm'), pg_temp.s('d'), 'ZZ/404')) like '%غير موجودة%';
-insert into t_r(check_name, ok) select 'teacher token cannot use admin functions',
-  not public.portal_admin_set_student_active(pg_temp.tok('t1'), pg_temp.s('a'), false)
-  and not public.portal_admin_move_student(pg_temp.tok('t1'), pg_temp.s('a'), 'ZZ/2');
+insert into t_r(check_name, ok) select 'teacher token cannot use admin move',
+  not public.portal_admin_move_student(pg_temp.tok('t1'), pg_temp.s('a'), 'ZZ/2');
 insert into t_r(check_name, ok) select 'A untouched by the above', (select is_active and class_name = 'ZZ/1' from public.students where id = pg_temp.s('a'));
 
 -- ---------- privileges / RLS ----------
