@@ -1,0 +1,31 @@
+{
+  "name": "school-report-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "فيديو موشن جرافيك لتقرير التقويم الذاتي المدرسي — مبني بـ Remotion وقابل لإعادة الاستخدام مع أي مدرسة",
+  "scripts": {
+    "preview": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts SchoolReport out/school-report.mp4 --codec=h264 --crf=18",
+    "render:fast": "remotion render src/index.ts SchoolReport out/school-report-draft.mp4 --codec=h264 --crf=28 --scale=0.5",
+    "stills": "node scripts/stills.mjs",
+    "voice": "python3 scripts/generate_voiceover.py",
+    "music": "python3 scripts/generate_music.py",
+    "check": "tsc --noEmit && node scripts/check-timing.mjs",
+    "script": "node scripts/export-script.mjs"
+  },
+  "dependencies": {
+    "remotion": "4.0.543",
+    "@remotion/cli": "4.0.543",
+    "@remotion/bundler": "4.0.543",
+    "@remotion/renderer": "4.0.543",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@fontsource/ibm-plex-sans-arabic": "5.3.0",
+    "@fontsource/noto-kufi-arabic": "5.3.0",
+    "@types/react": "19.1.0",
+    "esbuild": "0.28.1",
+    "typescript": "5.6.3"
+  }
+}

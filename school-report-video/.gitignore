@@ -1,0 +1,9 @@
+node_modules/
+out/
+.remotion/
+*.log
+
+# التقرير الأصلي يحتوي أسماء العاملين والطالبات — لا يُرفع إلى المستودع العام
+source/*.pdf
+source/img/
+source/*.txt
