@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react';
-import { CalendarCheck2, CalendarClock, CalendarRange, Info, RefreshCw } from 'lucide-react';
+import { CalendarCheck2, CalendarClock, CalendarRange, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSchedule } from '../lib/useSchedule';
 import { WEEK_LABELS, weekRangeLabel } from '../lib/schedule';
 import { ScheduleGrid } from '../components/ScheduleGrid';
 import { StatusLegend } from '../components/StatusLegend';
 import { SelectionBar } from '../components/SelectionBar';
+import { BookingFormModal } from '../components/BookingFormModal';
 
 export default function TeacherHome() {
   const { user } = useAuth();
   const { weeks, slots, loading, refresh } = useSchedule(user!.id);
   const [week, setWeek] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [notice, setNotice] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
 
   const toggle = (k: string) =>
     setSelected((s) => {
@@ -68,7 +69,7 @@ export default function TeacherHome() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="text-xl font-extrabold text-navy-800 sm:text-2xl">جدول حجز مركز مصادر التعلم</h2>
-            <p className="mt-1 text-sm font-medium text-navy-400">يمكنك اختيار أكثر من حصة، ولو في أيام أو أسابيع مختلفة.</p>
+            <p className="mt-1 text-sm font-medium text-navy-400">يمكنك اختيار أكثر من حصة (بما فيها الاستراحة)، ولو في أيام أو أسابيع مختلفة، وإرسالها في طلب واحد.</p>
           </div>
           <div className="flex items-center gap-3">
             <StatusLegend />
@@ -104,24 +105,20 @@ export default function TeacherHome() {
         </div>
       </section>
 
-      {notice && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-navy-900/40 p-4" onClick={() => setNotice(false)}>
-          <div className="max-w-sm rounded-xl2 bg-white p-6 text-center shadow-lift" onClick={(e) => e.stopPropagation()}>
-            <Info className="mx-auto h-10 w-10 text-navy-500" />
-            <h3 className="mt-3 text-lg font-extrabold text-navy-800">استمارة الحجز</h3>
-            <p className="mt-2 text-sm font-medium text-navy-500">
-              اخترت {selected.size} حصة. استمارة الحجز (الصف والشعبة ونوع الحجز والتوثيق) هي الخطوة التالية بعد اعتماد هذه الواجهة.
-            </p>
-            <button onClick={() => setNotice(false)} className="mt-5 w-full rounded-xl bg-navy-800 py-3 font-bold text-white hover:bg-navy-700">حسناً</button>
-          </div>
-        </div>
-      )}
+      <BookingFormModal
+        open={formOpen}
+        user={user!}
+        keys={[...selected]}
+        onClose={() => setFormOpen(false)}
+        onRemove={toggle}
+        onSubmitted={() => { setSelected(new Set()); refresh(); }}
+      />
 
       <SelectionBar
-        keys={[...selected]}
+        keys={formOpen ? [] : [...selected]}
         onRemove={toggle}
         onClear={() => setSelected(new Set())}
-        onContinue={() => setNotice(true)}
+        onContinue={() => setFormOpen(true)}
       />
     </div>
   );

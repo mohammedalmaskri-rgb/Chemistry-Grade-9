@@ -4,7 +4,6 @@ import { BadgeCheck, CalendarCheck, IdCard, Info, Loader2, LogIn, ShieldCheck } 
 import { useAuth } from '../context/AuthContext';
 import { DEMO_USERS } from '../data';
 import { LogoMark } from '../components/Logo';
-import { LibraryIllustration } from '../components/LibraryIllustration';
 import { APP_NAME, APP_SUBTITLE, ROLE_LABEL, SCHOOL_NAME } from '../lib/labels';
 
 export default function LoginPage() {
@@ -49,7 +48,7 @@ export default function LoginPage() {
 
           {/* صورة مصغرة للهاتف والآيباد */}
           <div className="mb-6 overflow-hidden rounded-xl2 shadow-card lg:hidden">
-            <LibraryIllustration className="h-40 w-full object-cover sm:h-52" />
+            <img src="./library.jpg" alt="مركز مصادر التعلم" className="h-44 w-full object-cover sm:h-56" />
           </div>
 
           <form onSubmit={submit} className="rounded-xl2 bg-white p-6 shadow-card sm:p-8" noValidate>
@@ -89,7 +88,7 @@ export default function LoginPage() {
                 <Info className="h-4 w-4" /> نسخة تجريبية — اختر حساباً للتجربة:
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {[DEMO_USERS[0], DEMO_USERS[4], DEMO_USERS[5]].map((u) => (
+                {(['teacher', 'lrc_admin', 'management'] as const).map((r) => DEMO_USERS.find((x) => x.role === r)!).map((u) => (
                   <button
                     key={u.id}
                     type="button"
@@ -111,7 +110,7 @@ export default function LoginPage() {
 
       {/* عمود الصورة (كمبيوتر) */}
       <aside className="relative hidden overflow-hidden bg-navy-800 lg:block">
-        <LibraryIllustration className="absolute inset-0 h-full w-full" />
+        <img src="./library.jpg" alt="مركز مصادر التعلم" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-navy-900/90 via-navy-900/25 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-10 text-white xl:p-14">
           <h2 className="text-3xl font-extrabold leading-snug xl:text-4xl">

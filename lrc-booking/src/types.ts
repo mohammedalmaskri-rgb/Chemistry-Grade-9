@@ -7,17 +7,18 @@ export interface User {
   name: string;
   role: Role;
   subject?: string;
+  active: boolean;
 }
 
 export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export type BookingType = 'lesson' | 'activity' | 'workshop' | 'initiative' | 'awareness' | 'other';
 
-/** حصة/فترة في اليوم الدراسي */
+/** حصة/فترة في اليوم الدراسي (الاستراحة فترة قابلة للحجز أيضاً) */
 export interface Period {
   id: string; // 'p1'...'p8' أو 'break'
-  label: string; // "الأولى" ...
-  short: string; // "1"
+  label: string; // "الحصة الأولى" / "الاستراحة"
+  short: string; // "1" / "استراحة"
   start: string; // "07:30"
   end: string;
   isBreak?: boolean;
@@ -29,25 +30,26 @@ export interface SlotKey {
   periodId: string;
 }
 
+/** حصة واحدة داخل طلب الحجز — لكل حصة صفها وشعبتها ونوعها */
 export interface BookingItem extends SlotKey {
-  grade?: string;
-  section?: string;
+  grade: string;
+  section: string;
+  type: BookingType;
+  typeOther?: string;
 }
 
-export interface Booking {
+export interface Booking extends BookingItem {
   id: string;
   requestId: string; // عدة حصص قد تُرسل في طلب واحد
   teacherId: string;
   teacherName: string;
-  date: string;
-  periodId: string;
-  grade?: string;
-  section?: string;
-  type: BookingType;
-  typeOther?: string;
+  employeeNo: string;
   wantsDocumentation: boolean;
+  documented?: boolean;
   status: BookingStatus;
   rejectionReason?: string;
+  cancelledByRole?: Role;
+  decidedBy?: string;
   createdAt: string;
 }
 

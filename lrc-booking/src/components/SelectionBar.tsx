@@ -27,7 +27,7 @@ export function SelectionBar({ keys, onRemove, onClear, onContinue }: Props) {
             const d = fromISODate(date);
             return (
               <span key={k} className="flex shrink-0 items-center gap-1.5 rounded-lg bg-white/10 py-1 pr-2.5 pl-1 text-xs font-bold">
-                {DAY_NAMES[d.getDay()]} {d.getDate()}/{d.getMonth() + 1} · الحصة {periodById(pid)?.label}
+                {DAY_NAMES[d.getDay()]} {d.getDate()}/{d.getMonth() + 1} · {periodById(pid)?.isBreak ? 'الاستراحة' : `الحصة ${periodById(pid)?.short}`}
                 <button onClick={() => onRemove(k)} className="rounded p-0.5 hover:bg-white/20" aria-label="إزالة">
                   <X className="h-3.5 w-3.5" />
                 </button>

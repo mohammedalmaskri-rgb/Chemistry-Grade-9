@@ -1,7 +1,7 @@
 const ITEMS = [
   { label: 'متاح للحجز', dot: 'bg-slot-free', ring: 'ring-slot-freeBd' },
   { label: 'بانتظار الموافقة', dot: 'bg-[#E9B10A]', ring: 'ring-slot-pendBd' },
-  { label: 'محجوز ومعتمد', dot: 'bg-slot-busy', ring: 'ring-slot-busyBd' },
+  { label: 'معتمد ومحجوز', dot: 'bg-slot-busy', ring: 'ring-slot-busyBd' },
   { label: 'اختيارك الحالي', dot: 'bg-navy-700', ring: 'ring-navy-200' },
 ];
 

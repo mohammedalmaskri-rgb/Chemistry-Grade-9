@@ -2,18 +2,19 @@ import type { Period } from '../types';
 
 /** إعداد اليوم الدراسي — يُعدّل هنا فقط */
 export const PERIODS: Period[] = [
-  { id: 'p1', label: 'الأولى', short: '1', start: '07:30', end: '08:10' },
-  { id: 'p2', label: 'الثانية', short: '2', start: '08:10', end: '08:50' },
-  { id: 'p3', label: 'الثالثة', short: '3', start: '08:50', end: '09:30' },
+  { id: 'p1', label: 'الحصة الأولى', short: '1', start: '07:30', end: '08:10' },
+  { id: 'p2', label: 'الحصة الثانية', short: '2', start: '08:10', end: '08:50' },
+  { id: 'p3', label: 'الحصة الثالثة', short: '3', start: '08:50', end: '09:30' },
   { id: 'break', label: 'الاستراحة', short: 'استراحة', start: '09:30', end: '10:00', isBreak: true },
-  { id: 'p4', label: 'الرابعة', short: '4', start: '10:00', end: '10:40' },
-  { id: 'p5', label: 'الخامسة', short: '5', start: '10:40', end: '11:20' },
-  { id: 'p6', label: 'السادسة', short: '6', start: '11:20', end: '12:00' },
-  { id: 'p7', label: 'السابعة', short: '7', start: '12:00', end: '12:40' },
-  { id: 'p8', label: 'الثامنة', short: '8', start: '12:40', end: '13:20' },
+  { id: 'p4', label: 'الحصة الرابعة', short: '4', start: '10:00', end: '10:40' },
+  { id: 'p5', label: 'الحصة الخامسة', short: '5', start: '10:40', end: '11:20' },
+  { id: 'p6', label: 'الحصة السادسة', short: '6', start: '11:20', end: '12:00' },
+  { id: 'p7', label: 'الحصة السابعة', short: '7', start: '12:00', end: '12:40' },
+  { id: 'p8', label: 'الحصة الثامنة', short: '8', start: '12:40', end: '13:20' },
 ];
 
-export const BOOKABLE_PERIODS = PERIODS.filter((p) => !p.isBreak);
+/** الاستراحة قابلة للحجز مثل الحصص */
+export const BOOKABLE_PERIODS = PERIODS;
 export const periodById = (id: string) => PERIODS.find((p) => p.id === id);
 
 export const DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
@@ -48,7 +49,7 @@ export interface WeekDay {
   monthName: string;
 }
 
-const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+export const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 export function buildWeeks(today = new Date(), count = 3): WeekDay[][] {
   const start = weekStart(today);
@@ -85,3 +86,14 @@ export function isPast(date: string, periodId: string, now = new Date()): boolea
 }
 
 export const slotKey = (date: string, periodId: string) => `${date}|${periodId}`;
+
+export function dayNameOf(iso: string): string {
+  const d = fromISODate(iso).getDay();
+  return ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][d];
+}
+
+/** "الأحد 16 نوفمبر" */
+export function formatDayDate(iso: string): string {
+  const d = fromISODate(iso);
+  return `${dayNameOf(iso)} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
