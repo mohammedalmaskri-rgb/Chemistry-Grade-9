@@ -108,7 +108,7 @@ export const Card: React.FC<{
 );
 
 /** مرجع صفحة التقرير */
-export const SourceTag: React.FC<{ page: number | number[]; style?: React.CSSProperties; opacity?: number }> = ({
+export const SourceTag: React.FC<{ page: number | number[] | string; style?: React.CSSProperties; opacity?: number }> = ({
   page,
   style,
   opacity = 1,

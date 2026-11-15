@@ -12,13 +12,6 @@ import { C, F } from "../theme";
 const FROM = TIMELINE[3].from;
 const END = sec(TIMELINE[3].to - TIMELINE[3].from);
 
-/** يستخرج أول عدد صحيح من نص (لعرض الأرقام الكبيرة في بطاقات الشواهد) */
-const leadingNumber = (text: string): number | null => {
-  const western = text.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
-  const m = western.match(/\d+/);
-  return m ? Number(m[0]) : null;
-};
-
 export const Initiatives: React.FC = () => {
   const frame = useCurrentFrame();
   const ini = report.initiatives;
@@ -61,7 +54,7 @@ export const Initiatives: React.FC = () => {
                 glow={h > 0.5}
                 style={{
                   padding: "26px 22px",
-                  height: 330,
+                  height: ini.projects.length <= cols ? 560 : 330,
                   display: "flex",
                   flexDirection: "column",
                   gap: 12,
@@ -94,7 +87,7 @@ export const Initiatives: React.FC = () => {
             );
           })}
         </div>
-        <SourceTag page={14} style={{ position: "absolute", bottom: 64, left: 110 }} />
+        <SourceTag page={ini.projects[0]?.page ?? report.meta.page} style={{ position: "absolute", bottom: 64, left: 110 }} />
       </Beat>
 
       {/* B: الموهوبات والدعم */}
@@ -103,28 +96,28 @@ export const Initiatives: React.FC = () => {
           <Card style={{ flex: 1.3, padding: "36px 44px" }} glow>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 22 }}>
               <Icon name="star" size={50} color={C.goldLight} draw={progress(frame, tB + 10, 30)} />
-              <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 36, color: C.white }}>الموهوبات حسب المجال</div>
+              <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 36, color: C.white }}>{report.meta.terms.giftedPlural} حسب المجال</div>
             </div>
             <HBars
               items={ini.gifted.map((g) => ({ label: g.field, value: g.count, extra: <Icon name={g.icon} size={32} color={C.mint} /> }))}
               start={tB + 20}
               width={1000}
               max={Math.max(...ini.gifted.map((g) => g.count)) * 1.1}
-              rowH={84}
+              rowH={ini.gifted.length > 5 ? 70 : 84}
               stagger={8}
             />
-            <div style={{ fontFamily: F.body, fontSize: 19, color: C.grey2, marginTop: 10 }}>عدد الطالبات في كل مجال كما ورد في جدول الموهوبين</div>
+            <div style={{ fontFamily: F.body, fontSize: 19, color: C.grey2, marginTop: 10 }}>{ini.giftedNote ?? "عدد الموهوبين في كل مجال كما ورد في التقرير"}</div>
             <SourceTag page={ini.giftedPage} style={{ marginTop: 6 }} />
           </Card>
           <div style={{ flex: 0.8, display: "flex", flexDirection: "column", gap: 30 }}>
             {ini.support.map((s, i) => {
               const at = mark("n14", "support", FROM, 0.7) - 10 + i * sec(1.8);
               const p = pop(frame, at);
-              const n = leadingNumber(s.text);
+              const n = s.figure ?? null;
               return (
                 <Card key={i} style={{ padding: 36, opacity: p, transform: `translateX(${(1 - p) * -40}px)` }}>
-                  <Icon name={i === 0 ? "book" : "school"} size={50} color={C.goldLight} draw={p} />
-                  {n !== null && i === 0 && (
+                  <Icon name={s.icon ?? "book"} size={50} color={C.goldLight} draw={p} />
+                  {n !== null && (
                     <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: 96, color: C.goldLight, lineHeight: 1.25 }}>
                       <Counter value={n} start={at} />
                     </div>
@@ -140,12 +133,18 @@ export const Initiatives: React.FC = () => {
 
       {/* C: الشواهد والمشاركات */}
       <Beat from={tC} to={END}>
-        <div style={{ position: "absolute", top: 270, right: 110, left: 110, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 30 }}>
+        {ini.achievementsTitle && (
+          <div style={{ position: "absolute", top: 240, right: 110, display: "flex", alignItems: "center", gap: 16, opacity: progress(frame, tC + 6, 20) }}>
+            <Icon name="trophy" size={46} color={C.goldLight} draw={progress(frame, tC + 6, 30)} />
+            <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 36, color: C.white }}>{ini.achievementsTitle}</div>
+          </div>
+        )}
+        <div style={{ position: "absolute", top: ini.achievementsTitle ? 330 : 270, right: 110, left: 110, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 30 }}>
           {ini.achievements.map((s, i) => {
             const at = i < 2 ? mark("n15", `a${i + 1}`, FROM, 0.3 + 0.4 * i) - 8 : mark("n15", "a2", FROM, 0.7) + sec(2 + (i - 2) * 1.6);
             const p = pop(frame, at);
-            const n = leadingNumber(s.text);
-            const big = i < 2 && n !== null;
+            const n = s.figure ?? null;
+            const big = n !== null;
             return (
               <Card key={i} glow={i === 1} style={{ padding: "32px 40px", display: "flex", alignItems: "center", gap: 34, opacity: p, transform: `scale(${0.85 + 0.15 * p})`, minHeight: 230 }}>
                 {big ? (
@@ -154,7 +153,7 @@ export const Initiatives: React.FC = () => {
                   </div>
                 ) : (
                   <div style={{ minWidth: 170, display: "flex", justifyContent: "center" }}>
-                    <Icon name={i === 2 ? "ball" : "bulb"} size={110} color={C.mint} draw={p} stroke={1.3} />
+                    <Icon name={s.icon ?? "star"} size={110} color={C.mint} draw={p} stroke={1.3} />
                   </div>
                 )}
                 <div>

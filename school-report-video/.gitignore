@@ -7,3 +7,5 @@ out/
 source/*.pdf
 source/img/
 source/*.txt
+source/doc2/
+source/**/*.docx

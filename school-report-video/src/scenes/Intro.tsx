@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { report } from "../config";
 import { cue, easeInOut, progress, sec } from "../lib/anim";
-import { digits } from "../lib/format";
+import { digits, fitSize } from "../lib/format";
 import { C, F } from "../theme";
 import { Pill, SourceTag } from "../components/ui";
 
@@ -117,7 +117,7 @@ export const Intro: React.FC = () => {
           style={{
             fontFamily: F.display,
             fontWeight: 800,
-            fontSize: 72,
+            fontSize: fitSize(m.schoolLabel, 72, 18, 52),
             background: `linear-gradient(90deg, ${C.goldDeep}, ${C.goldLight} 45%, ${C.gold})`,
             WebkitBackgroundClip: "text",
             backgroundClip: "text",

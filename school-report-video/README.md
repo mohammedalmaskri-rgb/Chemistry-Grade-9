@@ -1,13 +1,22 @@
 # فيديو تقرير التقويم الذاتي — موشن جرافيك (Remotion)
 
+> **المدارس المضمّنة حاليًا:**
+> | المدرسة | المعرّف `SCHOOL` | البيانات | التوثيق |
+> |---|---|---|---|
+> | مدرسة زهرة قريش (٦–١٠) · ٢٠٢٥/٢٠٢٦ | `zahrat-quraish` | `src/data/schools/zahrat-quraish.ts` | [`docs/schools/zahrat-quraish/`](docs/schools/zahrat-quraish/) |
+> | مدرسة الشيخ سعيد بن حمد الحارثي للبنين (٧–٩) · ٢٠٢٦/٢٠٢٧ | `al-harthi` | `src/data/schools/al-harthi.ts` | [`docs/schools/al-harthi/`](docs/schools/al-harthi/) |
+>
+> تُحدَّد المدرسة لكل أمر بالمتغير `SCHOOL` (مثال: `SCHOOL=al-harthi npm run render`)، والافتراضي `zahrat-quraish`. وفي المعاينة تظهر لكل مدرسة تركيبة مستقلة باسم `SchoolReport-<slug>`.
+
+
 فيديو وثائقي متحرك مدته **٣٠٠ ثانية بالضبط** (Full HD ‏1920×1080، ‏30 إطارًا/ثانية) يعرض تقرير التقويم الذاتي لـ**مدرسة زهرة قريش (٦–١٠)** للعام الدراسي ٢٠٢٥/٢٠٢٦م. مبني برمجيًا بـ React وTypeScript في Remotion، وكل حركاته مبنية على الإطارات، فتأتي نتائج التصدير ثابتة في كل مرة.
 
 | | |
 |---|---|
-| الفيديو النهائي | `out/school-report.mp4` (يُولَّد بالأمر `npm run render`) |
+| الفيديو النهائي | `out/<slug>.mp4` (يُولَّد بالأمر `SCHOOL=<slug> npm run render`) |
 | بيانات المدرسة | `src/data/schools/zahrat-quraish.ts` |
-| سيناريو التعليق بالتوقيتات | [`docs/SCRIPT.md`](docs/SCRIPT.md) |
-| توثيق استخراج البيانات والتعارضات | [`docs/DATA_EXTRACTION.md`](docs/DATA_EXTRACTION.md) |
+| سيناريو التعليق بالتوقيتات | `docs/schools/<slug>/SCRIPT.md` |
+| توثيق استخراج البيانات والتعارضات | `docs/schools/<slug>/DATA_EXTRACTION.md` |
 | التقرير المصدر | `source/report.pdf` |
 
 ## المشاهد
@@ -43,7 +52,7 @@ npm run preview
 npm run render
 ```
 
-النتيجة: `out/school-report.mp4` (H.264، ‏CRF 18، ‏yuv420p، صوت AAC). وللتصدير السريع بنصف الدقة للمراجعة:
+النتيجة: `out/<slug>.mp4` (H.264، ‏CRF 18، ‏yuv420p، صوت AAC). وللتصدير السريع بنصف الدقة للمراجعة:
 
 ```bash
 npm run render:fast
@@ -88,7 +97,7 @@ npm run music
 **استخدام تسجيل بشري بدل الصوت المولّد:**
 
 1. سجّل المقاطع بأسماء `n01.mp3` … `n20.mp3` وضعها في `public/voiceover/zahrat-quraish/`، ثم شغّل `SKIP_TTS=1 npm run voice` لقياس المدد والتحقق من التوقيت.
-2. أو سجّل ملفًا واحدًا كاملًا متزامنًا مع [`docs/SCRIPT.md`](docs/SCRIPT.md) وعيّن `AUDIO.externalVoiceFile` في `src/config.ts`.
+2. أو سجّل ملفًا واحدًا كاملًا متزامنًا مع `docs/schools/<slug>/SCRIPT.md` وعيّن `AUDIO.externalVoiceFile` في `src/config.ts`.
 
 ## إعادة الاستخدام مع مدرسة أخرى
 
@@ -96,10 +105,11 @@ npm run music
 
 ```
 src/
-├─ config.ts                 ← اختيار المدرسة + إعدادات الإخراج والصوت والعرض
+├─ config.ts                 ← سجل المدارس SCHOOLS + إعدادات الإخراج والصوت والعرض
 ├─ data/
 │  ├─ types.ts               ← مخطط البيانات (SchoolReport)
-│  └─ schools/zahrat-quraish.ts   ← كل نصوص وأرقام المدرسة + السيناريو
+│  ├─ schools/<slug>.ts      ← كل نصوص وأرقام المدرسة + السيناريو + مراجع المصدر
+│  └─ generated/<slug>.voice.json ← مدد مقاطع الصوت وتوقيت كلماتها (مولَّد)
 ├─ scenes/                   ← المشاهد الستة (تقرأ من البيانات فقط)
 ├─ components/               ← الخلفية، المخططات، البطاقات، الأيقونات، الانتقالات
 └─ lib/                      ← المزامنة، التنسيق الرقمي، الخطوط
@@ -107,20 +117,24 @@ src/
 
 الخطوات:
 
-1. انسخ `src/data/schools/zahrat-quraish.ts` إلى ملف جديد مثل `src/data/schools/new-school.ts`، وعدّل القيم ومراجع الصفحات.
-2. ضع شعارات المدرسة في `public/schools/new-school/` وحدّث `meta.logos`، أو احذفها لإخفاء لوحة الشعارات.
-3. في `src/config.ts` غيّر `SCHOOL_SLUG` و`report`.
-4. اكتب نص التعليق في `narration` بأوقات البدء ضمن حدود مشاهدها، وأضف علامات المزامنة `marks` للكلمات التي تطلق الحركات. والعلامات اختيارية: إن غابت تُقدَّر مواقعها تلقائيًا.
-5. شغّل `npm run voice` ثم `npm run check` ثم `npm run preview` ثم `npm run render`.
+1. انسخ ملف مدرسة قائمة (مثل `src/data/schools/al-harthi.ts`) إلى `src/data/schools/<slug>.ts`، ثم عدّل القيم ومراجع المصدر. يقبل حقل `page` رقم صفحة أو أرقامًا لملفات PDF، أو اسم قسم لملفات Word.
+2. ضع الشعارات في `public/schools/<slug>/` وحدّث `meta.logos`.
+3. أضف المدرسة إلى `SCHOOLS` في `src/config.ts`، وأنشئ ملف الصوت الفارغ `src/data/generated/<slug>.voice.json` بالمحتوى `{"school":"<slug>","voice":"","segments":{}}`.
+4. اكتب نص التعليق في `narration` بالمعرّفات نفسها (`n01`–`n20`)، فلكل معرّف دور ثابت في المشاهد. أضف علامات المزامنة `marks` للكلمات التي تطلق الحركات.
+5. شغّل `SCHOOL=<slug> npm run voice`، ثم `SCHOOL=<slug> npm run check`، ثم `npm run preview`، ثم `SCHOOL=<slug> npm run render`.
 
-تتكيف المكونات مع أطوال القوائم: عدد المواد والسنوات والمشروعات والمجالات وجوانب الإجادة والتحسين. ويمكن تغيير حدود المشاهد من `TIMELINE`، وتغيير الألوان والخطوط من `src/theme.ts`.
+**أقسام بديلة تلقائية** حين تختلف تقارير المدارس:
+- إن غابت نسبة الحضور (`attendance`) يُعرض تطور أعداد الطلبة (`growth`).
+- إن غابت الاختبارات الدولية (`benchmark`) يُعرض توزيع فئات التحصيل (`distribution`).
+- صيغ المذكر والمؤنث (طالبة/طالب، الموهوبات/الموهوبون…) في `meta.terms`.
+- يتكيف حجم اسم المدرسة مع طوله، وتتكيف المخططات مع عدد المواد والسنوات والمشروعات.
 
 ## ضوابط الدقة المتّبعة
 
 - كل رقم مأخوذ من التقرير ومعه رقم صفحته. الحسابات الوحيدة المضافة هي الفروق البسيطة بين عامين، وهي معلنة على الشاشة.
 - لا أسماء لطالبات أو عاملات، ولا بيانات صحية.
 - المحاور تبدأ من الصفر في المقارنات (تيمز) حتى لا تتضخم الفروق بصريًا.
-- التعارضات المرصودة في التقرير موثقة في [`docs/DATA_EXTRACTION.md`](docs/DATA_EXTRACTION.md) §٦، ولم يُرجَّح فيها رقم على آخر.
+- التعارضات المرصودة في التقرير موثقة في `docs/schools/<slug>/DATA_EXTRACTION.md` §٦، ولم يُرجَّح فيها رقم على آخر.
 
 ## التقنيات والتراخيص
 

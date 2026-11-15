@@ -77,7 +77,7 @@ async def main():
     slug = data["slug"]
     out_dir = os.path.join(ROOT, "public", "voiceover", slug)
     os.makedirs(out_dir, exist_ok=True)
-    manifest_path = os.path.join(ROOT, "src", "data", "generated", "voiceover.json")
+    manifest_path = os.path.join(ROOT, "src", "data", "generated", f"{slug}.voice.json")
     try:
         old = json.load(open(manifest_path, encoding="utf-8"))
     except Exception:

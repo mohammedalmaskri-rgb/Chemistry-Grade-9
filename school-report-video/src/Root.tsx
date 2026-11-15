@@ -1,34 +1,44 @@
 import React from "react";
-import { Composition, Still } from "remotion";
-import { report, VIDEO } from "./config";
-import { SchoolReportVideo, type VideoProps } from "./SchoolReportVideo";
+import { Composition, Folder, Still } from "remotion";
+import { SCHOOLS, VIDEO } from "./config";
+import { SchoolReportVideo } from "./SchoolReportVideo";
 
-const defaults: VideoProps = { withVoice: true, withMusic: true };
-
+/**
+ * لكل مدرسة مسجّلة في SCHOOLS ثلاث تركيبات:
+ *   SchoolReport-<slug>         الفيديو الكامل بالصوت والموسيقى
+ *   SchoolReportSilent-<slug>   نسخة صامتة للمعاينة السريعة
+ *   Poster-<slug>               لقطة ثابتة
+ */
 export const RemotionRoot: React.FC = () => (
   <>
-    <Composition
-      id="SchoolReport"
-      component={SchoolReportVideo}
-      durationInFrames={VIDEO.durationInSeconds * VIDEO.fps}
-      fps={VIDEO.fps}
-      width={VIDEO.width}
-      height={VIDEO.height}
-      defaultProps={defaults}
-    />
-    {/* نسخة صامتة للمعاينة السريعة أو عند عدم توفر ملفات الصوت */}
-    <Composition
-      id="SchoolReportSilent"
-      component={SchoolReportVideo}
-      durationInFrames={VIDEO.durationInSeconds * VIDEO.fps}
-      fps={VIDEO.fps}
-      width={VIDEO.width}
-      height={VIDEO.height}
-      defaultProps={{ withVoice: false, withMusic: false }}
-    />
-    <Still id="Poster" component={() => <SchoolReportVideo withVoice={false} withMusic={false} />} width={VIDEO.width} height={VIDEO.height} />
+    {Object.keys(SCHOOLS).map((slug) => (
+      <Folder key={slug} name={slug}>
+        <Composition
+          id={`SchoolReport-${slug}`}
+          component={SchoolReportVideo}
+          durationInFrames={VIDEO.durationInSeconds * VIDEO.fps}
+          fps={VIDEO.fps}
+          width={VIDEO.width}
+          height={VIDEO.height}
+          defaultProps={{ school: slug, withVoice: true, withMusic: true }}
+        />
+        <Composition
+          id={`SchoolReportSilent-${slug}`}
+          component={SchoolReportVideo}
+          durationInFrames={VIDEO.durationInSeconds * VIDEO.fps}
+          fps={VIDEO.fps}
+          width={VIDEO.width}
+          height={VIDEO.height}
+          defaultProps={{ school: slug, withVoice: false, withMusic: false }}
+        />
+        <Still
+          id={`Poster-${slug}`}
+          component={SchoolReportVideo}
+          width={VIDEO.width}
+          height={VIDEO.height}
+          defaultProps={{ school: slug, withVoice: false, withMusic: false }}
+        />
+      </Folder>
+    ))}
   </>
 );
-
-// اسم المدرسة يظهر في عنوان المعاينة
-if (typeof document !== "undefined") document.title = `${report.meta.schoolLabel} · ${report.meta.reportTitle}`;

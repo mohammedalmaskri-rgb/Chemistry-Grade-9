@@ -22,6 +22,15 @@ export const zahratQuraish: SchoolReport = {
       ministry: "schools/zahrat-quraish/ministry-logo.png",
       vision: "schools/zahrat-quraish/oman-vision-2040.png",
     },
+    terms: {
+      studentCount: "طالبة",
+      studentsDef: "الطالبات",
+      omaniOne: "طالبة عمانية",
+      nonOmaniOne: "طالبة غير عمانية",
+      omaniMany: "طالبات عمانيات",
+      teacherCount: "معلمة",
+      giftedPlural: "الموهوبات",
+    },
     page: [2, 4],
   },
 
@@ -69,6 +78,7 @@ export const zahratQuraish: SchoolReport = {
       { text: "فترة دوام واحدة", page: 12 },
       { text: "الدوام المدرسي من ٧:٠٠ إلى ١:٤٠", page: 4 },
     ],
+    highlight: { text: "أُضيف الصف العاشر هذا العام", icon: "arrowUp", page: 13 },
   },
 
   achievement: {
@@ -77,24 +87,26 @@ export const zahratQuraish: SchoolReport = {
     overall: {
       values: [72.79, 75.28, 82.22],
       counts: [433, 435, 470],
+      countsLabel: "عدد الطالبات الحاصلات على ٧٥٪ فأعلى",
       verdict: "متميز",
+      verdictTone: "positive",
       page: [18, 19, 20],
     },
     subjects: [
-      { name: "التربية الإسلامية", values: [45.21, 48.62, 54.72], page: [18, 19, 20], status: "improved" },
+      { name: "التربية الإسلامية", values: [45.21, 48.62, 54.72], page: [18, 19, 20], status: "improved", mark: "s1" },
       { name: "اللغة العربية", values: [51.6, 44.64, 51.4], page: [18, 19, 20], status: "neutral" },
-      { name: "اللغة الإنجليزية", values: [53.11, 52.42, 56.82], page: [18, 19, 20], status: "improved" },
-      { name: "الرياضيات", values: [25.04, 29.41, 33.74], page: [18, 19, 20], status: "watch" },
+      { name: "اللغة الإنجليزية", values: [53.11, 52.42, 56.82], page: [18, 19, 20], status: "improved", mark: "s3" },
+      { name: "الرياضيات", values: [25.04, 29.41, 33.74], page: [18, 19, 20], status: "watch", mark: "s2" },
       { name: "الدراسات الاجتماعية", values: [38.15, 44.46, 40.91], page: [18, 19, 20], status: "neutral" },
     ],
     focus: {
       title: "مواد العلوم والرياضيات",
       grade: "الصف التاسع",
       subjects: [
-        { name: "الكيمياء", values: [19.58, 30.5, 40.0], page: [18, 19, 20], status: "improved" },
-        { name: "الأحياء", values: [30.07, 32.62, 34.67], page: [18, 19, 20], status: "watch" },
-        { name: "الفيزياء", values: [25.87, 25.53, 28.0], page: [18, 19, 20], status: "watch" },
-        { name: "الرياضيات", values: [27.27, 26.95, 28.67], page: [18, 19, 20], status: "watch" },
+        { name: "الكيمياء", values: [19.58, 30.5, 40.0], page: [18, 19, 20], status: "improved", mark: "chem" },
+        { name: "الأحياء", values: [30.07, 32.62, 34.67], page: [18, 19, 20], status: "watch", mark: "watch" },
+        { name: "الفيزياء", values: [25.87, 25.53, 28.0], page: [18, 19, 20], status: "watch", mark: "watch" },
+        { name: "الرياضيات", values: [27.27, 26.95, 28.67], page: [18, 19, 20], status: "watch", mark: "watch" },
       ],
     },
     needsDevelopment: [
@@ -135,16 +147,18 @@ export const zahratQuraish: SchoolReport = {
       { field: "العلمي والابتكار", count: 5, icon: "bulb" },
     ],
     giftedPage: 15,
+    giftedNote: "عدد الطالبات في كل مجال كما ورد في جدول الموهوبين",
     support: [
-      { text: "برنامج التأهيل اللغوي لـ ١٦ طالبة من ذوات صعوبات التعلم", page: 15 },
-      { text: "قاعة لصعوبات التعلم ومعلمة متخصصة", page: [6, 13] },
+      { text: "برنامج التأهيل اللغوي لـ ١٦ طالبة من ذوات صعوبات التعلم", figure: 16, icon: "book", page: 15 },
+      { text: "قاعة لصعوبات التعلم ومعلمة متخصصة", icon: "school", page: [6, 13] },
     ],
     achievements: [
-      { text: "مشاركة ٢٠ طالبة في مسابقة «اقرأ» للناشئة", page: 29 },
-      { text: "فوز ٣ طالبات في البرنامج الوطني للقراءة", page: 29 },
-      { text: "المشاركة في برنامج قيادات رياضية شابة (أكتوبر ٢٠٢٥م)", page: [15, 28] },
-      { text: "المشاركة في مسابقة الابتكار لنفط عمان", page: [15, 29] },
+      { text: "مشاركة ٢٠ طالبة في مسابقة «اقرأ» للناشئة", figure: 20, page: 29 },
+      { text: "فوز ٣ طالبات في البرنامج الوطني للقراءة", figure: 3, page: 29 },
+      { text: "المشاركة في برنامج قيادات رياضية شابة (أكتوبر ٢٠٢٥م)", icon: "ball", page: [15, 28] },
+      { text: "المشاركة في مسابقة الابتكار لنفط عمان", icon: "bulb", page: [15, 29] },
     ],
+    achievementsTitle: "الشواهد والمشاركات",
   },
 
   evaluation: {
@@ -270,7 +284,7 @@ export const zahratQuraish: SchoolReport = {
     { id: "n03", start: 31.0, pages: [4, 12], text: "مدرسةٌ حكومية في ولاية السيب بمحافظة مسقط، تعمل بفترة دوامٍ واحدة." },
     { id: "n04", start: 38.0, pages: [5, 6, 7, 13], marks: { kpi1: "ستمئةٍ", kpi2: "عشرين", kpi3: "أربعٌ", kpi4: "أوائل" }, text: "تضم ستمئةٍ وأربعًا وثلاثين طالبة في عشرين شعبةً دراسية، تقوم على تعليمهن أربعٌ وأربعون معلمة، بينهن أربع معلماتٍ أوائل." },
     { id: "n05", start: 51.5, pages: 5, marks: { absence: "الغياب" }, text: "وبلغت نسبة الحضور الإجمالية ثمانيةً وتسعين فاصلة أربعة في المئة، فيما لم تتجاوز نسبة الغياب واحدًا فاصلة واحدٍ وخمسين في المئة." },
-    { id: "n06", start: 63.5, pages: [5, 13], marks: { grade10: "العاشر" }, text: "وتشكّل الطالبات العمانيات خمسةً وسبعين فاصلة سبعة في المئة، وقد أُضيف الصف العاشر إلى المدرسة هذا العام." },
+    { id: "n06", start: 63.5, pages: [5, 13], marks: { highlight: "العاشر" }, text: "وتشكّل الطالبات العمانيات خمسةً وسبعين فاصلة سبعة في المئة، وقد أُضيف الصف العاشر إلى المدرسة هذا العام." },
 
     // المشهد ٣: التحصيل الدراسي (75–150)
     { id: "n07", start: 76.0, pages: [18, 19, 20], marks: { years: "ثلاثة" }, text: "وفي التحصيل الدراسي، يرصد التقرير نسبة الطالبات الحاصلات على خمسةٍ وسبعين في المئة فأعلى في الامتحان النهائي، على مدى ثلاثة أعوام." },

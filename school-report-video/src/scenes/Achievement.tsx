@@ -28,18 +28,20 @@ export const Achievement: React.FC = () => {
   const verdictAt = mark("n08", "verdict", FROM, 0.95);
 
   // إبراز المواد المذكورة في التعليق n09
-  const subjectIdx = (name: string) => a.subjects.findIndex((s) => s.name === name);
+  // إبراز المواد عند ذكرها في التعليق n09 (علامة `mark` لكل مادة في ملف البيانات)
   const highlights: Record<number, number> = {};
-  // اسم المادة ← علامة المزامنة في المقطع n09
-  const hlPlan: [string, string, number][] = [
-    ["التربية الإسلامية", "s1", 0.12],
-    ["الرياضيات", "s2", 0.55],
-    ["اللغة الإنجليزية", "s3", 0.93],
-  ];
-  hlPlan.forEach(([n, m, fb]) => {
-    const i = subjectIdx(n);
-    if (i >= 0) highlights[i] = Math.max(n09, mark("n09", m, FROM, fb) - 6);
+  a.subjects.forEach((sub, i) => {
+    if (sub.mark) highlights[i] = Math.max(n09, mark("n09", sub.mark, FROM, 0.2 + 0.15 * i) - 6);
   });
+  const focusYears = a.focus.years ?? a.years;
+  const focusHighlights: Record<number, number> = {};
+  a.focus.subjects.forEach((sub, i) => {
+    if (sub.mark) focusHighlights[i] = mark("n10", sub.mark, FROM, 0.25 + 0.15 * i) - 6;
+  });
+  const minV = Math.min(...a.overall.values);
+  const trendMin = Math.max(0, Math.floor((minV - 20) / 10) * 10);
+  const tone = a.overall.verdictTone ?? "positive";
+  const toneColor = tone === "positive" ? C.goldLight : tone === "warn" ? C.warn : C.ivory;
 
   const lastYear = a.years[a.years.length - 1];
 
@@ -102,7 +104,7 @@ export const Achievement: React.FC = () => {
               <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 38, color: C.white }}>نسبة الإتقان العامة</div>
               <SourceTag page={a.overall.page} />
             </div>
-            <LineTrend values={a.overall.values} labels={a.years} start={tB} width={1080} height={600} min={50} max={100} pointStarts={pointStarts} />
+            <LineTrend values={a.overall.values} labels={a.years} start={tB} width={1080} height={600} min={trendMin} max={100} pointStarts={pointStarts} />
           </Card>
           <div style={{ width: 520, display: "flex", flexDirection: "column", gap: 26 }}>
             {(() => {
@@ -115,25 +117,26 @@ export const Achievement: React.FC = () => {
                     <div style={{ fontFamily: F.body, fontSize: 24, color: C.grey2 }}>
                       التغير بين {digits(a.years[0])}م و{digits(lastYear)}م
                     </div>
-                    <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: 82, color: C.positive, lineHeight: 1.3, display: "flex", alignItems: "center", gap: 14 }}>
-                      <Icon name="arrowUp" size={64} color={C.positive} stroke={2.4} draw={s} />
-                      <Counter value={gain} start={at} decimals={2} dur={40} />
+                    <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: 82, color: gain >= 0 ? C.positive : C.warn, lineHeight: 1.3, display: "flex", alignItems: "center", gap: 14 }}>
+                      <Icon name="arrowUp" size={64} color={gain >= 0 ? C.positive : C.warn} stroke={2.4} draw={s} style={{ transform: gain >= 0 ? undefined : "rotate(180deg)" }} />
+                      <Counter value={Math.abs(gain)} start={at} decimals={2} dur={40} />
                     </div>
                     <div style={{ fontFamily: F.body, fontSize: 24, color: C.grey1 }}>نقطة مئوية</div>
                   </Card>
                   {(() => {
                     const v = pop(frame, verdictAt - 4, 10);
                     return (
-                      <Card glow style={{ padding: 34, opacity: v, transform: `scale(${0.8 + 0.2 * v})`, textAlign: "center" }}>
-                        <div style={{ fontFamily: F.body, fontSize: 26, color: C.grey2 }}>الحكم العام على نسبة الإتقان</div>
-                        <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: 92, color: C.goldLight, lineHeight: 1.4, textShadow: `0 0 30px ${C.gold}66` }}>
+                      <Card glow={tone === "positive"} style={{ padding: 34, opacity: v, transform: `scale(${0.8 + 0.2 * v})`, textAlign: "center", borderColor: tone === "warn" ? `${C.warn}55` : undefined }}>
+                        <div style={{ fontFamily: F.body, fontSize: 26, color: C.grey2 }}>الحكم العام على نسبة الإتقان ({digits(lastYear)}م)</div>
+                        <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: a.overall.verdict.length > 8 ? 70 : 92, color: toneColor, lineHeight: 1.4, textShadow: tone === "positive" ? `0 0 30px ${C.gold}66` : undefined }}>
                           {a.overall.verdict}
                         </div>
+                        {a.overall.verdictNote && <div style={{ fontFamily: F.body, fontSize: 22, color: C.grey1, lineHeight: 1.5 }}>{a.overall.verdictNote}</div>}
                       </Card>
                     );
                   })()}
                   <div style={{ opacity: progress(frame, pointStarts[2] + 20, 20) }}>
-                    <div style={{ fontFamily: F.body, fontSize: 21, color: C.grey2, marginBottom: 8 }}>عدد الطالبات الحاصلات على ٧٥٪ فأعلى</div>
+                    <div style={{ fontFamily: F.body, fontSize: 21, color: C.grey2, marginBottom: 8 }}>{a.overall.countsLabel}</div>
                     <div style={{ display: "flex", gap: 12 }}>
                       {a.overall.counts.map((c, i) => (
                         <div key={i} style={{ flex: 1, textAlign: "center", border: `1px solid ${C.cardBorder}`, borderRadius: 14, padding: "8px 4px" }}>
@@ -163,7 +166,7 @@ export const Achievement: React.FC = () => {
               <div style={{ fontFamily: F.body, fontSize: 19, color: C.grey2 }}>
                 القيم نسب مئوية (٪) · الفرق محسوب بين {digits(a.years[0])}م و{digits(lastYear)}م
               </div>
-              <SourceTag page={[18, 19, 20]} />
+              <SourceTag page={a.overall.page} />
             </div>
           </Card>
         </div>
@@ -177,18 +180,18 @@ export const Achievement: React.FC = () => {
               <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 32, color: C.white }}>
                 {a.focus.title} · {a.focus.grade}
               </div>
-              <YearLegend years={a.years} />
+              <YearLegend years={focusYears} />
             </div>
             <GroupedBars
               groups={a.focus.subjects}
-              years={a.years}
+              years={focusYears}
               start={tD + 10}
               width={900}
               height={540}
-              highlights={{ 0: mark("n10", "chem", FROM, 0.25) - 6, 1: mark("n10", "watch", FROM, 0.5) + sec(2.6), 2: mark("n10", "watch", FROM, 0.5) + sec(2.6), 3: mark("n10", "watch", FROM, 0.5) + sec(2.6) }}
+              highlights={focusHighlights}
               valueFontSize={20}
             />
-            <SourceTag page={[18, 19, 20]} />
+            <SourceTag page={a.focus.page ?? a.overall.page} />
           </Card>
           <Card style={{ flex: 0.85, padding: "30px 34px", borderColor: `${C.warn}55` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
@@ -212,16 +215,17 @@ export const Achievement: React.FC = () => {
         </div>
       </Beat>
 
-      {/* E: الاختبارات الدولية */}
+      {/* E: الاختبارات الدولية — أو توزيع فئات التحصيل */}
       <Beat from={tE} to={END}>
+        {a.benchmark && (() => { const bm = a.benchmark; return (
         <div style={{ position: "absolute", top: 240, right: 110, left: 110 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 26 }}>
             <Icon name="globe" size={54} color={C.goldLight} draw={progress(frame, tE + 6, 30)} />
-            <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 40, color: C.white }}>{a.benchmark.title}</div>
-            <Pill style={{ marginInlineStart: 10 }}>{a.benchmark.note}</Pill>
+            <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 40, color: C.white }}>{bm.title}</div>
+            <Pill style={{ marginInlineStart: 10 }}>{bm.note}</Pill>
           </div>
           <div style={{ display: "flex", gap: 40 }}>
-            {a.benchmark.pairs.map((p, i) => {
+            {bm.pairs.map((p, i) => {
               const at = mark("n11", i === 0 ? "sci" : "math", FROM, i === 0 ? 0.4 : 0.75);
               const s = pop(frame, at - 10);
               // محور يبدأ من الصفر لتجنب تضخيم الفروق بصريًا
@@ -259,6 +263,46 @@ export const Achievement: React.FC = () => {
             })}
           </div>
         </div>
+        ); })()}
+        {!a.benchmark && a.distribution && (() => {
+          const d = a.distribution;
+          const colors = [C.goldLight, C.mint, C.greenLight, C.grey2, C.warn];
+          const barP = progress(frame, tE + 20, 60);
+          return (
+            <div style={{ position: "absolute", top: 250, right: 110, left: 110 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 30 }}>
+                <Icon name="chart" size={54} color={C.goldLight} draw={progress(frame, tE + 6, 30)} />
+                <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 40, color: C.white }}>{d.title}</div>
+              </div>
+              {/* شريط مكدّس */}
+              <div style={{ display: "flex", height: 70, borderRadius: 18, overflow: "hidden", background: "rgba(255,255,255,0.05)" }}>
+                {d.bands.map((b, i) => (
+                  <div key={b.label} style={{ width: `${b.value * barP}%`, background: colors[i % colors.length], opacity: 0.92, borderInlineStart: i ? "2px solid rgba(5,33,26,0.6)" : undefined }} />
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 22, marginTop: 34 }}>
+                {d.bands.map((b, i) => {
+                  const at = mark("n11", `b${i + 1}`, FROM, 0.15 + 0.15 * i) - 6;
+                  const p = pop(frame, at);
+                  return (
+                    <Card key={b.label} glow={i === 0} style={{ flex: 1, padding: "26px 22px", opacity: 0.25 + 0.75 * p, transform: `translateY(${(1 - p) * 30}px)`, borderTop: `6px solid ${colors[i % colors.length]}` }}>
+                      <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 30, color: C.white }}>{b.label}</div>
+                      <div style={{ fontFamily: F.body, fontSize: 21, color: C.grey2 }}>{digits(b.range)}</div>
+                      <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: 64, color: colors[i % colors.length], lineHeight: 1.4 }}>
+                        <Counter value={b.value} start={at} decimals={2} dur={36} />٪
+                      </div>
+                      <div style={{ fontFamily: F.body, fontSize: 21, color: C.grey1 }}>{num(b.count)} نتيجة</div>
+                    </Card>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 22 }}>
+                {d.note && <div style={{ fontFamily: F.body, fontSize: 21, color: C.grey2 }}>{d.note}</div>}
+                <SourceTag page={d.page} />
+              </div>
+            </div>
+          );
+        })()}
       </Beat>
     </AbsoluteFill>
   );

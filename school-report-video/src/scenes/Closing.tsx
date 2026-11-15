@@ -5,7 +5,7 @@ import { Beat } from "../components/Beat";
 import { Icon } from "../components/Icon";
 import { SourceTag } from "../components/ui";
 import { cue, easeInOut, mark, pop, progress, sec } from "../lib/anim";
-import { digits } from "../lib/format";
+import { digits, fitSize } from "../lib/format";
 import { C, F } from "../theme";
 import { Emblem, LogoPlate } from "./Intro";
 
@@ -61,7 +61,7 @@ export const Closing: React.FC = () => {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
             <LogoPlate opacity={plate} scale={0.95 + 0.05 * plate} />
             <div style={{ height: 2, width: 520 * plate, background: `linear-gradient(90deg, transparent, ${C.gold}, transparent)`, marginTop: 34 }} />
-            <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: 100, color: C.white, lineHeight: 1.4, opacity: progress(frame, tB + 18, 30) }}>
+            <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: fitSize(m.schoolLabel, 100, 16, 66), color: C.white, lineHeight: 1.4, textAlign: "center", opacity: progress(frame, tB + 18, 30) }}>
               {m.schoolLabel}
             </div>
             <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 44, color: C.goldLight, opacity: progress(frame, tB + 30, 30) }}>

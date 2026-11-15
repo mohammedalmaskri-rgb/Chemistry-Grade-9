@@ -170,7 +170,7 @@ export const GroupedBars: React.FC<{
               const y = padTop + chartH - h;
               return (
                 <g key={yi}>
-                  <rect x={x} y={y} width={barW} height={h} rx={6} fill={yearColors[yi % yearColors.length]} opacity={yi === years.length - 1 ? 1 : 0.85} />
+                  <rect x={x} y={y} width={barW} height={h} rx={6} fill={yearColors[Math.max(0, yearColors.length - years.length + yi)]} opacity={yi === years.length - 1 ? 1 : 0.85} />
                   <text
                     x={x + barW / 2}
                     y={y - 10}
@@ -311,9 +311,53 @@ export const YearLegend: React.FC<{ years: string[]; opacity?: number }> = ({ ye
   <div style={{ display: "flex", gap: 26, opacity, fontFamily: F.body, fontSize: 22, color: C.grey1 }}>
     {years.map((y, i) => (
       <div key={y} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ width: 18, height: 18, borderRadius: 5, background: yearColors[i % yearColors.length], display: "inline-block" }} />
+        <span style={{ width: 18, height: 18, borderRadius: 5, background: yearColors[Math.max(0, yearColors.length - years.length + i)], display: "inline-block" }} />
         {digits(y)}م
       </div>
     ))}
   </div>
 );
+
+/* ------------------------------------------------------------------ */
+/* أعمدة اتجاه بسيطة (قيمة واحدة لكل فترة)                              */
+/* ------------------------------------------------------------------ */
+export const ColumnTrend: React.FC<{
+  values: number[];
+  labels: string[];
+  start: number;
+  width: number;
+  height: number;
+  stagger?: number;
+}> = ({ values, labels, start, width, height, stagger = 10 }) => {
+  const frame = useCurrentFrame();
+  const n = values.length;
+  const max = Math.max(...values) * 1.12;
+  const padTop = 60;
+  const padBottom = 60;
+  const chartH = height - padTop - padBottom;
+  const slot = width / n;
+  const bw = Math.min(120, slot * 0.5);
+  return (
+    <svg width={width} height={height} style={{ overflow: "visible" }}>
+      <line x1={0} x2={width} y1={padTop + chartH} y2={padTop + chartH} stroke="rgba(255,255,255,0.18)" />
+      {values.map((v, i) => {
+        const idx = TIME_RTL ? n - 1 - i : i;
+        const cx = slot * (idx + 0.5);
+        const p = progress(frame, start + i * stagger, 36);
+        const h = (v / max) * chartH * p;
+        const last = i === n - 1;
+        return (
+          <g key={i}>
+            <rect x={cx - bw / 2} y={padTop + chartH - h} width={bw} height={h} rx={10} fill={last ? C.goldLight : yearColors[Math.min(i, yearColors.length - 2)]} opacity={last ? 1 : 0.85} />
+            <text x={cx} y={padTop + chartH - h - 14} fill={last ? C.goldLight : C.white} fontSize={34} fontWeight={800} fontFamily={F.display} textAnchor="middle" opacity={p}>
+              {num(v * p)}
+            </text>
+            <text x={cx} y={padTop + chartH + 40} fill={C.grey1} fontSize={22} fontFamily={F.display} fontWeight={600} textAnchor="middle" direction="rtl">
+              {digits(labels[i])}م
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};

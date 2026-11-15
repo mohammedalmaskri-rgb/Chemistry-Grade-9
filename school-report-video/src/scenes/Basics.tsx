@@ -2,24 +2,29 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { report, TIMELINE } from "../config";
 import { Beat } from "../components/Beat";
-import { HBars, Ring } from "../components/charts";
+import { ColumnTrend, HBars, Ring } from "../components/charts";
 import { Icon } from "../components/Icon";
 import { Card, Counter, Pill, SceneHeader, SourceTag } from "../components/ui";
 import { cue, mark, pop, progress, sec } from "../lib/anim";
-import { digits, num } from "../lib/format";
+import { num, sectionsWord } from "../lib/format";
 import { C, F } from "../theme";
 
 const FROM = TIMELINE[1].from;
+/** عدد المنازل العشرية كما وردت (١ أو ٢) */
+const dec = (v: number) => (Math.round(v * 100) % 10 ? 2 : 1);
 const END = sec(TIMELINE[1].to - TIMELINE[1].from);
 
 export const Basics: React.FC = () => {
   const frame = useCurrentFrame();
   const b = report.basics;
   const m = report.meta;
+  const T = m.terms;
   const tA = cue("n03", FROM) - 10;
   const tB = cue("n04", FROM) - 8;
   const tC = cue("n05", FROM) - 8;
   const tD = cue("n06", FROM) - 8;
+  const att = b.attendance;
+  const growth = b.growth;
 
   return (
     <AbsoluteFill>
@@ -40,7 +45,7 @@ export const Basics: React.FC = () => {
             <div style={{ fontFamily: F.display, fontSize: 34, color: C.goldLight, fontWeight: 600 }}>
               الصفوف {m.gradeRange}
             </div>
-            <SourceTag page={[4, 12]} />
+            <SourceTag page={m.page} />
           </Card>
           <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
             {b.facts.map((f, i) => {
@@ -94,9 +99,9 @@ export const Basics: React.FC = () => {
                   ))}
                 </div>
                 <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, color: C.white }}>
-                  {g.label} · {g.sections === 2 ? "شعبتان" : `${digits(g.sections)} شعب`}
+                  {g.label} · {sectionsWord(g.sections)}
                 </div>
-                <div style={{ fontFamily: F.body, fontSize: 18, color: C.grey2, opacity: p }}>الكثافة {digits(g.density)}</div>
+                <div style={{ fontFamily: F.body, fontSize: 18, color: C.grey2, opacity: p }}>الكثافة {num(g.density, g.density % 1 ? 1 : 0)}</div>
               </div>
             );
           })}
@@ -104,19 +109,21 @@ export const Basics: React.FC = () => {
         </div>
       </Beat>
 
-      {/* C: الحضور */}
+      {/* C: الحضور — أو نمو أعداد الطلبة إن لم يرد الحضور في التقرير */}
       <Beat from={tC} to={tD}>
+        {att && (
+          <>
         <div style={{ position: "absolute", top: 290, right: 150, left: 110, display: "flex", gap: 70, alignItems: "center" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
-            <Ring value={b.attendance.total} start={tC + 16} size={470} stroke={32} label="نسبة الحضور الإجمالية" />
+            <Ring value={att.total} start={tC + 16} size={470} stroke={32} label="نسبة الحضور الإجمالية" />
             <Pill color={C.mint} style={{ fontSize: 24, opacity: progress(frame, mark("n05", "absence", FROM, 0.55) - 6, 20) }}>
-              نسبة الغياب الإجمالية {num(b.attendance.absence, 2)}٪
+              نسبة الغياب الإجمالية {num(att.absence, 2)}٪
             </Pill>
           </div>
           <Card style={{ flex: 1, padding: "38px 44px" }}>
             <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 32, color: C.white, marginBottom: 16 }}>نسبة الحضور حسب الصف</div>
             <HBars
-              items={b.attendance.byGrade.map((g) => ({ label: `الصف ${g.label}`, value: g.value }))}
+              items={att.byGrade.map((g) => ({ label: `الصف ${g.label}`, value: g.value }))}
               start={tC + 30}
               width={920}
               max={100}
@@ -127,28 +134,59 @@ export const Basics: React.FC = () => {
             <div style={{ fontFamily: F.body, fontSize: 19, color: C.grey2, marginTop: 12 }}>
               من بداية دوام الطلبة حتى كتابة الوثيقة
             </div>
-            <SourceTag page={b.attendance.page} style={{ marginTop: 8 }} />
+            <SourceTag page={att.page} style={{ marginTop: 8 }} />
           </Card>
         </div>
+                </>
+        )}
+        {!att && growth && (
+          <div style={{ position: "absolute", top: 280, right: 110, left: 110, display: "flex", gap: 40 }}>
+            <Card style={{ flex: 1.5, padding: "30px 40px 20px" }} glow>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 36, color: C.white }}>{growth.title}</div>
+                <SourceTag page={growth.page} />
+              </div>
+              <ColumnTrend values={growth.values} labels={growth.labels} start={tC + 14} width={1000} height={520} stagger={sec(1.2)} />
+            </Card>
+            {(() => {
+              const at = mark("n05", "growth", FROM, 0.6) - 6;
+              const s2 = pop(frame, at);
+              const delta = growth.values[growth.values.length - 1] - growth.values[0];
+              return (
+                <Card style={{ flex: 0.8, padding: 40, opacity: s2, transform: `translateX(${(1 - s2) * -40}px)`, display: "flex", flexDirection: "column", justifyContent: "center", gap: 14 }}>
+                  <Icon name="arrowUp" size={64} color={C.positive} stroke={2.2} draw={s2} />
+                  <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: 104, color: C.positive, lineHeight: 1.2 }}>
+                    <Counter value={delta} start={at} />
+                  </div>
+                  <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 30, color: C.white }}>
+                    زيادة في عدد {T.studentsDef}
+                  </div>
+                  {growth.note && <div style={{ fontFamily: F.body, fontSize: 23, color: C.grey1, lineHeight: 1.6 }}>{growth.note}</div>}
+                  <SourceTag page={growth.page} />
+                </Card>
+              );
+            })()}
+          </div>
+        )}
       </Beat>
 
       {/* D: التركيبة */}
       <Beat from={tD} to={END}>
         <div style={{ position: "absolute", top: 300, right: 110, left: 110, display: "flex", gap: 40 }}>
           <Card style={{ flex: 1.2, padding: 56, display: "flex", gap: 44, alignItems: "center" }} glow>
-            <Ring value={b.nationality.omaniPct} start={tD + 12} size={400} stroke={38} color={C.greenLight} track={`${C.gold}55`} label="طالبات عمانيات" />
+            <Ring value={b.nationality.omaniPct} decimals={dec(b.nationality.omaniPct)} start={tD + 12} size={400} stroke={38} color={C.greenLight} track={`${C.gold}55`} label={T.omaniMany} />
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
               <div>
                 <div style={{ fontFamily: F.display, fontWeight: 900, fontSize: 72, color: C.white }}>
                   <Counter value={b.nationality.omani} start={tD + 16} />
                 </div>
-                <div style={{ fontFamily: F.body, fontSize: 26, color: C.mint }}>طالبة عمانية · {num(b.nationality.omaniPct, 1)}٪</div>
+                <div style={{ fontFamily: F.body, fontSize: 26, color: C.mint }}>{T.omaniOne} · {num(b.nationality.omaniPct, dec(b.nationality.omaniPct))}٪</div>
               </div>
               <div>
                 <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 52, color: C.grey1 }}>
                   <Counter value={b.nationality.nonOmani} start={tD + 26} />
                 </div>
-                <div style={{ fontFamily: F.body, fontSize: 24, color: C.goldLight }}>طالبة غير عمانية · {num(b.nationality.nonOmaniPct, 1)}٪</div>
+                <div style={{ fontFamily: F.body, fontSize: 24, color: C.goldLight }}>{T.nonOmaniOne} · {num(b.nationality.nonOmaniPct, dec(b.nationality.nonOmaniPct))}٪</div>
               </div>
               <SourceTag page={b.nationality.page} />
             </div>
@@ -162,7 +200,7 @@ export const Basics: React.FC = () => {
                   <div key={s.label} style={{ marginBottom: 18 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontFamily: F.body, fontSize: 24, color: C.grey1, marginBottom: 8 }}>
                       <span>{s.label}</span>
-                      <span style={{ color: C.goldLight, fontWeight: 700 }}>{num(s.value * p, 1)}٪</span>
+                      <span style={{ color: C.goldLight, fontWeight: 700 }}>{num(s.value * p, s.decimals ?? 1)}٪</span>
                     </div>
                     <div style={{ height: 16, background: "rgba(255,255,255,0.07)", borderRadius: 8 }}>
                       <div style={{ height: 16, width: `${s.value * p}%`, background: `linear-gradient(270deg, ${C.gold}, ${C.goldLight})`, borderRadius: 8 }} />
@@ -170,16 +208,18 @@ export const Basics: React.FC = () => {
                   </div>
                 );
               })}
-              <SourceTag page={5} />
+              <SourceTag page={b.stages[0]?.page ?? b.sectionsPage} />
             </Card>
             {(() => {
-              const s = pop(frame, mark("n06", "grade10", FROM, 0.7) - 18);
+              const hl = b.highlight;
+              if (!hl) return null;
+              const s = pop(frame, mark("n06", "highlight", FROM, 0.7) - 18);
               return (
                 <Card glow style={{ padding: "28px 36px", display: "flex", alignItems: "center", gap: 24, opacity: s, transform: `scale(${0.85 + 0.15 * s})` }}>
-                  <Icon name="arrowUp" size={58} color={C.goldLight} draw={s} />
+                  <Icon name={hl.icon ?? "star"} size={58} color={C.goldLight} draw={s} />
                   <div>
-                    <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 34, color: C.white }}>أُضيف الصف العاشر هذا العام</div>
-                    <SourceTag page={13} />
+                    <div style={{ fontFamily: F.display, fontWeight: 800, fontSize: 34, color: C.white }}>{hl.text}</div>
+                    <SourceTag page={hl.page} />
                   </div>
                 </Card>
               );

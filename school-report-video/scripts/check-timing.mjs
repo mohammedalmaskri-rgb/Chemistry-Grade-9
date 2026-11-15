@@ -5,9 +5,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-execFileSync("node", [join(root, "scripts/export-data.mjs")], { stdio: "ignore" });
+execFileSync("node", [join(root, "scripts/export-data.mjs")], { stdio: "ignore", env: process.env });
 const data = JSON.parse(readFileSync(join(root, "out/report.json"), "utf8"));
-const manifest = JSON.parse(readFileSync(join(root, "src/data/generated/voiceover.json"), "utf8"));
+const manifest = JSON.parse(readFileSync(join(root, `src/data/generated/${data.slug}.voice.json`), "utf8"));
 const durs = manifest.school === data.slug ? manifest.segments : {};
 const GAP = 0.4;
 let errors = 0;

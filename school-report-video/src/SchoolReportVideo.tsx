@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Sequence } from "remotion";
-import { TIMELINE, VIDEO } from "./config";
+import { setSchool, TIMELINE, VIDEO } from "./config";
 import { Background } from "./components/Background";
 import { LightSweep, SceneFrame } from "./components/SceneFrame";
 import { Soundtrack, Subtitles } from "./components/Soundtrack";
@@ -24,9 +24,11 @@ const SCENES: Record<(typeof TIMELINE)[number]["id"], React.FC> = {
   closing: Closing,
 };
 
-export type VideoProps = { withVoice: boolean; withMusic: boolean };
+export type VideoProps = { school: string; withVoice: boolean; withMusic: boolean };
 
-export const SchoolReportVideo: React.FC<VideoProps> = ({ withVoice, withMusic }) => {
+export const SchoolReportVideo: React.FC<VideoProps> = ({ school, withVoice, withMusic }) => {
+  // يضبط المدرسة النشطة قبل رسم المشاهد (كل المشاهد تقرأ البيانات منها)
+  setSchool(school);
   const fps = VIDEO.fps;
   return (
     <AbsoluteFill style={{ direction: "rtl", backgroundColor: C.bg0, color: C.white }}>

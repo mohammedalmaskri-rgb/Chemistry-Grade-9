@@ -4,7 +4,8 @@
  * كل رقم يحمل `page` = رقم صفحة التقرير المصدر (للتوثيق والمراجعة).
  */
 
-export type PageRef = number | number[];
+/** مرجع المصدر: رقم صفحة (أو أرقام) في PDF، أو اسم القسم/الجدول في ملفات Word التي لا تثبت ترقيمها */
+export type PageRef = number | number[] | string;
 
 export type IconName =
   | "students" | "teacher" | "classes" | "calendar" | "location" | "school"
@@ -36,6 +37,8 @@ export interface SubjectSeries {
   page: PageRef;
   /** تمييز بصري: improved = تحسن، watch = يحتاج إلى تطوير، neutral */
   status?: "improved" | "watch" | "neutral";
+  /** علامة مزامنة (في مقطع التعليق الخاص بالمخطط) يُبرَز عندها هذا العمود */
+  mark?: string;
 }
 
 export interface ComparePair {
@@ -68,7 +71,27 @@ export interface Domain {
 export interface Statement {
   text: string;
   domain?: string;
+  /** رقم بارز يُعرض بجانب العبارة (اختياري) */
+  figure?: number;
+  icon?: IconName;
   page: PageRef;
+}
+
+/** صيغ الإشارة إلى الطلبة (تختلف بين مدارس البنين والبنات) */
+export interface Terms {
+  /** بعد عدد كبير (تمييز): "طالبة" / "طالبًا" */
+  studentCount: string;
+  /** الجمع: "الطالبات" / "الطلبة" */
+  studentsDef: string;
+  /** "طالبة عمانية" / "طالب عماني" */
+  omaniOne: string;
+  nonOmaniOne: string;
+  /** "طالبات عمانيات" / "طلبة عمانيون" */
+  omaniMany: string;
+  /** "معلمة" / "معلمًا" */
+  teacherCount: string;
+  /** "الموهوبات" / "الموهوبون" */
+  giftedPlural: string;
 }
 
 export interface NarrationSegment {
@@ -99,6 +122,7 @@ export interface SchoolReport {
     shift: string;
     gradeRange: string;
     logos: { ministry?: string; vision?: string }; // مسارات داخل public/
+    terms: Terms;
     page: PageRef;
   };
   intro: {
@@ -108,28 +132,50 @@ export interface SchoolReport {
   };
   basics: {
     kpis: Kpi[];
-    attendance: { total: number; absence: number; byGrade: LabeledValue[]; page: PageRef };
+    /** إن لم يرد الحضور في التقرير يُعرض `growth` بدلًا منه */
+    attendance?: { total: number; absence: number; byGrade: LabeledValue[]; page: PageRef };
+    growth?: { title: string; labels: string[]; values: number[]; note?: string; page: PageRef };
     sectionsByGrade: { label: string; sections: number; density: number }[];
     sectionsPage: PageRef;
     nationality: { omani: number; omaniPct: number; nonOmani: number; nonOmaniPct: number; page: PageRef };
     stages: LabeledValue[];
     facts: Statement[];
+    /** بطاقة إبراز في نهاية المشهد */
+    highlight?: Statement;
   };
   achievement: {
     metricLabel: string;
     years: string[];
-    overall: { values: number[]; counts: number[]; verdict: string; page: PageRef };
+    overall: {
+      values: number[];
+      counts: number[];
+      /** وصف الأعداد: "عدد الطالبات الحاصلات على ٧٥٪ فأعلى" أو "عدد النتائج…" */
+      countsLabel: string;
+      verdict: string;
+      verdictNote?: string;
+      verdictTone?: "positive" | "neutral" | "warn";
+      page: PageRef;
+    };
     subjects: SubjectSeries[];
-    focus: { title: string; grade: string; subjects: SubjectSeries[] };
+    focus: { title: string; grade: string; subjects: SubjectSeries[]; years?: string[]; page?: PageRef };
     needsDevelopment: Statement[];
-    benchmark: { title: string; pairs: ComparePair[]; note: string; page: PageRef };
+    /** مقارنة بمرجع خارجي (مثل تيمز) — وإن غابت يُعرض `distribution` */
+    benchmark?: { title: string; pairs: ComparePair[]; note: string; page: PageRef };
+    distribution?: {
+      title: string;
+      bands: { label: string; range: string; value: number; count: number }[];
+      note?: string;
+      page: PageRef;
+    };
   };
   initiatives: {
     projects: Initiative[];
     gifted: { field: string; count: number; icon: IconName }[];
     giftedPage: PageRef;
+    giftedNote?: string;
     support: Statement[];
     achievements: Statement[];
+    achievementsTitle?: string;
   };
   evaluation: {
     domains: Domain[];
