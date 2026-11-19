@@ -191,68 +191,120 @@ body.login-screen #loginView::after{content:"نسأل الله أن يوفقك �
 }
 @media (max-height:620px){body.login-screen .wrap{align-items:flex-start}}
 @media (prefers-reduced-motion:reduce){body.login-screen *{animation:none!important}}
-/* LOGIN v2: split layout. Form panel (right) + photo panel (left); phone: photo banner on top. */
-body.login-screen{background:#f5f7fa;color:#0f172a}
+/* LOGIN v4: full-bleed lab photo, top bar, floating login card (right), welcome text + feature tiles. */
+body.login-screen{background:#0b2f6e;color:#fff}
 body.login-screen::before,body.login-screen::after{display:none!important}
 body.login-screen .wrap{padding:0!important;max-width:none;min-height:100svh;display:block}
-body.login-screen #loginView:not(.hide){display:grid!important;grid-template-columns:minmax(380px,40%) 1fr;width:100%!important;max-width:none!important;min-height:100svh;margin:0;padding:0!important;border:0;border-radius:0;background:#f7f9fb;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.login-screen #loginView:not(.hide){display:flex!important;flex-direction:column;position:relative;isolation:isolate;overflow:hidden;width:100%!important;max-width:none!important;min-height:100svh;margin:0;padding:0!important;border:0;border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;background:#0b2f6e url("login-lab-bg.jpg?v=20261119") center/cover no-repeat}
 body.login-screen #loginView::before,body.login-screen #loginView::after{display:none!important;content:none!important}
-.login-panel{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:clamp(24px,4vw,56px) clamp(20px,4vw,64px);background:radial-gradient(900px 500px at 100% 0%,#eaf3fb,transparent 60%),#f7f9fb}
-.login-panel::before{content:"";position:absolute;top:-30px;right:-40px;width:230px;height:230px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='%230f4c81' stroke-width='3'%3E%3Cellipse cx='100' cy='100' rx='90' ry='34'/%3E%3Cellipse cx='100' cy='100' rx='90' ry='34' transform='rotate(60 100 100)'/%3E%3Cellipse cx='100' cy='100' rx='90' ry='34' transform='rotate(120 100 100)'/%3E%3Ccircle cx='100' cy='100' r='10' fill='%230f4c81'/%3E%3C/svg%3E") center/contain no-repeat;opacity:.07;pointer-events:none}
-.login-box{position:relative;width:100%;max-width:440px}
-.login-mark{display:none}
-.login-title{margin:0;font-size:clamp(30px,2.7vw,40px);font-weight:800;color:#12355b;line-height:1.3}
-.login-sub{margin:8px 0 24px;color:#5b6b7f;font-size:16px}
+/* app.js shrinks the closest login card on phones (scale .86); this layout is already sized for phones. */
+body.login-screen #loginView.portal-mobile-login-card,body.login-screen #loginView .portal-mobile-login-card{transform:none!important}
+.lx-shade{position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(0deg,rgba(4,30,92,.88) 0%,rgba(4,30,92,.5) 30%,rgba(4,30,92,0) 58%),linear-gradient(180deg,rgba(4,30,92,.35) 0%,rgba(4,30,92,0) 18%)}
 .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-body.login-screen #loginView .field{margin:0 0 14px;position:relative}
-body.login-screen #loginView .field input{width:100%;height:58px;background:#fff;color:#0f172a;border:1.5px solid #d3dce6;border-radius:999px;padding:0 22px 0 60px;font-size:17px;font-weight:600;direction:ltr;text-align:right;unicode-bidi:plaintext;box-shadow:0 2px 6px #0f2f5708;transition:border-color .2s,box-shadow .2s}
+/* ---- top bar ---- */
+.lx-top{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:clamp(14px,2.4vh,26px) clamp(16px,2vw,34px) 0}
+.lx-pill{flex:none;display:inline-flex;align-items:center;gap:10px;height:56px;padding:0 24px;border-radius:999px;border:1.5px solid #7dd3fc;background:rgba(8,40,104,.55);color:#fff;font:inherit;font-size:18px;font-weight:800;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 8px 24px #0004;transition:background .2s}
+.lx-pill:hover{background:rgba(14,60,140,.7)}
+.lx-bar{display:flex;align-items:center;justify-content:space-between;gap:24px;width:min(1110px,72%);min-height:84px;padding:6px 28px;border-radius:22px;background:linear-gradient(90deg,rgba(9,42,108,.62),rgba(9,42,108,.78));border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 10px 30px #0003}
+.lx-links{display:flex;align-items:center;gap:clamp(18px,3vw,58px)}
+.lx-links a,.lx-links button{display:inline-flex;align-items:center;gap:9px;color:#fff;text-decoration:none;font:inherit;font-size:18px;font-weight:700;background:none;border:0;padding:6px 2px;cursor:pointer;white-space:nowrap}
+.lx-links a:hover,.lx-links button:hover{color:#7dd3fc}
+.lx-links svg{color:#e2f2ff}
+.lx-brand{display:flex;align-items:center;gap:20px;min-width:0}
+.lx-brand img{width:clamp(70px,6vw,98px);height:auto;border-radius:50%;box-shadow:0 0 0 3px #22d3ee,0 0 22px #22d3ee99;flex:none}
+.lx-brand-sep{width:2px;align-self:stretch;margin:6px 0;background:rgba(255,255,255,.5)}
+.lx-brand-t{display:flex;flex-direction:column;text-align:right;min-width:0}
+.lx-brand-t b{font-size:clamp(20px,1.7vw,28px);font-weight:900;line-height:1.3}
+.lx-brand-t small{font-size:13px;opacity:.9;line-height:1.5}
+/* ---- main grid: card (right) | hero + tiles (left) ---- */
+.lx-main{flex:1 1 auto;display:grid;grid-template-columns:minmax(440px,560px) 1fr;grid-template-rows:1fr auto auto auto;grid-template-areas:"card ." "card hero" "card tiles" "card foot";column-gap:clamp(20px,4vw,80px);padding:clamp(22px,6vh,80px) clamp(16px,2.6vw,48px) 18px}
+.login-panel{grid-area:card;align-self:start}
+.login-box{position:relative;background:rgba(255,255,255,.94);color:#0f172a;border-radius:30px;padding:46px 44px 30px;box-shadow:0 30px 70px rgba(3,20,60,.38);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.lx-atom{position:absolute;top:-34px;right:-46px;width:170px;height:170px;color:#38bdf8;opacity:.95;filter:drop-shadow(0 0 10px #38bdf899);pointer-events:none}
+.login-title{margin:0;text-align:center;font-size:clamp(32px,2.6vw,42px);font-weight:900;color:#12355b;line-height:1.3}
+.login-sub{margin:10px 0 24px;text-align:center;color:#334155;font-size:16.5px}
+body.login-screen #loginView .field{margin:0 0 16px;position:relative}
+body.login-screen #loginView .field input{width:100%;height:60px;background:#fff;color:#0f172a;border:1.5px solid #dbe3ec;border-radius:999px;padding:0 24px 0 64px;font-size:18px;font-weight:700;direction:ltr;text-align:right;unicode-bidi:plaintext;box-shadow:0 2px 8px #0f2f570d;transition:border-color .2s,box-shadow .2s}
 body.login-screen #loginView .field input::placeholder{color:#8a98a9;opacity:1;text-align:right;font-weight:500}
-body.login-screen #loginView .field input:focus{outline:none;border-color:#2f8a73;box-shadow:0 0 0 4px #2f8a7322}
-.fi-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#2f8a73;background:#e8f4f0;pointer-events:none}
-.pw-toggle{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:0;border-radius:50%;background:#e8f4f0;color:#2f8a73;display:grid;place-items:center;cursor:pointer}
-.pw-toggle:hover,.pw-toggle[aria-pressed="true"]{background:#cfe9e1;color:#1f6b58}
-.pw-toggle:focus-visible{outline:2px solid #2f8a73;outline-offset:1px}
-.forgot-link{display:inline-block;margin:2px 6px 16px;padding:4px 0;border:0;background:none;color:#2f8a73;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+body.login-screen #loginView .field input:focus{outline:none;border-color:#1aa3b0;box-shadow:0 0 0 4px #1aa3b022}
+.fi-icon,.pw-toggle{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#1a8fb0;background:#e3f3fa}
+.fi-icon{pointer-events:none}
+.pw-toggle{border:0;cursor:pointer}
+.pw-toggle:hover,.pw-toggle[aria-pressed="true"]{background:#cbe8f5}
+.pw-toggle:focus-visible{outline:2px solid #1aa3b0;outline-offset:1px}
+.forgot-link{display:block;margin:0 6px 18px auto;padding:4px 0;border:0;background:none;color:#0e9db3;font:inherit;font-size:16px;font-weight:800;cursor:pointer}
 .forgot-link:hover{text-decoration:underline}
-body.login-screen #loginBtn{display:flex;align-items:center;justify-content:center;gap:10px;height:58px;border-radius:999px;background:linear-gradient(135deg,#3a9a82,#2a7d68);color:#fff;font-size:18px;font-weight:800;margin:0;box-shadow:0 12px 26px #2a7d6838;transition:filter .2s,transform .1s}
+body.login-screen #loginBtn{display:flex;align-items:center;justify-content:center;gap:10px;height:60px;border-radius:999px;background:linear-gradient(90deg,#1690a6,#2ec5b4);color:#fff;font-size:19px;font-weight:800;margin:0;box-shadow:0 14px 28px #1690a640;transition:filter .2s,transform .1s}
 body.login-screen #loginBtn:hover{filter:brightness(1.07)}
 body.login-screen #loginBtn:active{transform:translateY(1px)}
 body.login-screen #loginBtn:disabled{opacity:.7}
 body.login-screen #loginMsg:not(:empty){margin:0 0 16px}
-body.login-screen #loginMsg .msg{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:16px;font-size:15px;line-height:1.7}
-body.login-screen #loginMsg .msg.ok{background:#eef8f2;border:1px solid #cfe9db;color:#1f6b4f}
-body.login-screen #loginMsg .msg.err{background:#fdf0f0;border:1px solid #f5d0d0;color:#9b2c2c}
-body.login-screen #loginMsg .msg::before{content:"✓";flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:15px;font-weight:900;color:#fff;background:#3fa77c}
+body.login-screen #loginMsg .msg{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:16px;font-size:15.5px;font-weight:700;line-height:1.75}
+body.login-screen #loginMsg .msg.ok{background:#e4f6ea;border:1px solid #c9ead5;color:#14653f}
+body.login-screen #loginMsg .msg.err{background:#fdeeee;border:1px solid #f4cccc;color:#9b2c2c}
+body.login-screen #loginMsg .msg::before{content:"✓";flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;font-weight:900;color:#fff;background:#27ae60}
 body.login-screen #loginMsg .msg.err::before{content:"!";background:#d64545}
-.login-tagline{display:flex;align-items:center;gap:14px;margin:26px 0 0;color:#3b4b5e;font-size:13.5px;line-height:1.8;text-align:center}
-.login-tagline::before,.login-tagline::after{content:"";flex:1 1 36px;min-width:24px;height:1px;background:#cfd8e2}
-body.login-screen .site-links{justify-content:center;margin-top:12px;gap:4px 14px;font-size:12px}
-body.login-screen .site-links a{color:#6b7c90}body.login-screen .site-links a:hover{color:#2f8a73}
-.login-visual{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;background:#0c2d6b;color:#fff;isolation:isolate}
-.login-visual::after{content:"";position:absolute;inset:auto 0 0 0;height:42%;z-index:-1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 160' fill='none' stroke='%237fb3ff' stroke-width='1.4' opacity='.6'%3E%3Cpath d='M10 120 40 90 80 104 110 70 150 86 180 50 220 66 250 30M40 90 50 50 80 40 110 70M150 86 160 130 200 140 220 66M80 104 90 150'/%3E%3Cg fill='%237fb3ff'%3E%3Ccircle cx='10' cy='120' r='3'/%3E%3Ccircle cx='40' cy='90' r='4'/%3E%3Ccircle cx='80' cy='104' r='3'/%3E%3Ccircle cx='110' cy='70' r='4'/%3E%3Ccircle cx='150' cy='86' r='3'/%3E%3Ccircle cx='180' cy='50' r='4'/%3E%3Ccircle cx='220' cy='66' r='3'/%3E%3Ccircle cx='250' cy='30' r='3'/%3E%3Ccircle cx='50' cy='50' r='3'/%3E%3Ccircle cx='80' cy='40' r='3'/%3E%3Ccircle cx='160' cy='130' r='3'/%3E%3Ccircle cx='200' cy='140' r='3'/%3E%3Ccircle cx='90' cy='150' r='3'/%3E%3C/g%3E%3C/svg%3E") 0 100%/360px auto repeat-x;opacity:.35}
-.lv-photo{display:block;width:100%;height:auto;flex:none}
-.lv-logo{position:absolute;top:clamp(16px,2.4vw,30px);left:clamp(16px,2.4vw,34px);width:clamp(76px,8vw,124px);height:auto;border-radius:50%;box-shadow:0 0 0 4px #ffffffcc,0 10px 30px #0006}
-body.login-screen .seo-intro.lv-text{position:relative;flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;margin:-40px 0 0;padding:0 clamp(20px,4vw,56px) clamp(22px,3vw,40px);background:none;border:0;text-align:center}
-.lv-kicker{display:block;color:#7ee0c3;font-size:clamp(26px,2.6vw,42px);font-weight:800;line-height:1.3;text-shadow:0 3px 16px #0007}
-body.login-screen .seo-intro.lv-text h1{color:#fff;font-size:clamp(40px,4.6vw,74px);font-weight:900;line-height:1.15;margin:2px 0 14px;text-shadow:0 6px 26px #0009}
+.login-tagline{display:flex;align-items:center;gap:14px;margin:24px 0 0;color:#1e293b;font-size:14px;line-height:1.8;text-align:center}
+.login-tagline::before,.login-tagline::after{content:"";flex:1 1 30px;min-width:22px;height:1px;background:#c9d4df}
+/* ---- hero text ---- */
+body.login-screen #loginView .lx-hero{grid-area:hero;align-self:end;margin:0;padding:0;background:none;border:0;text-align:center;color:#fff}
+.lv-kicker{display:inline-flex;align-items:center;gap:14px;font-size:clamp(26px,2.4vw,40px);font-weight:700;line-height:1.3;text-shadow:0 3px 16px #000a}
+.lv-kicker::before{content:"";width:44px;height:2px;background:#38bdf8;box-shadow:0 0 8px #38bdf8}
+body.login-screen #loginView .lx-hero h1{color:#fff;font-size:clamp(44px,4.6vw,78px);font-weight:900;line-height:1.15;margin:2px 0 12px;text-shadow:0 6px 26px #000a}
 .lv-emo{display:none}
-.lv-sep{display:block;width:min(70%,420px);height:1px;margin:0 auto 12px;background:linear-gradient(90deg,transparent,#ffffffaa,transparent)}
-body.login-screen .seo-intro.lv-text p{color:#e6efff;font-size:clamp(14px,1.2vw,18px);font-weight:600;line-height:1.8;margin:0 auto;max-width:640px}
-@media (max-width:900px){
- body.login-screen #loginView:not(.hide){grid-template-columns:1fr;grid-template-rows:auto 1fr}
- .login-visual{order:-1}
- .lv-photo{aspect-ratio:16/9;object-fit:cover;object-position:50% 40%}
- .lv-logo{width:58px;top:12px;left:12px;box-shadow:0 0 0 3px #ffffffcc,0 6px 18px #0006}
- body.login-screen .seo-intro.lv-text{margin-top:-14px;padding:0 16px 18px}
- .lv-kicker{font-size:18px}
- body.login-screen .seo-intro.lv-text h1{font-size:30px;margin:0 0 8px}
- body.login-screen .seo-intro.lv-text p{font-size:12.5px;line-height:1.65}
- .lv-sep{margin-bottom:8px}
- .login-panel{align-items:flex-start;padding:24px 18px 30px}
- .login-panel::before{width:150px;height:150px;top:-20px;right:-30px}
- .login-title{font-size:27px}
- .login-sub{margin:6px 0 18px;font-size:14.5px}
+.lv-hl{background:linear-gradient(180deg,#67e8f9,#22b8e6);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 4px 18px #22d3ee66)}
+body.login-screen #loginView .lx-hero p{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;color:#eef6ff;font-size:clamp(16px,1.35vw,21px);font-weight:700;line-height:1.7;margin:0 auto;max-width:720px;text-shadow:0 2px 12px #000a}
+body.login-screen #loginView .lx-hero p::before,body.login-screen #loginView .lx-hero p::after{content:"";width:48px;height:2px;background:rgba(255,255,255,.7)}
+body.login-screen #loginView .lx-hero p span{display:block;width:100%;font-size:.78em;font-weight:600;opacity:.85;order:3}
+body.login-screen #loginView .lx-hero p br{display:none}
+/* ---- feature tiles ---- */
+.lx-tiles{grid-area:tiles;list-style:none;display:flex;justify-content:center;gap:clamp(12px,1.6vw,26px);margin:26px 0 0;padding:0}
+.lx-tiles li{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:clamp(150px,12vw,196px);min-height:118px;padding:16px 10px;border-radius:18px;background:rgba(10,45,115,.42);border:1px solid rgba(125,211,252,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.lx-tiles svg{color:#5ee0f7;filter:drop-shadow(0 0 10px #22d3eeaa)}
+.lx-tiles b{font-size:clamp(15px,1.15vw,19px);font-weight:800;color:#fff;text-align:center}
+.lx-foot{grid-area:foot;margin-top:14px}
+body.login-screen #loginView .site-links{justify-content:center;margin:0;gap:4px 14px;font-size:12px}
+body.login-screen #loginView .site-links a{color:rgba(255,255,255,.72)}body.login-screen #loginView .site-links a:hover{color:#fff}
+/* ---- support dialog ---- */
+.lx-dialog{border:0;border-radius:22px;padding:28px 30px;max-width:min(92vw,440px);color:#0f172a;text-align:center;box-shadow:0 30px 80px #0007}
+.lx-dialog::backdrop{background:rgba(3,20,60,.55);backdrop-filter:blur(3px)}
+.lx-dialog h3{margin:0 0 10px;font-size:24px;color:#12355b}
+.lx-dialog p{margin:0 0 12px;color:#334155;line-height:1.8}
+.lx-mail{display:inline-block;margin:0 0 14px;padding:10px 18px;border-radius:12px;background:#e3f3fa;color:#0b6f8a;font-weight:800;font-size:17px;text-decoration:none;word-break:break-all}
+.lx-note{font-size:14px}
+.lx-close{margin-top:6px;height:46px;padding:0 28px;border:0;border-radius:999px;background:linear-gradient(90deg,#1690a6,#2ec5b4);color:#fff;font:inherit;font-weight:800;cursor:pointer}
+/* ---- tablet / phone ---- */
+@media (max-width:1100px) and (min-width:1001px){.lx-bar{width:auto;flex:1}.lx-links{gap:22px}}
+@media (max-width:1499px) and (min-width:1001px){.lx-brand-t small{display:none}}
+@media (max-width:1000px){
+ body.login-screen #loginView:not(.hide){background:#0b2f6e url("login-lab-photo.jpg?v=20261119") top center/100% auto no-repeat}
+ .lx-shade{background:linear-gradient(180deg,rgba(4,30,92,.15) 0%,rgba(4,30,92,0) 30%)}
+ .lx-top{flex-wrap:wrap;padding:10px 10px 0;gap:8px}
+ .lx-pill{display:none}
+ .lx-bar{width:100%;min-height:0;padding:8px 12px;border-radius:16px;flex-wrap:wrap;gap:6px 10px;justify-content:center}
+ .lx-brand{order:-1;width:100%;justify-content:center;gap:12px}
+ .lx-brand img{width:46px}
+ .lx-brand-sep{display:none}
+ .lx-brand-t b{font-size:18px}
+ .lx-brand-t small{font-size:11px}
+ .lx-links{gap:6px;justify-content:center;width:100%}
+ .lx-links a,.lx-links button{font-size:13px;gap:5px;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.12)}
+ .lx-links svg{width:16px;height:16px}
+ .lx-main{grid-template-columns:1fr;grid-template-rows:auto;grid-template-areas:"hero" "card" "tiles" "foot";padding:clamp(60px,28vw,190px) 14px 20px}
+ body.login-screen #loginView .lx-hero{margin-bottom:18px}
+ .lv-kicker{font-size:20px}
+ body.login-screen #loginView .lx-hero h1{font-size:34px;margin:0 0 8px}
+ body.login-screen #loginView .lx-hero p{font-size:14px;gap:10px}
+ body.login-screen #loginView .lx-hero p::before,body.login-screen #loginView .lx-hero p::after{display:none}
+ .login-box{padding:34px 20px 22px;border-radius:24px}
+ .lx-atom{width:110px;height:110px;top:-26px;right:-18px}
+ .login-title{font-size:28px}
+ .login-sub{font-size:14.5px;margin:6px 0 18px}
  body.login-screen #loginView .field input,body.login-screen #loginBtn{height:54px}
+ .lx-tiles{gap:8px;margin-top:18px}
+ .lx-tiles li{width:auto;flex:1 1 0;min-height:96px;padding:12px 6px}
+ .lx-tiles svg{width:36px;height:36px}
+ .lx-tiles b{font-size:13px}
 }
 
 .gradebook-table th{white-space:nowrap;text-align:center;vertical-align:middle}.gradebook-table td{text-align:center;white-space:nowrap}.gradebook-table td:nth-child(2){text-align:right;white-space:normal;min-width:220px}.gradebook-total{font-weight:900;background:#f2f8f7}.gradebook-grand{font-weight:900;background:#f9eef1}.gradebook-empty{color:#9aa8a6}.gradebook-table thead tr:first-child th{background:#eef7f5}.gradebook-table thead tr:nth-child(2) th{background:#f8fbfb}
@@ -302,34 +354,55 @@ body.login-screen .science-bg{display:none}
 <header class="top"><div><div class="brand">🔬 منصة روافد العلوم</div><div class="sub" id="topSub">الصفوف 7 - 9</div></div><button id="logoutBtn" class="btn secondary hide">خروج</button></header>
 <main class="wrap">
 <section id="loginView" class="card login">
-  <div class="login-panel">
-    <div class="login-box">
-      <img class="login-mark" src="favicon-192.png" alt="" width="64" height="64">
-      <h2 class="login-title">تسجيل الدخول</h2>
-      <p class="login-sub">اكتب اسم المستخدم للدخول إلى حسابك التعليمي</p>
-      <div id="loginMsg"></div>
-      <div class="field user-field"><label for="loginUser" class="sr-only">اسم المستخدم</label><span class="fi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.4 0-8 2.2-8 5v1.5h16V19c0-2.8-3.6-5-8-5Z"/></svg></span><input id="loginUser" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next" placeholder="اسم المستخدم"></div>
-      <div id="passStep" class="pass-step" aria-hidden="true"><div class="pass-step-in">
-        <div class="field pw-field"><label for="loginPass" class="sr-only">كلمة المرور</label><input id="loginPass" type="password" autocomplete="current-password" enterkeyhint="go" placeholder="كلمة المرور" tabindex="-1"><button type="button" id="pwToggle" class="pw-toggle" aria-label="إظهار كلمة المرور" aria-pressed="false" tabindex="-1"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 5C6.5 5 2.7 9.2 1.5 12c1.2 2.8 5 7 10.5 7s9.3-4.2 10.5-7C21.3 9.2 17.5 5 12 5Zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9Zm0-2.3a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4Z"/></svg></button></div>
-        <button type="button" id="forgotLink" class="forgot-link" tabindex="-1">أنسيت بيانات الدخول؟</button>
-        <button id="loginBtn" class="btn primary" style="width:100%" tabindex="-1"><span>تسجيل الدخول</span><svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path fill="currentColor" d="M10 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8v-2h8V5h-8V3Zm-.6 5.4L11 7l-5 5 5 5-1.6 1.4L5.4 14H3v-4h2.4l4-1.6Zm-4 2.6v2h9v-2h-9Z"/></svg></button>
-      </div></div>
-      <p class="login-tagline">منصة روافد العلوم، منصة تعليمية تدعم التعلّم الرقمي وتسهم في بناء جيل مبدع في العلوم.</p>
-      <nav class="site-links" aria-label="عن المنصة"><a href="/about/">عن المنصة</a><a href="/features/">المزايا</a><a href="/science-grade-7/">علوم السابع</a><a href="/science-grade-8/">علوم الثامن</a><a href="/chemistry-grade-9/">كيمياء التاسع</a><a href="/physics-grade-9/">فيزياء التاسع</a><a href="/biology-grade-9/">أحياء التاسع</a><a href="/faq/">أسئلة شائعة</a><a href="https://www.instagram.com/rawafidedu.om/" rel="me noopener" target="_blank">إنستغرام</a></nav>
+  <div class="lx-shade" aria-hidden="true"></div>
+  <header class="lx-top">
+    <button type="button" class="lx-pill" id="lxLoginJump"><svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path fill="currentColor" d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0 1.8c-3.3 0-6 1.7-6 3.9V19h12v-2.3c0-2.2-2.7-3.9-6-3.9Zm7.5-1.8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm.5 1.8c-.6 0-1.2.1-1.7.2 1.1.9 1.7 2.1 1.7 3.4V19H21v-2.3c0-2-1.8-3.9-4-3.9Z"/></svg><span>تسجيل الدخول</span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M10 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8v-2h8V5h-8V3Zm1 4.6L12.4 6 18 12l-5.6 6L11 16.4l3.3-3.4H4v-2h10.3L11 7.6Z"/></svg></button>
+    <div class="lx-bar">
+      <nav class="lx-links" aria-label="روابط المنصة">
+        <a href="/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg><span>الرئيسية</span></a>
+        <a href="/about/"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Zm0 0V19"/></svg><span>عن المنصة</span></a>
+        <button type="button" id="supportBtn"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M4 13v-1a8 8 0 0 1 16 0v1M4 13v3a2 2 0 0 0 2 2h1v-6H6a2 2 0 0 0-2 2Zm16 0v3a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2Zm-3 5c0 1.5-2 2.5-5 2.5"/></svg><span>الدعم والمساعدة</span></button>
+      </nav>
+      <div class="lx-brand"><div class="lx-brand-t"><b>منصة روافد العلوم</b><small>بوابة التعلم الرقمي للعلوم والكيمياء والفيزياء والأحياء</small></div><span class="lx-brand-sep" aria-hidden="true"></span><img src="favicon-192.png" alt="شعار منصة روافد العلوم" width="96" height="96"></div>
     </div>
-  </div>
-  <div class="login-visual">
-    <img class="lv-photo" src="login-lab-photo.jpg?v=20261119" alt="" width="1654" height="1080" fetchpriority="high" decoding="async">
-    <img class="lv-logo" src="favicon-192.png" alt="شعار منصة روافد العلوم" width="120" height="120">
-    <div class="seo-intro lv-text" itemscope itemtype="https://schema.org/WebSite">
+  </header>
+  <div class="lx-main">
+    <div class="login-panel">
+      <div class="login-box">
+        <svg class="lx-atom" viewBox="0 0 200 200" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="5"><ellipse cx="100" cy="100" rx="88" ry="32"/><ellipse cx="100" cy="100" rx="88" ry="32" transform="rotate(60 100 100)"/><ellipse cx="100" cy="100" rx="88" ry="32" transform="rotate(120 100 100)"/></g><circle cx="100" cy="100" r="14" fill="currentColor"/><circle cx="188" cy="100" r="7" fill="currentColor"/><circle cx="56" cy="24" r="7" fill="currentColor"/><circle cx="56" cy="176" r="7" fill="currentColor"/></svg>
+        <h2 class="login-title">تسجيل الدخول</h2>
+        <p class="login-sub">اكتب اسم المستخدم للدخول إلى حسابك التعليمي</p>
+        <div id="loginMsg"></div>
+        <div class="field user-field"><label for="loginUser" class="sr-only">اسم المستخدم</label><span class="fi-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.4 0-8 2.2-8 5v1.5h16V19c0-2.8-3.6-5-8-5Z"/></svg></span><input id="loginUser" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next" placeholder="اسم المستخدم"></div>
+        <div id="passStep" class="pass-step" aria-hidden="true"><div class="pass-step-in">
+          <div class="field pw-field"><label for="loginPass" class="sr-only">كلمة المرور</label><input id="loginPass" type="password" autocomplete="current-password" enterkeyhint="go" placeholder="كلمة المرور" tabindex="-1"><button type="button" id="pwToggle" class="pw-toggle" aria-label="إظهار كلمة المرور" aria-pressed="false" tabindex="-1"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 5C6.5 5 2.7 9.2 1.5 12c1.2 2.8 5 7 10.5 7s9.3-4.2 10.5-7C21.3 9.2 17.5 5 12 5Zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9Zm0-2.3a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4Z"/></svg></button></div>
+          <button type="button" id="forgotLink" class="forgot-link" tabindex="-1">نسيت بيانات الدخول؟</button>
+          <button id="loginBtn" class="btn primary" style="width:100%" tabindex="-1"><span>تسجيل الدخول</span><svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true"><path fill="currentColor" d="M10 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8v-2h8V5h-8V3Zm1 4.6L12.4 6 18 12l-5.6 6L11 16.4l3.3-3.4H4v-2h10.3L11 7.6Z"/></svg></button>
+        </div></div>
+        <p class="login-tagline">منصة روافد العلوم، منصة تعليمية متقدمة تدعم التعلّم الرقمي وتسهم في بناء جيل مبدع في العلوم.</p>
+      </div>
+    </div>
+    <div class="login-visual seo-intro lx-hero" itemscope itemtype="https://schema.org/WebSite">
       <meta itemprop="url" content="https://rawafidedu.om/">
       <meta itemprop="inLanguage" content="ar-OM">
       <span class="lv-kicker">أهلًا بك في</span>
-      <h1 itemprop="name"><span class="lv-emo" aria-hidden="true">🔬 </span>منصة روافد العلوم</h1>
-      <span class="lv-sep" aria-hidden="true"></span>
+      <h1 itemprop="name"><span class="lv-emo" aria-hidden="true">🔬 </span>منصة <span class="lv-hl">روافد</span> العلوم</h1>
       <p itemprop="description">منصة روافد العلوم للتعليم الرقمي للصفوف السابع والثامن والتاسع، وتشمل العلوم والكيمياء والفيزياء والأحياء والدروس والملخصات والأسئلة والدرجات وفيديوهات الشرح والتجارب والاختبارات الإلكترونية.</p>
     </div>
+    <ul class="lx-tiles" aria-label="مزايا المنصة">
+      <li><svg viewBox="0 0 24 24" width="50" height="50" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M9 3h6M10 3v6.2L4.6 18.4A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.4-2.6L14 9.2V3"/><path fill="currentColor" opacity=".55" d="M7.3 15h9.4l1.9 3.2a.6.6 0 0 1-.5.8H5.9a.6.6 0 0 1-.5-.8Z"/></svg><b>مختبرات تفاعلية</b></li>
+      <li><svg viewBox="0 0 24 24" width="50" height="50" aria-hidden="true"><rect x="3" y="4.5" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path fill="currentColor" d="m10 8.3 5 2.7-5 2.7Z"/><path stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M8 20.5h8"/></svg><b>محتوى تعليمي متنوع</b></li>
+      <li><svg viewBox="0 0 24 24" width="50" height="50" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M4 20h16M6.5 17v-4M10.5 17V9.5M14.5 17v-6M18.5 17V6.5M5 10.5l4.5-4 4 3 5.5-5.5"/><path fill="currentColor" d="m19 4 1.3 3.2-3.4-.2Z"/></svg><b>متابعة الأداء</b></li>
+    </ul>
+    <div class="lx-foot"><nav class="site-links" aria-label="عن المنصة"><a href="/about/">عن المنصة</a><a href="/features/">المزايا</a><a href="/science-grade-7/">علوم السابع</a><a href="/science-grade-8/">علوم الثامن</a><a href="/chemistry-grade-9/">كيمياء التاسع</a><a href="/physics-grade-9/">فيزياء التاسع</a><a href="/biology-grade-9/">أحياء التاسع</a><a href="/faq/">أسئلة شائعة</a><a href="https://www.instagram.com/rawafidedu.om/" rel="me noopener" target="_blank">إنستغرام</a></nav></div>
   </div>
+  <dialog id="supportDialog" class="lx-dialog" aria-labelledby="supportTitle">
+    <h3 id="supportTitle">الدعم والمساعدة</h3>
+    <p>لأي استفسار أو مشكلة في الدخول أو استخدام المنصة، راسلنا على البريد:</p>
+    <a class="lx-mail" href="mailto:Mohammedalamskri@gmail.com" dir="ltr">Mohammedalamskri@gmail.com</a>
+    <p class="lx-note">نسيت كلمة المرور؟ الطالب يتواصل مع معلم المادة، والمعلم يتواصل مع مشرف المنصة لإعادة تعيينها.</p>
+    <button type="button" class="lx-close" id="supportClose">إغلاق</button>
+  </dialog>
 </section>
 
 <section id="studentView" class="hide">
