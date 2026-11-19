@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="login-bg-root">
 <head>
   <link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -343,9 +343,11 @@ body.login-screen .science-bg{display:none}
   }
 }
 </style>
+<link rel="preload" as="image" href="login-lab-bg.jpg?v=20261119" media="(min-width: 1001px)">
+<link rel="preload" as="image" href="login-lab-photo.jpg?v=20261119" media="(max-width: 1000px)">
 <link rel="stylesheet" href="question-bank-addon.css">
 </head>
-<body>
+<body class="login-screen">
 <div class="science-bg" aria-hidden="true">
   <span class="science-mark science-physics">⚛</span>
   <span class="science-mark science-biology">🧬</span>
@@ -390,7 +392,8 @@ body.login-screen .science-bg{display:none}
       <meta itemprop="inLanguage" content="ar-OM">
       <div class="lx-hero-head"><span class="lv-kicker">أهلًا بك في</span>
       <h1 itemprop="name"><span class="lv-emo" aria-hidden="true">🔬 </span>منصة <span class="lv-hl">روافد</span> العلوم</h1></div>
-      <p itemprop="description">منصة روافد العلوم للتعليم الرقمي للصفوف السابع والثامن والتاسع، وتشمل العلوم والكيمياء والفيزياء والأحياء والدروس والملخصات والأسئلة والدرجات وفيديوهات الشرح والتجارب والاختبارات الإلكترونية.</p>
+      <meta itemprop="description" content="منصة روافد العلوم للتعليم الرقمي للصفوف السابع والثامن والتاسع، وتشمل العلوم والكيمياء والفيزياء والأحياء والدروس والملخصات والأسئلة والدرجات وفيديوهات الشرح والتجارب والاختبارات الإلكترونية.">
+      <p>بوابة التعلم الرقمي للعلوم والكيمياء والفيزياء والأحياء<br><span style="opacity:.92">مدرسة الشيخ سعيد بن حمد الحارثي للبنين | الصفوف 7–9</span></p>
     </div>
     <ul class="lx-tiles" aria-label="مزايا المنصة">
       <li><svg viewBox="0 0 24 24" width="50" height="50" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M9 3h6M10 3v6.2L4.6 18.4A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.4-2.6L14 9.2V3"/><path fill="currentColor" opacity=".55" d="M7.3 15h9.4l1.9 3.2a.6.6 0 0 1-.5.8H5.9a.6.6 0 0 1-.5-.8Z"/></svg><b>مختبرات تفاعلية</b></li>
@@ -407,6 +410,7 @@ body.login-screen .science-bg{display:none}
     <button type="button" class="lx-close" id="supportClose">إغلاق</button>
   </dialog>
 </section>
+<script src="boot.js?v=20261119"></script>
 
 <section id="studentView" class="hide">
   <div class="grid">
