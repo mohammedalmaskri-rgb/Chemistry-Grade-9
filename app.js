@@ -1378,7 +1378,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   document.title = 'منصة روافد العلوم | التعليم الرقمي للعلوم | الصفوف 7 - 9';
 
   const heading = login.querySelector('h1');
-  if(heading) heading.textContent = '🔬 منصة روافد العلوم';
+  if(heading) heading.innerHTML = '<span class="lv-emo" aria-hidden="true">🔬 </span>منصة روافد العلوم'; /* same text as before; the emoji sits in a span the login design can hide */
 
   const paragraphs = Array.from(login.querySelectorAll('p'));
   const intro = paragraphs.find(p => /بوابة|كيمياء|محمد المسكري/.test((p.textContent || '').trim()));
