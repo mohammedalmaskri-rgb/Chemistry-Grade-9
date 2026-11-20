@@ -205,7 +205,7 @@ function updateTeacherBranding(){
 }
 function rebuildTeacherClassControls(){
   const allLabel='<option value="ALL">🌐 كل الشعب</option>', opts=classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  ['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass','recoveryClass','behaviorFilterClass','loginClass','gradeReportClass','supportClass'].forEach(id=>{if($(id))$(id).innerHTML=allLabel+opts});
+  ['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass','recoveryClass','behaviorFilterClass','loginClass','gradeReportClass','supportClass','topicClass'].forEach(id=>{if($(id))$(id).innerHTML=allLabel+opts});
   ['gradeClass','behaviorClass','gradebookClass','newStudentClass'].forEach(id=>{if($(id))$(id).innerHTML=opts});
   if($('pointsClass'))$('pointsClass').innerHTML=allLabel+opts;
 }
@@ -1197,7 +1197,7 @@ $('loginClass')&&($('loginClass').onchange=loadStudentLogins);
 $('loginSearch')&&($('loginSearch').oninput=renderStudentLogins);
 const loginNavBtn=$('teacherNav')?.querySelector('[data-sec="t-logins"]');
 loginNavBtn&&loginNavBtn.addEventListener('click',()=>{if(!studentLoginRows.length)loadStudentLogins()});
-$('teacherNav')?.addEventListener('click',e=>{const b=e.target.closest('button[data-sec]');if(!b)return;setTimeout(()=>{const sec=$(b.dataset.sec);if(!sec)return;if(sec.contains($('studentsTable'))){const cls=$('studentFilter')?.value||'ALL';if(teacherStudentsLoadedFor!==cls)loadStudents(cls).catch(err=>console.warn('Students list unavailable',err));}if(sec.contains($('gradeStudent'))||sec.contains($('pointsStudent')))refreshStudentSelects().catch(err=>console.warn('Student selectors unavailable',err));if(sec.id==='t-support')loadSupportIndex();},0)});
+$('teacherNav')?.addEventListener('click',e=>{const b=e.target.closest('button[data-sec]');if(!b)return;setTimeout(()=>{const sec=$(b.dataset.sec);if(!sec)return;if(sec.contains($('studentsTable'))){const cls=$('studentFilter')?.value||'ALL';if(teacherStudentsLoadedFor!==cls)loadStudents(cls).catch(err=>console.warn('Students list unavailable',err));}if(sec.contains($('gradeStudent'))||sec.contains($('pointsStudent')))refreshStudentSelects().catch(err=>console.warn('Student selectors unavailable',err));if(sec.id==='t-support')loadSupportIndex();if(sec.id==='t-topics')loadTopicSupport();},0)});
 function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));$('studentsTable').innerHTML=list.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points}</td><td><button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button></td></tr>`).join('');if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;}
 async function loadStudents(c='ALL'){if(teacherStudentsLoading)return teacherStudentsLoading;teacherStudentsPage=1;teacherStudentsLoading=(async()=>{try{const rows=await rpc('portal_teacher_students_v2',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:c});allStudents=Array.isArray(rows)?rows:[];teacherStudentsLoadedFor=c;renderStudentsTable()}finally{teacherStudentsLoading=null}})();return teacherStudentsLoading}
 $('studentFilter').onchange=()=>loadStudents($('studentFilter').value);$('studentSearch').oninput=()=>{teacherStudentsPage=1;renderStudentsTable()};
@@ -1307,6 +1307,59 @@ async function loadSupportIndex(){
 $('supportClass')&&($('supportClass').onchange=loadSupportIndex);
 $('supportRefresh')&&($('supportRefresh').onclick=loadSupportIndex);
 $('supportAll')&&($('supportAll').onchange=renderSupportIndex);
+// ===== مواضيع تحتاج دعم (قراءة فقط): من محاولات بنك الأسئلة، بدقة المحاولة الأولى =====
+let topicRows=[],topicBusy=false;
+const TOPIC_LEVELS={need:['تحتاج دعمًا','red'],watch:['راقب','amber'],ok:['جيد','ok'],low_data:['بيانات غير كافية','no_data'],no_questions:['لا أسئلة','no_data']};
+function renderTopicSupport(){
+  const rows=topicRows,all=$('topicAll')?.checked,cnt=k=>rows.filter(r=>r.level===k).length;
+  $('topicSummary').innerHTML=[['need','تحتاج دعمًا'],['watch','راقب'],['ok','جيد']].map(([k,t])=>`<span class="sp-chip ${k==='need'?'red':k==='watch'?'amber':'ok'}">${t}: ${cnt(k)}</span>`).join('')+(cnt('low_data')?`<span class="sp-chip">بيانات غير كافية: ${cnt('low_data')}</span>`:'');
+  const pool=rows.filter(r=>all?true:(r.level==='need'||r.level==='watch'));
+  if(!rows.length){$('topicList').innerHTML='<p class="muted">لا توجد مواضيع لها أسئلة أو زيارات بعد.</p>';return}
+  if(!pool.length){$('topicList').innerHTML='<div class="msg ok">✅ لا يوجد موضوع تحت الحد حاليًا. ما زال التحليل يتحسن مع كل محاولة جديدة من الطلاب.</div>';return}
+  $('topicList').innerHTML=pool.map(r=>{
+    const lv=TOPIC_LEVELS[r.level]||TOPIC_LEVELS.low_data,acc=r.accuracy==null?null:Number(r.accuracy);
+    const bar=acc==null?'':`<div class="tp-bar" aria-hidden="true"><i class="${esc(lv[1])}" style="width:${Math.max(2,Math.min(100,acc))}%"></i></div>`;
+    return `<div class="sp-item ${esc(lv[1])}" data-topic="${esc(r.topic_id)}"><div style="flex:1;min-width:0"><div class="sp-name">${esc(r.title)} <span class="sp-cls">· ${esc(r.unit_title||'')}</span></div><div class="sp-cls">${esc(lv[0])}${acc==null?'':` · أجاب صحيحًا من أول مرة: <b>${esc(acc)}</b> من 100`}</div>${bar}<div class="sp-cls">${esc(r.first_try_n)} إجابة أولى من ${esc(r.tried_n)} طالب · فتح الدرس ${esc(r.opened_n)} من ${esc(r.students_n)} · ${esc(r.questions_n)} سؤال</div>${r.first_try_wrong_n>0?`<button class="btn secondary tp-who" type="button" data-topic="${esc(r.topic_id)}">👥 من أخطأ في هذا الموضوع؟</button><div class="tp-students"></div>`:''}</div></div>`}).join('');
+}
+async function loadTopicSupport(){
+  if(topicBusy||!teacherToken||!teacherSubjectCode||!$('topicList'))return;
+  topicBusy=true;$('topicList').innerHTML='<p class="muted">جاري التحليل...</p>';
+  try{
+    const d=await rpc('portal_teacher_mt_topic_support',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:$('topicClass')?.value||'ALL'});
+    topicRows=Array.isArray(d)?d:[];renderTopicSupport();
+  }catch(e){$('topicSummary').innerHTML='';$('topicList').innerHTML=`<div class="msg err">${esc(e?.message||'تعذر تحميل التحليل. حاول مرة أخرى.')}</div>`}
+  finally{topicBusy=false}
+}
+$('topicClass')&&($('topicClass').onchange=loadTopicSupport);
+$('topicRefresh')&&($('topicRefresh').onclick=loadTopicSupport);
+$('topicAll')&&($('topicAll').onchange=renderTopicSupport);
+$('topicList')&&$('topicList').addEventListener('click',async e=>{
+  const b=e.target.closest('.tp-who');if(!b)return;
+  const box=b.parentElement.querySelector('.tp-students');if(!box)return;
+  if(box.dataset.open==='1'){box.dataset.open='0';box.innerHTML='';return}
+  box.dataset.open='1';box.innerHTML='<span class="muted">جاري التحميل...</span>';
+  try{
+    const d=await rpc('portal_teacher_mt_topic_students',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_topic_id:Number(b.dataset.topic),p_class:$('topicClass')?.value||'ALL'});
+    const rows=Array.isArray(d)?d:[];
+    box.innerHTML=rows.length?`<ul class="sp-reasons">${rows.slice(0,60).map(s=>`<li>${studentName(s.full_name)} <span class="sp-cls">· ${esc(s.class_name)} — أخطأ في ${esc(s.wrong_n)} من ${esc(s.tried_n)} أسئلة من أول مرة</span></li>`).join('')}</ul>`:'<span class="muted">لا أحد.</span>';
+  }catch(err){box.innerHTML=`<span class="msg err">${esc(err?.message||'تعذر التحميل')}</span>`}
+});
+
+// ===== «أنصحك بمراجعة» للطالب: دروس وأسئلة من بنك الأسئلة تناسبه =====
+let studentRecsBusy=false;
+async function loadStudentRecs(){
+  const host=$('studentRecs');if(!host||studentRecsBusy||!studentToken||!studentSubjectCode)return;
+  studentRecsBusy=true;
+  try{
+    const d=await rpc('portal_student_mt_recommendations',{p_token:studentToken,p_subject_code:studentSubjectCode});
+    const rows=Array.isArray(d)?d:[];
+    if(!rows.length){host.innerHTML='';host.hidden=true;return}
+    host.hidden=false;
+    host.innerHTML=`<h3>🎯 أنصحك بمراجعة</h3><p class="muted" style="margin-top:0">اخترنا لك هذه الدروس من نتائجك في بنك الأسئلة:</p>${rows.map(r=>`<div class="rec-item p${esc(r.priority)}"><div class="rec-title">${esc(r.topic_title)} <span class="sp-cls">· ${esc(r.unit_title||'')}</span></div><div class="rec-why">${esc(r.reason)}${r.lesson_opened?'':' · لم تفتح ملخص الدرس بعد'}</div></div>`).join('')}`;
+  }catch(e){host.innerHTML='';host.hidden=true}
+  finally{studentRecsBusy=false}
+}
+$('studentNav')?.addEventListener('click',e=>{const b=e.target.closest('button[data-sec="s-bank"]');if(b)setTimeout(loadStudentRecs,0)});
 const gradebookNavBtn=$('teacherNav')?.querySelector('[data-sec="t-gradebook"]');gradebookNavBtn&&gradebookNavBtn.addEventListener('click',()=>loadGradebook());
 document.addEventListener('input',e=>{const el=e.target.closest?.('.gradebook-input');if(!el)return;const value=gbNum(el),slot=el.dataset.gbSlot,studentId=Number(el.dataset.gbStudent),m=GRADEBOOK_META[slot];el.style.borderColor=(value!=null&&(value<0||value>m.max))?'#dc2626':'#0f766e';if(value==null)gradebookDirty.delete(studentId+':'+slot);else gradebookDirty.set(studentId+':'+slot,{studentId,slot,value});recalcGradebookRow(el.closest('tr'))});
 
