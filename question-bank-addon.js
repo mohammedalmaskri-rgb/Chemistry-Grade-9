@@ -157,10 +157,13 @@
       const r=d?.[0]; if(!r)throw new Error('لم تصل نتيجة التصحيح');
       const correct=!!r.is_correct;
       if(correct){active.correct++;active.score+=10;active.addedPoints+=Number(r.awarded_points||0);if(msg){msg.className='qb-challenge-msg qb-msg-ok';msg.textContent='✅ إجابة صحيحة'}}
-      else{active.wrong++;if(msg){msg.className='qb-challenge-msg qb-msg-err';msg.textContent='❌ إجابة غير صحيحة'}}
+      let pause=650;
+      if(!correct){active.wrong++;if(msg){msg.className='qb-challenge-msg qb-msg-err';msg.textContent='❌ إجابة غير صحيحة'}
+        try{const fb=await rpc('portal_student_mt_misconception_feedback',{p_token:studentToken,p_subject_code:studentSubjectCode,p_question_id:q.id});const f=Array.isArray(fb)?fb[0]:null;
+          if(f&&f.label&&msg){msg.className='qb-challenge-msg qb-msg-err';msg.textContent='';const b1=document.createElement('div');b1.textContent='❌ إجابة غير صحيحة';const b2=document.createElement('div');b2.textContent='🧩 '+f.label;b2.style.fontWeight='700';const b3=document.createElement('div');b3.textContent='💡 '+f.remedy;msg.append(b1,b2,b3);pause=4500}}catch(_e){}}
       if(el('studentPoints')&&r.total_points!=null)el('studentPoints').textContent=fmt(r.total_points);
       active.answeredIds.add(q.id);
-      setTimeout(()=>{active.index++;if(active.index>=active.questions.length)finish();else renderQuestion()},650);
+      setTimeout(()=>{active.index++;if(active.index>=active.questions.length)finish();else renderQuestion()},pause);
     }catch(e){btn.disabled=false;if(msg){msg.className='qb-challenge-msg qb-msg-err';msg.textContent=e?.message||'تعذر حفظ الإجابة. حاول مرة أخرى.'}}
   }
 

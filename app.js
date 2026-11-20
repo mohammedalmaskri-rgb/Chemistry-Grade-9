@@ -205,7 +205,7 @@ function updateTeacherBranding(){
 }
 function rebuildTeacherClassControls(){
   const allLabel='<option value="ALL">🌐 كل الشعب</option>', opts=classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  ['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass','recoveryClass','behaviorFilterClass','loginClass','gradeReportClass','supportClass','topicClass'].forEach(id=>{if($(id))$(id).innerHTML=allLabel+opts});
+  ['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass','recoveryClass','behaviorFilterClass','loginClass','gradeReportClass','supportClass','topicClass','miscClass'].forEach(id=>{if($(id))$(id).innerHTML=allLabel+opts});
   ['gradeClass','behaviorClass','gradebookClass','newStudentClass'].forEach(id=>{if($(id))$(id).innerHTML=opts});
   if($('pointsClass'))$('pointsClass').innerHTML=allLabel+opts;
 }
@@ -1197,7 +1197,7 @@ $('loginClass')&&($('loginClass').onchange=loadStudentLogins);
 $('loginSearch')&&($('loginSearch').oninput=renderStudentLogins);
 const loginNavBtn=$('teacherNav')?.querySelector('[data-sec="t-logins"]');
 loginNavBtn&&loginNavBtn.addEventListener('click',()=>{if(!studentLoginRows.length)loadStudentLogins()});
-$('teacherNav')?.addEventListener('click',e=>{const b=e.target.closest('button[data-sec]');if(!b)return;setTimeout(()=>{const sec=$(b.dataset.sec);if(!sec)return;if(sec.contains($('studentsTable'))){const cls=$('studentFilter')?.value||'ALL';if(teacherStudentsLoadedFor!==cls)loadStudents(cls).catch(err=>console.warn('Students list unavailable',err));}if(sec.contains($('gradeStudent'))||sec.contains($('pointsStudent')))refreshStudentSelects().catch(err=>console.warn('Student selectors unavailable',err));if(sec.id==='t-support')loadSupportIndex();if(sec.id==='t-topics')loadTopicSupport();},0)});
+$('teacherNav')?.addEventListener('click',e=>{const b=e.target.closest('button[data-sec]');if(!b)return;setTimeout(()=>{const sec=$(b.dataset.sec);if(!sec)return;if(sec.contains($('studentsTable'))){const cls=$('studentFilter')?.value||'ALL';if(teacherStudentsLoadedFor!==cls)loadStudents(cls).catch(err=>console.warn('Students list unavailable',err));}if(sec.contains($('gradeStudent'))||sec.contains($('pointsStudent')))refreshStudentSelects().catch(err=>console.warn('Student selectors unavailable',err));if(sec.id==='t-support')loadSupportIndex();if(sec.id==='t-topics')loadTopicSupport();if(sec.id==='t-misc')loadMisconceptions();},0)});
 function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));$('studentsTable').innerHTML=list.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points}</td><td><button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button></td></tr>`).join('');if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;}
 async function loadStudents(c='ALL'){if(teacherStudentsLoading)return teacherStudentsLoading;teacherStudentsPage=1;teacherStudentsLoading=(async()=>{try{const rows=await rpc('portal_teacher_students_v2',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:c});allStudents=Array.isArray(rows)?rows:[];teacherStudentsLoadedFor=c;renderStudentsTable()}finally{teacherStudentsLoading=null}})();return teacherStudentsLoading}
 $('studentFilter').onchange=()=>loadStudents($('studentFilter').value);$('studentSearch').oninput=()=>{teacherStudentsPage=1;renderStudentsTable()};
@@ -1332,6 +1332,43 @@ async function loadTopicSupport(){
 }
 $('topicClass')&&($('topicClass').onchange=loadTopicSupport);
 $('topicRefresh')&&($('topicRefresh').onclick=loadTopicSupport);
+// ===== مفاهيم خاطئة شائعة (قراءة فقط): من الخيار الخاطئ الذي يختاره الطلاب في أول محاولة =====
+let miscRows=[],miscBusy=false;
+const MISC_LEVELS={common:['شائع','red'],some:['يظهر أحيانًا','amber'],rare:['نادر','ok'],low_data:['بيانات غير كافية','no_data']};
+function renderMisconceptions(){
+  const rows=miscRows,all=$('miscAll')?.checked,cnt=k=>rows.filter(r=>r.level===k).length;
+  $('miscSummary').innerHTML=[['common','شائع','red'],['some','يظهر أحيانًا','amber'],['rare','نادر','ok']].map(([k,t,c])=>`<span class="sp-chip ${c}">${t}: ${cnt(k)}</span>`).join('')+(cnt('low_data')?`<span class="sp-chip">بيانات غير كافية: ${cnt('low_data')}</span>`:'');
+  const pool=rows.filter(r=>all?true:(r.level==='common'||r.level==='some'));
+  if(!rows.length){$('miscList').innerHTML='<p class="muted">لا توجد مفاهيم مسجلة لهذه المادة بعد.</p>';return}
+  if(!pool.length){$('miscList').innerHTML='<div class="msg ok">لا يوجد مفهوم خاطئ شائع حاليًا. يزداد التحليل دقة مع كل محاولة جديدة من الطلاب.</div>';return}
+  $('miscList').innerHTML=pool.map(r=>{
+    const lv=MISC_LEVELS[r.level]||MISC_LEVELS.low_data,rate=r.rate==null?null:Number(r.rate);
+    const bar=rate==null?'':`<div class="tp-bar" aria-hidden="true"><i class="${esc(lv[1])}" style="width:${Math.max(2,Math.min(100,rate))}%"></i></div>`;
+    return `<div class="sp-item ${esc(lv[1])}"><div style="flex:1;min-width:0"><div class="sp-name">${esc(r.label)}</div><div class="sp-cls">${esc(lv[0])}${rate==null?'':` · وقع فيه <b>${esc(r.affected_n)}</b> من ${esc(r.exposed_n)} طالب (${esc(rate)} من 100)`}</div>${bar}<div class="sp-cls">${esc((r.topics||[]).join('، '))}${(r.topics||[]).length?' · ':''}${esc(r.questions_n)} سؤال</div><div class="misc-fix">💡 التصحيح المقترح: ${esc(r.remedy)}</div>${r.affected_n>0?`<button class="btn secondary misc-who" type="button" data-concept="${esc(r.concept_id)}">👥 من وقع فيه؟</button><div class="misc-students"></div>`:''}</div></div>`}).join('');
+}
+async function loadMisconceptions(){
+  if(miscBusy||!teacherToken||!teacherSubjectCode||!$('miscList'))return;
+  miscBusy=true;$('miscList').innerHTML='<p class="muted">جاري التحليل...</p>';
+  try{
+    const d=await rpc('portal_teacher_mt_misconceptions',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:$('miscClass')?.value||'ALL'});
+    miscRows=Array.isArray(d)?d:[];renderMisconceptions();
+  }catch(e){$('miscSummary').innerHTML='';$('miscList').innerHTML=`<div class="msg err">${esc(e?.message||'تعذر تحميل التحليل. حاول مرة أخرى.')}</div>`}
+  finally{miscBusy=false}
+}
+$('miscClass')&&($('miscClass').onchange=loadMisconceptions);
+$('miscRefresh')&&($('miscRefresh').onclick=loadMisconceptions);
+$('miscAll')&&($('miscAll').onchange=renderMisconceptions);
+$('miscList')&&$('miscList').addEventListener('click',async e=>{
+  const b=e.target.closest('.misc-who');if(!b)return;
+  const box=b.parentElement.querySelector('.misc-students');if(!box)return;
+  if(box.dataset.open==='1'){box.dataset.open='0';box.innerHTML='';return}
+  box.dataset.open='1';box.innerHTML='<span class="muted">جاري التحميل...</span>';
+  try{
+    const d=await rpc('portal_teacher_mt_misconception_students',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_concept_id:Number(b.dataset.concept),p_class:$('miscClass')?.value||'ALL'});
+    const rows=Array.isArray(d)?d:[];
+    box.innerHTML=rows.length?`<ul class="sp-reasons">${rows.slice(0,60).map(s=>`<li>${studentName(s.full_name)} <span class="sp-cls">· ${esc(s.class_name)} — ${esc(s.hits)} ${Number(s.hits)===1?'سؤال':'أسئلة'} من أول محاولة</span></li>`).join('')}</ul>`:'<span class="muted">لا أحد.</span>';
+  }catch(err){box.innerHTML=`<span class="msg err">${esc(err?.message||'تعذر التحميل')}</span>`}
+});
 $('topicAll')&&($('topicAll').onchange=renderTopicSupport);
 $('topicList')&&$('topicList').addEventListener('click',async e=>{
   const b=e.target.closest('.tp-who');if(!b)return;
