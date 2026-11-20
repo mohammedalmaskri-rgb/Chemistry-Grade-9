@@ -961,7 +961,7 @@ async function loadTeacherBank(){
 async function loadTeacherEssaySubmissions(){
   if(!$('teacherEssayList'))return;
   try{
-    const all=await rpc('portal_teacher_questions',{p_token:teacherToken,p_status:null});
+    const all=await teacherQuestionsOnce();
     const rows=(all||[]).map(q=>({q,p:parseEssaySubmission(q.question_text)})).filter(x=>x.p).sort((a,b)=>new Date(b.q.created_at)-new Date(a.q.created_at));
     $('teacherEssayList').innerHTML=rows.length?rows.map(({q,p})=>`<div class="item qb-essay-card"><div class="qb-meta"><span class="badge">${esc(q.class_name||'')}</span><span class="badge ${q.teacher_reply?'state-on':'state-off'}">${q.teacher_reply?'تم التصحيح':'بانتظار التصحيح'}</span></div><h3>${studentName(q.full_name)} — ${esc(p.title||'سؤال مقالي')}</h3><div class="muted">🕒 ${q.created_at?formatQuestionTime(q.created_at):''}</div><div class="qb-essay-answer"><b>إجابة الطالب:</b><br>${esc(p.answer)}</div><div class="field"><label>تصحيحك / الدرجة</label><textarea id="essayReply-${q.id}" rows="3" placeholder="مثال: 2/3 — الإجابة صحيحة لكن ينقصها تفسير...">${esc(q.teacher_reply||'')}</textarea></div><button class="btn primary" data-action="grade-essay-answer" data-id="${q.id}">💾 حفظ التصحيح</button></div>`).join(''):'<div class="muted">لا توجد إجابات مقالية مرسلة حتى الآن.</div>';
   }catch(e){$('teacherEssayList').innerHTML=`<div class="msg err">تعذر تحميل الإجابات المقالية: ${esc(e.message||'خطأ غير معروف')}</div>`}
@@ -1070,15 +1070,18 @@ window.resolveBehavior=async id=>{const ok=await rpc('portal_teacher_resolve_beh
 window.deleteBehavior=async id=>{if(!confirm('حذف هذه الملاحظة السلوكية؟'))return;const ok=await rpc('portal_teacher_delete_behavior_record',{p_token:teacherToken,p_record_id:id});if(ok)await loadBehaviorRecords()};
 
 async function reloadTeacherSubjectPanels(){
+  // Perf: create the panels' containers first (no network), then start the loaders that do not depend on `topics` right away,
+  // so they overlap with the topics -> lesson-plan chain instead of waiting behind it.
+  ensureTeacherTopicManager();ensureTeacherSubjectVideoUI();
+  const managedP=loadManagedTeacherTopics().catch(()=>{managedTopics=[];renderTeacherTopicManager()});
+  const videosP=loadTeacherSubjectVideos().catch(()=>{});
+  const behaviorP=$('behaviorClass')?Promise.resolve().then(refreshBehaviorStudents).then(loadBehaviorRecords).catch(e=>console.warn('Behavior panel unavailable',e)):Promise.resolve();
   topics=await loadTeacherTopicsWithBuiltInCurriculum();
   fillStudyTopicSelects();
   await initLessonPlanEditor();
-  ensureTeacherTopicManager();ensureTeacherSubjectVideoUI();
-  await loadManagedTeacherTopics().catch(()=>{managedTopics=[];renderTeacherTopicManager()});
   const tasks=[loadOverview,loadProgressCards,loadTeacherAnnouncements,loadTeacherContent,loadTeacherQuestions,loadTeacherExperiments,loadTeacherBank,loadTeacherEssaySubmissions,loadTeacherStudyMaterials];
   await Promise.allSettled(tasks.map(fn=>Promise.resolve().then(fn)));
-  await loadTeacherSubjectVideos().catch(()=>{});
-  if($('behaviorClass'))await Promise.resolve().then(refreshBehaviorStudents).then(loadBehaviorRecords).catch(e=>console.warn('Behavior panel unavailable',e));
+  await Promise.allSettled([managedP,videosP,behaviorP]);
   if($('loginTable'))loadStudentLogins().catch(()=>{});
 }
 
@@ -1086,7 +1089,8 @@ async function enterTeacher(){
   show('teacherView');$('topSub').textContent='جاري تحميل تكليفات المعلم...';
   await prepareTeacherContext();
   if(isPrimaryTeacher()&&teacherSubjectCode==='chemistry'){
-    try{await rpc('portal_teacher_mt_migrate_legacy_chemistry',{p_token:teacherToken});await rpc('portal_teacher_mt_repair_legacy_chemistry_logins',{p_token:teacherToken})}catch(e){alert('تعذر تجهيز بيانات الكيمياء في النظام الجديد. بياناتك القديمة لم تتغير.\n\nسبب الخطأ:\n'+(e?.message||String(e)));throw e}
+    const migKey='rawafidLegacyMtPrepared:'+teacherIdentity();let migFresh=false;try{migFresh=Date.now()-Number(localStorage.getItem(migKey)||0)<12*60*60*1000}catch(_e){}
+    if(!migFresh)try{await rpc('portal_teacher_mt_migrate_legacy_chemistry',{p_token:teacherToken});await rpc('portal_teacher_mt_repair_legacy_chemistry_logins',{p_token:teacherToken});try{localStorage.setItem(migKey,String(Date.now()))}catch(_e){}}catch(e){alert('تعذر تجهيز بيانات الكيمياء في النظام الجديد. بياناتك القديمة لم تتغير.\n\nسبب الخطأ:\n'+(e?.message||String(e)));throw e}
   }
   $('topSub').textContent=`${subjectDisplayName(teacherSubjectCode,teacherSubjectName)} — ${classes.join(' • ')}`;renderTeacherContextBar();updateTeacherBranding();
   if(!isPrimaryTeacher())applyTeacherSafeMode();
@@ -1211,7 +1215,10 @@ const gradebookNavBtn=$('teacherNav')?.querySelector('[data-sec="t-gradebook"]')
 document.addEventListener('input',e=>{const el=e.target.closest?.('.gradebook-input');if(!el)return;const value=gbNum(el),slot=el.dataset.gbSlot,studentId=Number(el.dataset.gbStudent),m=GRADEBOOK_META[slot];el.style.borderColor=(value!=null&&(value<0||value>m.max))?'#dc2626':'#0f766e';if(value==null)gradebookDirty.delete(studentId+':'+slot);else gradebookDirty.set(studentId+':'+slot,{studentId,slot,value});recalcGradebookRow(el.closest('tr'))});
 
 function formatQuestionTime(v){if(!v)return '';try{return new Date(v).toLocaleString('ar-OM',{dateStyle:'short',timeStyle:'short'})}catch(e){return new Date(v).toLocaleString('ar')}}
-async function loadTeacherQuestions(){const all=await rpc('portal_teacher_questions',{p_token:teacherToken,p_status:null});const d=(all||[]).filter(q=>!String(q.question_text||'').startsWith(BANK_ESSAY_PREFIX));$('teacherQuestionList').innerHTML=d.length?d.map(q=>`<div class="item"><span class="badge">${esc(q.class_name)} • ${q.status==='new'?'جديد':'تمت الإجابة'}</span><h3>${studentName(q.full_name)}</h3>${q.created_at?`<div class="muted" style="margin-top:-6px;margin-bottom:10px">🕒 أرسل السؤال: ${formatQuestionTime(q.created_at)}</div>`:''}<p>${esc(q.question_text)}</p>${q.attachment_url?renderSafeAttachment(q.attachment_url,'فتح المرفق'):''}<div class="field"><textarea id="reply-${q.id}" rows="3" placeholder="اكتب ردك...">${esc(q.teacher_reply||'')}</textarea></div><button class="btn primary" data-action="reply-question" data-id="${q.id}">إرسال الرد</button></div>`).join(''):'<div class="muted">لا توجد أسئلة.</div>'}
+/* Perf: the questions list carries students' image attachments (~2 MB). Two panels ask for it at the same moment; share ONE in-flight request. Later calls (after a reply/grade) fetch fresh data. */
+let _tqInflight=null;
+function teacherQuestionsOnce(){if(!_tqInflight)_tqInflight=rpc('portal_teacher_questions',{p_token:teacherToken,p_status:null}).finally(()=>{_tqInflight=null});return _tqInflight}
+async function loadTeacherQuestions(){const all=await teacherQuestionsOnce();const d=(all||[]).filter(q=>!String(q.question_text||'').startsWith(BANK_ESSAY_PREFIX));$('teacherQuestionList').innerHTML=d.length?d.map(q=>`<div class="item"><span class="badge">${esc(q.class_name)} • ${q.status==='new'?'جديد':'تمت الإجابة'}</span><h3>${studentName(q.full_name)}</h3>${q.created_at?`<div class="muted" style="margin-top:-6px;margin-bottom:10px">🕒 أرسل السؤال: ${formatQuestionTime(q.created_at)}</div>`:''}<p>${esc(q.question_text)}</p>${q.attachment_url?renderSafeAttachment(q.attachment_url,'فتح المرفق'):''}<div class="field"><textarea id="reply-${q.id}" rows="3" placeholder="اكتب ردك...">${esc(q.teacher_reply||'')}</textarea></div><button class="btn primary" data-action="reply-question" data-id="${q.id}">إرسال الرد</button></div>`).join(''):'<div class="muted">لا توجد أسئلة.</div>'}
 window.replyQ=async id=>{const ok=await rpc('portal_teacher_reply_question',{p_token:teacherToken,p_question_id:id,p_reply:$('reply-'+id).value});if(ok){await loadTeacherQuestions();await loadOverview()}};
 async function applyPoints(delta=null){try{const d=delta===null?Number($('pointsDelta').value):delta;if(!Number.isFinite(d)||Math.abs(d)>100)throw new Error('الحد الأقصى لتعديل النقاط في المرة الواحدة 100 نقطة');const sid=Number($('pointsStudent').value);const p=await rpc('portal_teacher_adjust_points',{p_token:teacherToken,p_student_id:sid,p_delta:d});if(p===null)throw new Error('تعذر التعديل');await refreshStudentSelects();const pc=$('pointsClass').value||'9/1';const rows=await rpc('portal_teacher_points_overview',{p_token:teacherToken,p_class:pc});const row=(rows||[]).find(x=>Number(x.student_id)===sid);const total=row?fmtPoints(row.total_points):fmtPoints(p);msg('pointsMsg',(d<0?'تم خصم '+Math.abs(d)+' نقطة. ':'تمت إضافة '+d+' نقطة. ')+'إجمالي رصيد الطالب الآن: '+total+' ⭐')}catch(e){msg('pointsMsg',e.message,false)}}$('pointsBtn').onclick=()=>applyPoints();$('pointsPlusBtn')&&($('pointsPlusBtn').onclick=()=>applyPoints(1));$('pointsMinusBtn')&&($('pointsMinusBtn').onclick=()=>applyPoints(-1));
 if($('newStudentClass'))$('newStudentClass').innerHTML=classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
