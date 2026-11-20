@@ -205,7 +205,7 @@ function updateTeacherBranding(){
 }
 function rebuildTeacherClassControls(){
   const allLabel='<option value="ALL">🌐 كل الشعب</option>', opts=classes.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  ['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass','recoveryClass','behaviorFilterClass','loginClass','gradeReportClass'].forEach(id=>{if($(id))$(id).innerHTML=allLabel+opts});
+  ['annClass','contentClass','studentFilter','expClass','bankClass','studyClass','engClass','recoveryClass','behaviorFilterClass','loginClass','gradeReportClass','supportClass'].forEach(id=>{if($(id))$(id).innerHTML=allLabel+opts});
   ['gradeClass','behaviorClass','gradebookClass','newStudentClass'].forEach(id=>{if($(id))$(id).innerHTML=opts});
   if($('pointsClass'))$('pointsClass').innerHTML=allLabel+opts;
 }
@@ -1197,7 +1197,7 @@ $('loginClass')&&($('loginClass').onchange=loadStudentLogins);
 $('loginSearch')&&($('loginSearch').oninput=renderStudentLogins);
 const loginNavBtn=$('teacherNav')?.querySelector('[data-sec="t-logins"]');
 loginNavBtn&&loginNavBtn.addEventListener('click',()=>{if(!studentLoginRows.length)loadStudentLogins()});
-$('teacherNav')?.addEventListener('click',e=>{const b=e.target.closest('button[data-sec]');if(!b)return;setTimeout(()=>{const sec=$(b.dataset.sec);if(!sec)return;if(sec.contains($('studentsTable'))){const cls=$('studentFilter')?.value||'ALL';if(teacherStudentsLoadedFor!==cls)loadStudents(cls).catch(err=>console.warn('Students list unavailable',err));}if(sec.contains($('gradeStudent'))||sec.contains($('pointsStudent')))refreshStudentSelects().catch(err=>console.warn('Student selectors unavailable',err));},0)});
+$('teacherNav')?.addEventListener('click',e=>{const b=e.target.closest('button[data-sec]');if(!b)return;setTimeout(()=>{const sec=$(b.dataset.sec);if(!sec)return;if(sec.contains($('studentsTable'))){const cls=$('studentFilter')?.value||'ALL';if(teacherStudentsLoadedFor!==cls)loadStudents(cls).catch(err=>console.warn('Students list unavailable',err));}if(sec.contains($('gradeStudent'))||sec.contains($('pointsStudent')))refreshStudentSelects().catch(err=>console.warn('Student selectors unavailable',err));if(sec.id==='t-support')loadSupportIndex();},0)});
 function renderStudentsTable(){const q=($('studentSearch')?.value||'').trim().toLowerCase();const list=!q?allStudents:allStudents.filter(s=>String(s.full_name).toLowerCase().includes(q)||String(s.username).toLowerCase().includes(q));$('studentsTable').innerHTML=list.map(s=>`<tr><td>${studentName(s.full_name)}</td><td>${esc(s.class_name)}</td><td>${esc(s.username)}</td><td>${s.points}</td><td><button class="btn secondary" data-action="edit-student-name" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}">✏️ تعديل الاسم</button> <button class="btn secondary" data-action="move-student" data-id="${s.id}" data-v1="${safeEnc(s.full_name)}" data-v2="${safeEnc(s.class_name)}">🔄 نقل الشعبة</button></td></tr>`).join('');if($('studentSearchCount'))$('studentSearchCount').textContent=`النتائج: ${list.length} طالب`;}
 async function loadStudents(c='ALL'){if(teacherStudentsLoading)return teacherStudentsLoading;teacherStudentsPage=1;teacherStudentsLoading=(async()=>{try{const rows=await rpc('portal_teacher_students_v2',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:c});allStudents=Array.isArray(rows)?rows:[];teacherStudentsLoadedFor=c;renderStudentsTable()}finally{teacherStudentsLoading=null}})();return teacherStudentsLoading}
 $('studentFilter').onchange=()=>loadStudents($('studentFilter').value);$('studentSearch').oninput=()=>{teacherStudentsPage=1;renderStudentsTable()};
@@ -1277,6 +1277,33 @@ if($('gradebookClass'))$('gradebookClass').innerHTML=classes.map(c=>`<option val
 $('gradebookLoadBtn')&&($('gradebookLoadBtn').onclick=loadGradebook);
 $('gradebookClass')&&($('gradebookClass').onchange=loadGradebook);
 $('gradebookAddStudentBtn')&&($('gradebookAddStudentBtn').onclick=()=>{document.querySelectorAll('#teacherView .section').forEach(x=>x.classList.remove('active'));$('t-students').classList.add('active');document.querySelectorAll('#teacherNav button').forEach(x=>x.classList.toggle('active',x.dataset.sec==='t-students'));if($('newStudentClass'))$('newStudentClass').value=$('gradebookClass')?.value||'9/1';$('newStudentName')?.focus();$('t-students').scrollIntoView({behavior:'smooth',block:'start'})});
+
+// ===== مؤشر الدعم المبكر (قراءة فقط) =====
+let supportRows=[],supportBusy=false;
+const SUPPORT_LEVELS={high:['تحتاج متابعة','high'],watch:['راقب','watch'],stable:['مستقر','stable'],no_data:['بيانات غير كافية','no_data']};
+function renderSupportIndex(){
+  const rows=supportRows,cnt=k=>rows.filter(r=>r.level===k).length,all=$('supportAll')?.checked;
+  $('supportSummary').innerHTML=[['high','تحتاج متابعة'],['watch','راقب'],['stable','مستقر']].map(([k,t])=>`<span class="sp-chip ${k}">${t}: ${cnt(k)}</span>`).join('')+(cnt('no_data')?`<span class="sp-chip">بيانات غير كافية: ${cnt('no_data')}</span>`:'');
+  const pool=rows.filter(r=>all?true:(r.level==='high'||r.level==='watch')),shown=pool.slice(0,200);
+  if(!rows.length){$('supportList').innerHTML='<p class="muted">لا يوجد طلاب في هذه الشعبة بعد.</p>';return}
+  if(!shown.length){$('supportList').innerHTML='<div class="msg ok">✅ لا يوجد طالب يحتاج متابعة حاليًا حسب البيانات المسجلة.</div>';return}
+  $('supportList').innerHTML=shown.map(r=>{
+    const lv=SUPPORT_LEVELS[r.level]||SUPPORT_LEVELS.no_data,reasons=(Array.isArray(r.reasons)?r.reasons:[]).map(x=>`<li>${esc(x)}</li>`).join('');
+    return `<div class="sp-item ${esc(lv[1])}"><div><div class="sp-name">${studentName(r.full_name)} <span class="sp-cls">· ${esc(r.class_name)}</span></div><div class="sp-cls">${esc(lv[0])}</div>${reasons?`<ul class="sp-reasons">${reasons}</ul>`:''}</div><div class="sp-score">${r.risk_score==null?'—':Number(r.risk_score)}<small>من 100</small></div></div>`}).join('');
+  if(pool.length>shown.length)$('supportList').insertAdjacentHTML('beforeend',`<p class="muted">يُعرض أول ${shown.length} من ${pool.length}. اختر شعبة محددة لرؤية الباقي.</p>`);
+}
+async function loadSupportIndex(){
+  if(supportBusy||!teacherToken||!teacherSubjectCode||!$('supportList'))return;
+  supportBusy=true;$('supportList').innerHTML='<p class="muted">جاري التحليل...</p>';
+  try{
+    const d=await rpc('portal_teacher_mt_support_index',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:$('supportClass')?.value||'ALL'});
+    supportRows=Array.isArray(d)?d:[];renderSupportIndex();
+  }catch(e){$('supportSummary').innerHTML='';$('supportList').innerHTML=`<div class="msg err">${esc(e?.message||'تعذر تحميل المؤشر. حاول مرة أخرى.')}</div>`}
+  finally{supportBusy=false}
+}
+$('supportClass')&&($('supportClass').onchange=loadSupportIndex);
+$('supportRefresh')&&($('supportRefresh').onclick=loadSupportIndex);
+$('supportAll')&&($('supportAll').onchange=renderSupportIndex);
 const gradebookNavBtn=$('teacherNav')?.querySelector('[data-sec="t-gradebook"]');gradebookNavBtn&&gradebookNavBtn.addEventListener('click',()=>loadGradebook());
 document.addEventListener('input',e=>{const el=e.target.closest?.('.gradebook-input');if(!el)return;const value=gbNum(el),slot=el.dataset.gbSlot,studentId=Number(el.dataset.gbStudent),m=GRADEBOOK_META[slot];el.style.borderColor=(value!=null&&(value<0||value>m.max))?'#dc2626':'#0f766e';if(value==null)gradebookDirty.delete(studentId+':'+slot);else gradebookDirty.set(studentId+':'+slot,{studentId,slot,value});recalcGradebookRow(el.closest('tr'))});
 
