@@ -7,6 +7,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="referrer" content="no-referrer"/>
+<link rel="preconnect" href="https://axcfgpfcdrwnsryihulg.supabase.co" crossorigin>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://axcfgpfcdrwnsryihulg.supabase.co wss://axcfgpfcdrwnsryihulg.supabase.co; frame-src 'self' https://mohammedalmaskri-rgb.github.io https://www.youtube.com https://www.youtube-nocookie.com data: blob:; media-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests"/>
 <title>منصة روافد العلوم | التعليم الرقمي للعلوم | الصفوف 7 - 9</title>
 <meta name="description" content="منصة روافد العلوم للتعليم الرقمي للصفوف السابع والثامن والتاسع في سلطنة عمان، وتشمل العلوم والكيمياء والفيزياء والأحياء والدروس والملخصات والأسئلة والدرجات والفيديوهات والتجارب والاختبارات الإلكترونية."/>
@@ -237,6 +238,10 @@ body.login-screen #loginBtn{display:flex;align-items:center;justify-content:cent
 body.login-screen #loginBtn:hover{filter:brightness(1.07)}
 body.login-screen #loginBtn:active{transform:translateY(1px)}
 body.login-screen #loginBtn:disabled{opacity:.7}
+body.login-screen #loginBtn.is-busy{opacity:.9;cursor:progress}
+body.login-screen #loginBtn.is-busy svg{animation:lxspin .8s linear infinite;transform-origin:50% 50%}
+@keyframes lxspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){body.login-screen #loginBtn.is-busy svg{animation:none}}
 body.login-screen #loginMsg:not(:empty){margin:0 0 16px}
 body.login-screen #loginMsg .msg{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:16px;font-size:15.5px;font-weight:700;line-height:1.75}
 body.login-screen #loginMsg .msg.ok{background:#e4f6ea;border:1px solid #c9ead5;color:#14653f}
