@@ -1278,27 +1278,29 @@ $('gradebookLoadBtn')&&($('gradebookLoadBtn').onclick=loadGradebook);
 $('gradebookClass')&&($('gradebookClass').onchange=loadGradebook);
 $('gradebookAddStudentBtn')&&($('gradebookAddStudentBtn').onclick=()=>{document.querySelectorAll('#teacherView .section').forEach(x=>x.classList.remove('active'));$('t-students').classList.add('active');document.querySelectorAll('#teacherNav button').forEach(x=>x.classList.toggle('active',x.dataset.sec==='t-students'));if($('newStudentClass'))$('newStudentClass').value=$('gradebookClass')?.value||'9/1';$('newStudentName')?.focus();$('t-students').scrollIntoView({behavior:'smooth',block:'start'})});
 
-// ===== مؤشر الدعم المبكر (قراءة فقط) =====
+// ===== تنبيهات الدرجات (قراءة فقط): من الدرجات المسجّلة فقط =====
 let supportRows=[],supportBusy=false;
-const SUPPORT_LEVELS={high:['تحتاج متابعة','high'],watch:['راقب','watch'],stable:['مستقر','stable'],no_data:['بيانات غير كافية','no_data']};
+const SUPPORT_LEVELS={red:['تنبيه قوي','red'],amber:['انتبه','amber'],ok:['بلا تنبيه','ok'],no_data:['لا توجد درجات','no_data']};
+const fmtPct=v=>{const n=Number(v);return Number.isFinite(n)?(Math.round(n*10)/10).toString():'—'};
 function renderSupportIndex(){
-  const rows=supportRows,cnt=k=>rows.filter(r=>r.level===k).length,all=$('supportAll')?.checked;
-  $('supportSummary').innerHTML=[['high','تحتاج متابعة'],['watch','راقب'],['stable','مستقر']].map(([k,t])=>`<span class="sp-chip ${k}">${t}: ${cnt(k)}</span>`).join('')+(cnt('no_data')?`<span class="sp-chip">بيانات غير كافية: ${cnt('no_data')}</span>`:'');
-  const pool=rows.filter(r=>all?true:(r.level==='high'||r.level==='watch')),shown=pool.slice(0,200);
+  const rows=supportRows,cnt=k=>rows.filter(r=>r.severity===k).length,all=$('supportAll')?.checked;
+  $('supportSummary').innerHTML=[['red','تنبيه قوي'],['amber','انتبه'],['ok','بلا تنبيه']].map(([k,t])=>`<span class="sp-chip ${k}">${t}: ${cnt(k)}</span>`).join('')+(cnt('no_data')?`<span class="sp-chip">بلا درجات: ${cnt('no_data')}</span>`:'');
+  const pool=rows.filter(r=>all?true:(r.severity==='red'||r.severity==='amber')),shown=pool.slice(0,200);
   if(!rows.length){$('supportList').innerHTML='<p class="muted">لا يوجد طلاب في هذه الشعبة بعد.</p>';return}
-  if(!shown.length){$('supportList').innerHTML='<div class="msg ok">✅ لا يوجد طالب يحتاج متابعة حاليًا حسب البيانات المسجلة.</div>';return}
+  if(!shown.length){$('supportList').innerHTML='<div class="msg ok">✅ لا توجد تنبيهات حاليًا حسب الدرجات المسجلة.</div>';return}
   $('supportList').innerHTML=shown.map(r=>{
-    const lv=SUPPORT_LEVELS[r.level]||SUPPORT_LEVELS.no_data,reasons=(Array.isArray(r.reasons)?r.reasons:[]).map(x=>`<li>${esc(x)}</li>`).join('');
-    return `<div class="sp-item ${esc(lv[1])}"><div><div class="sp-name">${studentName(r.full_name)} <span class="sp-cls">· ${esc(r.class_name)}</span></div><div class="sp-cls">${esc(lv[0])}</div>${reasons?`<ul class="sp-reasons">${reasons}</ul>`:''}</div><div class="sp-score">${r.risk_score==null?'—':Number(r.risk_score)}<small>من 100</small></div></div>`}).join('');
+    const lv=SUPPORT_LEVELS[r.severity]||SUPPORT_LEVELS.no_data,reasons=(Array.isArray(r.reasons)?r.reasons:[]).map(x=>`<li>${esc(x)}</li>`).join('');
+    const seq=(Array.isArray(r.grades)?r.grades:[]).map(g=>`${esc(g.t)}: <b>${esc(fmtPct(g.p))}</b>`).join(' ← ');
+    return `<div class="sp-item ${esc(lv[1])}"><div><div class="sp-name">${studentName(r.full_name)} <span class="sp-cls">· ${esc(r.class_name)}</span></div><div class="sp-cls">${esc(lv[0])}</div>${reasons?`<ul class="sp-reasons">${reasons}</ul>`:''}${seq?`<div class="sp-seq">${seq}</div>`:''}</div><div class="sp-score">${r.last_pct==null?'—':esc(fmtPct(r.last_pct))}<small>آخر درجة</small></div></div>`}).join('');
   if(pool.length>shown.length)$('supportList').insertAdjacentHTML('beforeend',`<p class="muted">يُعرض أول ${shown.length} من ${pool.length}. اختر شعبة محددة لرؤية الباقي.</p>`);
 }
 async function loadSupportIndex(){
   if(supportBusy||!teacherToken||!teacherSubjectCode||!$('supportList'))return;
   supportBusy=true;$('supportList').innerHTML='<p class="muted">جاري التحليل...</p>';
   try{
-    const d=await rpc('portal_teacher_mt_support_index',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:$('supportClass')?.value||'ALL'});
+    const d=await rpc('portal_teacher_mt_grade_alerts',{p_token:teacherToken,p_subject_code:teacherSubjectCode,p_class:$('supportClass')?.value||'ALL'});
     supportRows=Array.isArray(d)?d:[];renderSupportIndex();
-  }catch(e){$('supportSummary').innerHTML='';$('supportList').innerHTML=`<div class="msg err">${esc(e?.message||'تعذر تحميل المؤشر. حاول مرة أخرى.')}</div>`}
+  }catch(e){$('supportSummary').innerHTML='';$('supportList').innerHTML=`<div class="msg err">${esc(e?.message||'تعذر تحميل التنبيهات. حاول مرة أخرى.')}</div>`}
   finally{supportBusy=false}
 }
 $('supportClass')&&($('supportClass').onchange=loadSupportIndex);
