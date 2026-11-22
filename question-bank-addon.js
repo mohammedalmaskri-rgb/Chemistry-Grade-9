@@ -16,9 +16,11 @@
     {key:'separation',unit:1,name:'فصل وتنقية المواد',icon:'🧪',aliases:['فصل وتنقية المواد','فصل المواد وتنقيتها','تنقية المواد وفصلها','فصل وتنقية المواد وتصفيتها','تنقية المواد']},
     {key:'atoms',unit:2,name:'الذرات والجزيئات',icon:'⚛️',aliases:['الذرات والجزيئات','الذرات والجزيئات والايونات']},
     {key:'atomic',unit:2,name:'تركيب الذرة',icon:'🔬',aliases:['تركيب الذرة','التركيب الذري للذرة']},
-    {key:'electrons',unit:2,name:'ترتيب الإلكترونات في الذرات',icon:'🌀',aliases:['ترتيب الإلكترونات في الذرات','ترتيب الالكترونات','التركيب الالكتروني']}
+    {key:'electrons',unit:2,name:'ترتيب الإلكترونات في الذرات',icon:'🌀',aliases:['ترتيب الإلكترونات في الذرات','ترتيب الالكترونات','التركيب الالكتروني']},
+    {key:'periodic_classify',unit:3,name:'الجدول الدوري للعناصر: تصنيف العناصر',icon:'🧮',aliases:['الجدول الدوري للعناصر: تصنيف العناصر','الجدول الدوري للعناصر']},
+    {key:'periodic_trends',unit:3,name:'دورية خصائص العناصر في الجدول الدوري',icon:'📈',aliases:['دورية خصائص العناصر في الجدول الدوري','دورية خصائص العناصر']}
   ];
-  const UNITS=[{no:1,title:'📘 الوحدة الأولى: طبيعة المادة'},{no:2,title:'📗 الوحدة الثانية: التركيب الذري'}];
+  const UNITS=[{no:1,title:'📘 الوحدة الأولى: طبيعة المادة'},{no:2,title:'📗 الوحدة الثانية: التركيب الذري'},{no:3,title:'📙 الوحدة الثالثة: الجدول الدوري'}];
   let rows=[];
   let active=null;
 
@@ -157,10 +159,18 @@
       const r=d?.[0]; if(!r)throw new Error('لم تصل نتيجة التصحيح');
       const correct=!!r.is_correct;
       if(correct){active.correct++;active.score+=10;active.addedPoints+=Number(r.awarded_points||0);if(msg){msg.className='qb-challenge-msg qb-msg-ok';msg.textContent='✅ إجابة صحيحة'}}
-      let pause=650;
+      let pause=650;const extra=[];
       if(!correct){active.wrong++;if(msg){msg.className='qb-challenge-msg qb-msg-err';msg.textContent='❌ إجابة غير صحيحة'}
+        // الإجابة الصحيحة + الشرح (متاحة فقط إذا أظهر المعلم حل السؤال)
+        try{
+          const ub=unpackBank(q);let ans='';extra.length=0;
+          if(meta.type==='mcq'&&Array.isArray(meta.answer?.options)&&meta.answer.correct!=null)ans=String(meta.answer.options[Number(meta.answer.correct)]??'');
+          else if(meta.type==='tf'&&typeof meta.answer?.correct==='boolean')ans=meta.answer.correct?'صح':'خطأ';
+          if(msg&&ans){const a1=document.createElement('div');a1.textContent='✅ الإجابة الصحيحة: '+ans;a1.style.fontWeight='700';msg.appendChild(a1);extra.push(a1);pause=3500;
+            const ex=String(ub.solution||'').trim();if(ex){const a2=document.createElement('div');a2.textContent='📖 '+ex;msg.appendChild(a2);extra.push(a2);pause=5500}}
+        }catch(_e){}
         try{const fb=await rpc('portal_student_mt_misconception_feedback',{p_token:studentToken,p_subject_code:studentSubjectCode,p_question_id:q.id});const f=Array.isArray(fb)?fb[0]:null;
-          if(f&&f.label&&msg){msg.className='qb-challenge-msg qb-msg-err';msg.textContent='';const b1=document.createElement('div');b1.textContent='❌ إجابة غير صحيحة';const b2=document.createElement('div');b2.textContent='🧩 '+f.label;b2.style.fontWeight='700';const b3=document.createElement('div');b3.textContent='💡 '+f.remedy;msg.append(b1,b2,b3);pause=4500}}catch(_e){}}
+          if(f&&f.label&&msg){msg.className='qb-challenge-msg qb-msg-err';msg.textContent='';const b1=document.createElement('div');b1.textContent='❌ إجابة غير صحيحة';const b2=document.createElement('div');b2.textContent='🧩 '+f.label;b2.style.fontWeight='700';const b3=document.createElement('div');b3.textContent='💡 '+f.remedy;msg.append(b1,b2,b3,...extra);pause=Math.max(pause,6500)}}catch(_e){}}
       if(el('studentPoints')&&r.total_points!=null)el('studentPoints').textContent=fmt(r.total_points);
       active.answeredIds.add(q.id);
       setTimeout(()=>{active.index++;if(active.index>=active.questions.length)finish();else renderQuestion()},pause);
